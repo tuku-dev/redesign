@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>reDesign — Design editor</title>
+  </head>
+  <body>
+    <header>
+      <strong class="brand">D<span>r</span></strong
+      ><span class="breadcrumb">Drafts /</span
+      ><input id="document-name" aria-label="Document name" value="Untitled" /><span
+        id="save-status"
+        role="status"
+        >Local document</span
+      >
+      <div class="header-actions">
+        <button id="open"><span data-icon="open"></span><span>Open</span></button
+        ><button id="save"><span data-icon="save"></span><span>Save file</span></button
+        ><button id="export" class="primary">
+          <span data-icon="export"></span><span>Export SVG</span>
+        </button>
+      </div>
+    </header>
+    <main>
+      <aside class="left">
+        <div class="panel-heading">File <span class="badge">LOCAL</span></div>
+        <div class="page-row"><span data-icon="page"></span><span>Page 1</span></div>
+        <div class="panel-heading">
+          Layers <button id="add" aria-label="Add rectangle"><span data-icon="plus"></span></button>
+        </div>
+        <div id="layers"></div>
+        <div class="sidebar-note">
+          reDesign · Early development<br />Native .fig support is pending.
+        </div>
+      </aside>
+      <section id="workspace" aria-label="Design canvas">
+        <svg
+          id="canvas"
+          xmlns="http://www.w3.org/2000/svg"
+          tabindex="0"
+          aria-label="Editable design canvas"
+        >
+          <defs>
+            <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+              <circle cx="1" cy="1" r="0.65" fill="#d1d1d6" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="transparent" />
+          <g id="viewport">
+            <g id="scene"></g>
+            <g id="selection"></g>
+          </g>
+        </svg>
+        <label class="snap-toggle"
+          ><input id="snap-enabled" type="checkbox" checked /> Snap to geometry</label
+        >
+        <div class="canvas-hint">Drag to draw · Space + drag to pan · Scroll to zoom</div>
+        <nav class="toolbar" aria-label="Drawing tools">
+          <button data-tool="select" title="Move (V)" aria-label="Move tool">
+            <span data-icon="select"></span></button
+          ><button data-tool="hand" title="Hand (H)" aria-label="Hand tool">
+            <span data-icon="hand"></span></button
+          ><span class="separator"></span
+          ><button data-tool="frame" title="Frame (F)" aria-label="Frame tool">
+            <span data-icon="frame"></span></button
+          ><button data-tool="rectangle" title="Rectangle (R)" aria-label="Rectangle tool">
+            <span data-icon="rectangle"></span></button
+          ><button data-tool="ellipse" title="Ellipse (O)" aria-label="Ellipse tool">
+            <span data-icon="ellipse"></span></button
+          ><button data-tool="text" title="Text (T)" aria-label="Text tool">
+            <span data-icon="text"></span></button
+          ><span class="separator"></span
+          ><button id="undo" title="Undo (Ctrl+Z)" aria-label="Undo">
+            <span data-icon="undo"></span></button
+          ><button id="redo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">
+            <span data-icon="redo"></span>
+          </button>
+        </nav>
+        <div class="zoom">
+          <button id="fit-all" title="Fit all (Shift+1)" aria-label="Fit all layers">Fit</button
+          ><button
+            id="fit-selection"
+            title="Fit selection (Shift+2)"
+            aria-label="Fit selected layers"
+          >
+            Selection</button
+          ><button id="zoom-out" aria-label="Zoom out"><span data-icon="minus"></span></button
+          ><button id="zoom-reset">100%</button
+          ><button id="zoom-in" aria-label="Zoom in"><span data-icon="plus"></span></button>
+        </div>
+      </section>
+      <aside class="right">
+        <div class="panel-heading">Design <span class="badge">ALPHA</span></div>
+        <div id="properties"></div>
+        <div class="shortcuts">
+          <strong>Keyboard shortcuts</strong>
+          <p>V Move · F Frame · R Rectangle<br />O Ellipse · T Text · H Hand</p>
+          <p>
+            Shift-click Multi-select · Drag Marquee<br />Ctrl+A Select all · Ctrl+D Duplicate<br />Ctrl+C
+            / X / V Copy / Cut / Paste<br />Ctrl+Shift+V Paste in place<br />Shift+1 Fit all ·
+            Shift+2 Fit selection<br />Ctrl + drag Perfect square/circle<br />Shift Resize
+            proportionally · Alt From center<br />Escape Cancel · Arrows Nudge
+          </p>
+        </div>
+      </aside>
+    </main>
+    <input type="file" id="file" accept=".redesign,application/json" hidden />
+    <div id="toast" role="status" hidden></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

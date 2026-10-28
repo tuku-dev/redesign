@@ -1,0 +1,29 @@
+{
+  "name": "redesign",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "start": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "tsc -p tsconfig.test.json && node --test .test-build/tests/*.test.js",
+    "check": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\" \"src/**/*.css\" index.html vite.config.ts tsconfig.json tsconfig.test.json eslint.config.mjs package.json .prettierrc.json",
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\" \"src/**/*.css\" index.html vite.config.ts tsconfig.json tsconfig.test.json eslint.config.mjs package.json .prettierrc.json"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.5",
+    "eslint": "^10.13.0",
+    "prettier": "^3.9.10",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.1",
+    "vite": "^8.3.5"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  }
+}
