@@ -106,6 +106,7 @@ export function bindKeyboard(
     };
     const tool = tools[key];
     if (!mod && tool) {
+      if (tool === 'text') store.textMode = 'text';
       store.tool = tool;
       store.refresh();
     }

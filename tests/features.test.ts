@@ -71,6 +71,24 @@ test('toVector converts rectangles and ellipses to editable paths and undoes cle
   assert.equal(node(s, e.id).type, 'ellipse');
   assert.equal(node(s, e.id).vector, undefined);
 });
+test('addTextOnPath creates a valid text layer that follows an ellipse and undoes cleanly', () => {
+  const e = createNode('ellipse', { x: 10, y: 20, width: 80, height: 60 }),
+    f = createNode('frame', { width: 200, height: 200 }),
+    { s, c } = editor([e, f]);
+  const id = c.addTextOnPath(e.id)!;
+  const text = node(s, id);
+  assert.equal(text.type, 'text');
+  assert.equal(text.textPath?.rings[0].length, 4);
+  assert.deepEqual([text.x, text.y, text.width, text.height], [10, 20, 80, 60]);
+  assert.doesNotThrow(() => validateDocument(JSON.parse(JSON.stringify(s.doc))));
+  assert.equal(c.addTextOnPath(f.id), null);
+  assert.equal(c.addTextOnPath(id), null);
+  s.undo();
+  assert.equal(
+    s.doc.nodes.some((n) => n.id === id),
+    false,
+  );
+});
 test('horizontal hug auto layout applies independent padding, gap and one undo transaction', () => {
   const { s, c, f, a, b } = layoutEditor(),
     before = structuredClone(s.doc);

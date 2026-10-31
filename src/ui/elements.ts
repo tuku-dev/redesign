@@ -10,6 +10,8 @@ export function getElements() {
     snapGridEnabled: required('snap-grid-enabled', HTMLButtonElement),
     shapeMenuToggle: required('shape-menu-toggle', HTMLButtonElement),
     shapeMenu: required('shape-menu', HTMLElement),
+    textMenuToggle: required('text-menu-toggle', HTMLButtonElement),
+    textMenu: required('text-menu', HTMLElement),
     pickColor: required('pick-color', HTMLButtonElement),
     penButton: required('pen-tool', HTMLButtonElement),
     penMenuToggle: required('pen-menu-toggle', HTMLButtonElement),

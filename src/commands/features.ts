@@ -24,6 +24,28 @@ import { booleanRings, vectorFromPoints } from '../model/vector.ts';
 import { LINE_STROKE, linePoints, polygonPoints, starPoints } from '../model/shapes.ts';
 import type { ShapeKind } from '../model/shapes.ts';
 import type { BooleanOperation } from '../model/vector.ts';
+/** Editable ring for a rectangle or ellipse; null for anything else. */
+function nativeRings(n: DesignNode): VectorPoint[][] | null {
+  const k = 0.5522847498 / 2;
+  if (n.type === 'ellipse')
+    return [
+      [
+        { x: 0.5, y: 0, smooth: true, in: { x: 0.5 - k, y: 0 }, out: { x: 0.5 + k, y: 0 } },
+        { x: 1, y: 0.5, smooth: true, in: { x: 1, y: 0.5 - k }, out: { x: 1, y: 0.5 + k } },
+        { x: 0.5, y: 1, smooth: true, in: { x: 0.5 + k, y: 1 }, out: { x: 0.5 - k, y: 1 } },
+        { x: 0, y: 0.5, smooth: true, in: { x: 0, y: 0.5 + k }, out: { x: 0, y: 0.5 - k } },
+      ],
+    ];
+  if (n.type !== 'rectangle') return null;
+  return [
+    [
+      { x: 0, y: 0, radius: n.cornerRadii?.topLeft },
+      { x: 1, y: 0, radius: n.cornerRadii?.topRight },
+      { x: 1, y: 1, radius: n.cornerRadii?.bottomRight },
+      { x: 0, y: 1, radius: n.cornerRadii?.bottomLeft },
+    ].map((p) => (p.radius === undefined ? { x: p.x, y: p.y } : p)),
+  ];
+}
 export class FeatureCommands {
   constructor(private readonly store: EditorStore) {}
   private editable(): DesignNode[] {
@@ -249,25 +271,7 @@ export class FeatureCommands {
       isLocked(this.store.doc, n)
     )
       return false;
-    const k = 0.5522847498 / 2;
-    const rings: VectorPoint[][] =
-      n.type === 'ellipse'
-        ? [
-            [
-              { x: 0.5, y: 0, smooth: true, in: { x: 0.5 - k, y: 0 }, out: { x: 0.5 + k, y: 0 } },
-              { x: 1, y: 0.5, smooth: true, in: { x: 1, y: 0.5 - k }, out: { x: 1, y: 0.5 + k } },
-              { x: 0.5, y: 1, smooth: true, in: { x: 0.5 + k, y: 1 }, out: { x: 0.5 - k, y: 1 } },
-              { x: 0, y: 0.5, smooth: true, in: { x: 0, y: 0.5 + k }, out: { x: 0, y: 0.5 - k } },
-            ],
-          ]
-        : [
-            [
-              { x: 0, y: 0, radius: n.cornerRadii?.topLeft },
-              { x: 1, y: 0, radius: n.cornerRadii?.topRight },
-              { x: 1, y: 1, radius: n.cornerRadii?.bottomRight },
-              { x: 0, y: 1, radius: n.cornerRadii?.bottomLeft },
-            ].map((p) => (p.radius === undefined ? { x: p.x, y: p.y } : p)),
-          ];
+    const rings = nativeRings(n)!;
     this.store.change(() => {
       n.type = 'path';
       n.vector = { closed: true, rings };
@@ -275,6 +279,36 @@ export class FeatureCommands {
       if (n.name === 'Rectangle' || n.name === 'Ellipse') n.name = 'Vector';
     });
     return true;
+  }
+  /** Adds a text layer whose glyphs follow the outline of a path, line or shape. */
+  addTextOnPath(targetId: string): string | null {
+    const s = this.store,
+      target = s.doc.nodes.find((n) => n.id === targetId);
+    if (!target || target.type === 'text' || target.type === 'group' || target.type === 'frame')
+      return null;
+    const rings = target.vector ? clone(target.vector.rings) : nativeRings(target);
+    if (!rings) return null;
+    const closed = target.vector?.closed ?? true;
+    let id = '';
+    s.change(() => {
+      const n = createNode('text', {
+        x: target.x,
+        y: target.y,
+        width: target.width,
+        height: target.height,
+        rotation: target.rotation,
+        flipX: target.flipX,
+        flipY: target.flipY,
+        text: 'Text on path',
+        name: 'Text on path',
+        textPath: { closed, rings },
+      });
+      n.parentId = target.parentId;
+      s.doc.nodes.push(n);
+      s.selected = new Set([n.id]);
+      id = n.id;
+    });
+    return id;
   }
   vertex(ring: number, index: number, point: Point): void {
     const n = this.store.current();

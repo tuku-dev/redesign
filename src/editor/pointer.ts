@@ -12,6 +12,7 @@ import { isLocked } from '../model/layer-state.ts';
 import { defaultAppearance } from '../model/features.ts';
 import type { CornerName, DesignDocument, Point } from '../model/types.ts';
 import { vectorCorners } from '../model/vector.ts';
+import { FeatureCommands } from '../commands/features.ts';
 import { clone } from '../model/types.ts';
 export function bindPointer(
   el: EditorElements,
@@ -226,6 +227,18 @@ export function bindPointer(
       const id = target?.closest('[data-id]')?.getAttribute('data-id') ?? null,
         deepSelect = e.ctrlKey || e.metaKey;
       gestures.startSelection(p, id, e.shiftKey, deepSelect);
+      return;
+    }
+    if (store.tool === 'text' && store.textMode === 'path') {
+      const id = target?.closest('[data-id]')?.getAttribute('data-id'),
+        created = id ? new FeatureCommands(store).addTextOnPath(id) : null;
+      if (!created) {
+        notify('Click a path, line or shape to place text on it.');
+        return;
+      }
+      store.tool = 'select';
+      store.refresh();
+      if (editText) editText(created);
       return;
     }
     const text = store.tool === 'text';

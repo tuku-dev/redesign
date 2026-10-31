@@ -206,8 +206,31 @@
             hidden
           >
             <span data-icon="directSelect"></span></button
-          ><button data-tool="text" title="Text (T)" aria-label="Text tool">
-            <span data-icon="text"></span></button
+          ><span class="tool-group"
+            ><button data-tool="text" title="Text (T)" aria-label="Text tool">
+              <span data-icon="text"></span></button
+            ><button
+              id="text-menu-toggle"
+              type="button"
+              class="tool-more"
+              title="Text options"
+              aria-label="Text options"
+              aria-haspopup="menu"
+              aria-expanded="false"
+              aria-controls="text-menu"
+            >
+              <span data-icon="chevronUp"></span>
+            </button>
+            <div id="text-menu" class="shape-menu" role="menu" aria-label="Text" hidden>
+              <button type="button" role="menuitemradio" data-text="text">
+                <span class="check" data-icon="check"></span><span data-icon="text"></span
+                ><span class="label">Text</span><kbd>T</kbd>
+              </button>
+              <button type="button" role="menuitemradio" data-text="path">
+                <span class="check" data-icon="check"></span><span data-icon="textPath"></span
+                ><span class="label">Text on path</span>
+              </button>
+            </div></span
           ><span class="separator"></span
           ><button id="undo" title="Undo (Ctrl+Z)" aria-label="Undo">
             <span data-icon="undo"></span></button

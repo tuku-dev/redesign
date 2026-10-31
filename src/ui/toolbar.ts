@@ -7,6 +7,7 @@ import type { EditorElements } from './elements.ts';
 import type { Notify } from './notifications.ts';
 import { toolCursor } from '../render/cursors.ts';
 import { bindShapeMenu, renderShapeMenu } from './shape-menu.ts';
+import { bindTextMenu, renderTextMenu } from './text-menu.ts';
 export function isTool(value: string | undefined): value is Tool {
   return (
     value !== undefined &&
@@ -52,6 +53,7 @@ export function bindToolbar(
       }),
   );
   bindShapeMenu(el, store, () => gestures.cancel());
+  bindTextMenu(el, store, () => gestures.cancel(), notify);
   el.add.onclick = () => commands.addRectangle();
   el.undo.onclick = () => {
     gestures.cancel();
@@ -73,6 +75,7 @@ export function renderToolbar(el: EditorElements, store: EditorStore): void {
     b.setAttribute('aria-pressed', String(b.dataset.tool === store.tool));
   });
   renderShapeMenu(el, store);
+  renderTextMenu(el, store);
   el.snapGridEnabled.setAttribute('aria-pressed', String(store.gridSnappingEnabled));
   el.snapGridEnabled.classList.toggle('active', store.gridSnappingEnabled);
   el.pickColor.setAttribute('aria-pressed', String(store.canvasColorMode === 'sample'));

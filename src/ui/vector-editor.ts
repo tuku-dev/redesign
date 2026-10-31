@@ -567,6 +567,7 @@ export function bindVectorEditor(
   );
   el.toolButtons.forEach((b) => b.addEventListener('click', cancelDraft));
   el.shapeMenu.querySelectorAll('button').forEach((b) => b.addEventListener('click', cancelDraft));
+  el.textMenu.querySelectorAll('button').forEach((b) => b.addEventListener('click', cancelDraft));
   document.addEventListener('redesign:before-save', () => {
     stop(false);
     if (drawing && points.length >= 2) finish(false);

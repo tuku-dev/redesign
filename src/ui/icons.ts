@@ -22,6 +22,7 @@ const paths = {
   chevronUp: 'M6 15l6-6 6 6',
   ellipse: 'M20 12a8 8 0 11-16 0 8 8 0 0116 0',
   text: 'M5 7V4h14v3M12 4v16M8 20h8',
+  textPath: 'M4 14c3-8 13-8 16 0M9.5 9V6h5v3M12 6v6',
   undo: 'M8 5L3 10l5 5M3 10h11a6 6 0 010 12',
   redo: 'M16 5l5 5-5 5M21 10H10a6 6 0 000 12',
   plus: 'M12 5v14M5 12h14',

@@ -1417,6 +1417,27 @@ test('the pen menu switches between pen and pencil and the pencil draws freehand
   expect(errors).toEqual([]);
 });
 
+test('the text menu places text on a path that follows the shape', async ({ page }) => {
+  const errors = await open(page);
+  await page.getByLabel('Text options').click();
+  const menu = page.locator('#text-menu');
+  await expect(menu.locator('[data-text=text]')).toHaveAttribute('aria-checked', 'true');
+  await menu.locator('[data-text=path]').click();
+  await expect(menu).toBeHidden();
+  await expect(page.locator('[data-tool=text]')).toHaveAttribute('title', 'Text on path');
+  await page.locator('#scene ellipse[data-id="circle-b"]').click();
+  const doc = await saved(page);
+  const node = doc.nodes.at(-1)!;
+  expect(node.type).toBe('text');
+  expect(node.textPath?.closed).toBe(true);
+  expect(node.textPath?.rings[0]).toHaveLength(4);
+  await expect(page.locator('#scene textPath')).toHaveCount(1);
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('t');
+  await expect(page.locator('[data-tool=text]')).toHaveAttribute('title', 'Text (T)');
+  expect(errors).toEqual([]);
+});
+
 test('the Image item and Ctrl+Shift+K open the image picker', async ({ page }) => {
   await open(page, createDocument());
   await page.getByLabel('Shape options').click();

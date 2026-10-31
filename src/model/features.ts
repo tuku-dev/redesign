@@ -77,6 +77,8 @@ export interface NodeFeatures {
   appearance?: Appearance;
   image?: ImageFill;
   vector?: VectorPath;
+  /** Path (normalized to the layer box) that a text layer's glyphs follow. */
+  textPath?: VectorPath;
   component?: { kind: 'main' | 'instance'; sourceId?: string };
   instanceSource?: string;
   overrides?: string[];
@@ -126,6 +128,33 @@ const num = (v: unknown, min = 0, max = 1e6) =>
   typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max;
 const color = (v: unknown) => typeof v === 'string' && /^#[\da-f]{6}$/i.test(v);
 const member = (v: unknown, values: string[]) => typeof v === 'string' && values.includes(v);
+function validVectorPath(v: unknown): boolean {
+  return (
+    object(v) &&
+    typeof v.closed === 'boolean' &&
+    Array.isArray(v.rings) &&
+    v.rings.length > 0 &&
+    v.rings.length <= 1000 &&
+    v.rings.every(
+      (r) =>
+        Array.isArray(r) &&
+        r.length >= 2 &&
+        r.length <= 10000 &&
+        r.every(
+          (p) =>
+            object(p) &&
+            num(p.x, -1000, 1000) &&
+            num(p.y, -1000, 1000) &&
+            (p.smooth === undefined || typeof p.smooth === 'boolean') &&
+            ['in', 'out'].every(
+              (key) =>
+                p[key] === undefined ||
+                (object(p[key]) && num(p[key].x, -1000, 1000) && num(p[key].y, -1000, 1000)),
+            ),
+        ),
+    )
+  );
+}
 export function validFeatures(n: Record<string, unknown>): boolean {
   const l = n.layout,
     s = n.sizing,
@@ -194,34 +223,8 @@ export function validFeatures(n: Record<string, unknown>): boolean {
           !num(i.adjustments.saturation, 0, 200))))
   )
     return false;
-  if (
-    v !== undefined &&
-    (!object(v) ||
-      n.type !== 'path' ||
-      typeof v.closed !== 'boolean' ||
-      !Array.isArray(v.rings) ||
-      !v.rings.length ||
-      v.rings.length > 1000 ||
-      !v.rings.every(
-        (r) =>
-          Array.isArray(r) &&
-          r.length >= 2 &&
-          r.length <= 10000 &&
-          r.every(
-            (p) =>
-              object(p) &&
-              num(p.x, -1000, 1000) &&
-              num(p.y, -1000, 1000) &&
-              (p.smooth === undefined || typeof p.smooth === 'boolean') &&
-              ['in', 'out'].every(
-                (key) =>
-                  p[key] === undefined ||
-                  (object(p[key]) && num(p[key].x, -1000, 1000) && num(p[key].y, -1000, 1000)),
-              ),
-          ),
-      ))
-  )
-    return false;
+  if (v !== undefined && (n.type !== 'path' || !validVectorPath(v))) return false;
+  if (n.textPath !== undefined && (n.type !== 'text' || !validVectorPath(n.textPath))) return false;
   if (n.type === 'path' && v === undefined) return false;
   if (
     c !== undefined &&

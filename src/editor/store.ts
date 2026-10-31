@@ -17,6 +17,7 @@ export class EditorStore {
   selected = new Set<string>();
   tool: Tool = 'select';
   drawShape: DrawShape = 'rectangle';
+  textMode: 'text' | 'path' = 'text';
   zoom = 1;
   pan: Point = { x: 80, y: 80 };
   space = false;

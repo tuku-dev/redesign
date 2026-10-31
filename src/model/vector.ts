@@ -64,6 +64,15 @@ export function vectorCorners(n: DesignNode): VectorCorner[] {
 export function pathData(n: DesignNode): string {
   return n.vector ? bezierPathData(worldRings(n), n.vector.closed) : '';
 }
+/** Absolute SVG path data of the curve a text layer follows. */
+export function textPathData(n: DesignNode): string {
+  const path = n.textPath;
+  if (!path) return '';
+  const rings = path.rings.map((r) =>
+    r.map((p) => mapVectorPoint(p, (q) => ({ x: n.x + q.x * n.width, y: n.y + q.y * n.height }))),
+  );
+  return bezierPathData(rings, path.closed);
+}
 export function vectorFromPoints(
   rings: VectorPoint[][],
   closed = true,

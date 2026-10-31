@@ -1,5 +1,6 @@
 ﻿import type { DesignNode } from '../model/types.ts';
 import { graphemes, textLines } from '../model/text-layout.ts';
+import { textPathData } from '../model/vector.ts';
 import { svg } from './svg.ts';
 let context: CanvasRenderingContext2D | null | undefined;
 export function measureText(node: DesignNode, text: string): number {
@@ -13,10 +14,49 @@ export function measureText(node: DesignNode, text: string): number {
     Math.max(0, graphemes(text).length - 1) * node.letterSpacing
   );
 }
-export function renderText(
-  node: DesignNode,
-  attrs: Record<string, string | number>,
-): SVGTextElement {
+export function renderText(node: DesignNode, attrs: Record<string, string | number>): SVGElement {
+  if (node.textPath) return renderTextOnPath(node, attrs);
+  return renderFlatText(node, attrs);
+}
+let pathSequence = 0;
+/** Glyphs follow the stored curve; a transparent stroke keeps the layer clickable. */
+function renderTextOnPath(node: DesignNode, attrs: Record<string, string | number>): SVGElement {
+  const id = `text-path-${pathSequence++}`,
+    d = textPathData(node),
+    group = svg('g', attrs),
+    defs = svg('defs'),
+    align = node.textAlign;
+  defs.append(svg('path', { id, d, fill: 'none' }));
+  const text = svg('text', {
+    'font-size': node.fontSize,
+    'font-family': node.fontFamily,
+    'font-weight': node.fontWeight,
+    'font-style': node.fontStyle,
+    'letter-spacing': node.letterSpacing,
+    'text-anchor': align === 'center' ? 'middle' : align === 'right' ? 'end' : 'start',
+  });
+  text.style.whiteSpace = 'pre';
+  const run = svg('textPath', {
+    href: `#${id}`,
+    startOffset: align === 'center' ? '50%' : align === 'right' ? '100%' : '0%',
+  });
+  run.textContent = node.text.replace(/\s*\n\s*/g, ' ') || '\u200b';
+  text.append(run);
+  group.append(
+    defs,
+    svg('path', {
+      d,
+      fill: 'none',
+      stroke: 'transparent',
+      'stroke-width': Math.max(node.fontSize, 12),
+      'pointer-events': 'stroke',
+      'data-id': node.id,
+    }),
+    text,
+  );
+  return group;
+}
+function renderFlatText(node: DesignNode, attrs: Record<string, string | number>): SVGTextElement {
   const x =
     node.x +
     (node.textAlign === 'center' ? node.width / 2 : node.textAlign === 'right' ? node.width : 0);
