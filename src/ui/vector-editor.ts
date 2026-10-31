@@ -11,6 +11,7 @@ import { transformNodePoint, localPoint } from '../model/rotation.ts';
 import { isLocked, isHidden } from '../model/layer-state.ts';
 import { bezierPathData, mapVectorPoint, moveAnchor, moveHandle } from '../model/bezier.ts';
 import { FeatureCommands } from '../commands/features.ts';
+import { strokeToVector } from '../model/pencil.ts';
 import { renderVectorPoints } from '../render/vector-editor.ts';
 import { svg } from '../render/svg.ts';
 import { errorMessage } from './elements.ts';
@@ -27,6 +28,8 @@ export function bindVectorEditor(
     hover: Point | null = null;
   let placing: { index: number; pointerId: number; before: VectorPoint[] } | null = null;
   let ctrlHeld = false;
+  let pencilOn = false,
+    stroke: { points: Point[]; pointerId: number } | null = null;
   let draftDrag: {
     index: number;
     side: HandleSide | null;
@@ -117,17 +120,29 @@ export function bindVectorEditor(
     const pointerShown = active || (drawing && ctrlHeld);
     const penButton = document.querySelector<HTMLButtonElement>('#pen-tool');
     if (penButton) penButton.hidden = pointerShown;
-    penButton?.classList.toggle('active', drawing);
-    penButton?.setAttribute('aria-pressed', String(drawing));
+    penButton?.classList.toggle('active', drawing || pencilOn);
+    penButton?.setAttribute('aria-pressed', String(drawing || pencilOn));
+    penButton?.parentElement?.toggleAttribute('hidden', pointerShown);
     directButton!.hidden = !pointerShown;
     directButton!.classList.toggle('active', pointerShown);
     el.toolButtons.forEach((b) => {
-      const active = !drawing && b.dataset.tool === store.tool && !isEditing();
+      const active = !drawing && !pencilOn && b.dataset.tool === store.tool && !isEditing();
       b.classList.toggle('active', active);
       b.setAttribute('aria-pressed', String(active));
     });
     overlay.replaceChildren();
-    el.canvas.style.cursor = toolCursor(store, drawing);
+    el.canvas.style.cursor = toolCursor(store, drawing || pencilOn);
+    if (stroke && stroke.points.length > 1)
+      overlay.append(
+        svg('path', {
+          d: bezierPathData([stroke.points], false),
+          fill: 'none',
+          stroke: 'var(--text-primary)',
+          'stroke-width': 1.5 / store.zoom,
+          'pointer-events': 'none',
+          'data-pencil-preview': 'true',
+        }),
+      );
     if (drawing && points.length) {
       const preview = hover && !placing && !ctrlHeld ? [...points, hover] : points;
       overlay.append(
@@ -192,6 +207,10 @@ export function bindVectorEditor(
     }
   }
   function stop(cancel: boolean): void {
+    if (stroke && cancel) {
+      stroke = null;
+      render();
+    }
     if (draftDrag) {
       if (cancel) points = draftDrag.before;
       draftDrag = null;
@@ -225,6 +244,7 @@ export function bindVectorEditor(
     const wasEditing = store.editingVectorId !== null;
     stop(true);
     drawing = false;
+    pencilOn = false;
     store.editingVectorId = null;
     points = [];
     hover = null;
@@ -283,6 +303,13 @@ export function bindVectorEditor(
         el.canvas.setPointerCapture(e.pointerId);
         return;
       }
+      if (pencilOn && !isEditing() && !store.space) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        stroke = { points: [local(e)], pointerId: e.pointerId };
+        el.canvas.setPointerCapture(e.pointerId);
+        return;
+      }
       if (!drawing) return;
       e.stopImmediatePropagation();
       e.preventDefault();
@@ -316,6 +343,15 @@ export function bindVectorEditor(
     true,
   );
   el.canvas.addEventListener('pointermove', (e) => {
+    if (stroke && stroke.pointerId === e.pointerId) {
+      const p = local(e),
+        last = stroke.points.at(-1)!;
+      if (Math.hypot(p.x - last.x, p.y - last.y) >= 1 / store.zoom) {
+        stroke.points.push(p);
+        render();
+      }
+      return;
+    }
     if (draftDrag && draftDrag.pointerId === e.pointerId) {
       const point = points[draftDrag.index];
       if (point) {
@@ -359,7 +395,24 @@ export function bindVectorEditor(
     }
   });
   // Pointer prevention suppresses native mouse double-clicks; SVG redraws also replace targets.
+  function finishStroke(): void {
+    const done = stroke;
+    stroke = null;
+    if (!done || done.points.length < 2) return render();
+    try {
+      new FeatureCommands(store).path(strokeToVector(done.points, 2 / store.zoom), false);
+      store.refresh();
+      render();
+    } catch (error) {
+      render();
+      notify(errorMessage(error));
+    }
+  }
   el.canvas.addEventListener('pointerup', (e) => {
+    if (stroke && stroke.pointerId === e.pointerId) {
+      finishStroke();
+      return;
+    }
     const hit = lastHit;
     lastHit = null;
     stop(false);
@@ -483,6 +536,14 @@ export function bindVectorEditor(
         enterEdit(store.current()!.id);
         return;
       }
+      if (pencilOn && e.key === 'Escape') {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        cancelDraft();
+        store.refresh();
+        return;
+      }
+      if (pencilOn && /^[vhfrlot]$/i.test(e.key) && !e.ctrlKey && !e.metaKey) cancelDraft();
       if (!drawing) return;
       e.stopImmediatePropagation();
       if (e.key === 'Escape') {
@@ -505,6 +566,7 @@ export function bindVectorEditor(
     true,
   );
   el.toolButtons.forEach((b) => b.addEventListener('click', cancelDraft));
+  el.shapeMenu.querySelectorAll('button').forEach((b) => b.addEventListener('click', cancelDraft));
   document.addEventListener('redesign:before-save', () => {
     stop(false);
     if (drawing && points.length >= 2) finish(false);
@@ -542,6 +604,15 @@ export function bindVectorEditor(
       notify(
         'Pen: click for corners; drag for curves. Enter finishes; click the first point to close.',
       );
+    },
+    startPencil: () => {
+      gestures.cancel();
+      cancelDraft();
+      pencilOn = true;
+      store.tool = 'select';
+      el.canvas.focus();
+      render();
+      notify('Pencil: drag on the canvas to draw freehand. Escape exits.');
     },
     edit: () => {
       const n = store.current();

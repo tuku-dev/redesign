@@ -8,6 +8,7 @@ import { FeatureCommands } from '../commands/features.ts';
 import { bindRulers } from './rulers.ts';
 import { bindImages } from './images.ts';
 import { INSERT_IMAGE_EVENT } from './shape-menu.ts';
+import { bindPenMenu } from './pen-menu.ts';
 import { bindVectorEditor } from './vector-editor.ts';
 import { presentPrototype } from './prototype.ts';
 import { renderPages } from './pages.ts';
@@ -27,9 +28,7 @@ export function bindWorkspace(
   const images = bindImages(el, store, viewport, notify),
     vector = bindVectorEditor(el, store, gestures, viewport, notify),
     guides = new GuideCommands(store);
-  const penButton = document.querySelector<HTMLButtonElement>('#pen-tool');
-  if (!penButton) throw new Error('Missing pen tool button');
-  penButton.onclick = vector.start;
+  const penMenu = bindPenMenu(el, vector);
   document.addEventListener(INSERT_IMAGE_EVENT, images.insert);
   bindRulers(el, store, notify);
   let shapeCount = 5;
@@ -163,7 +162,13 @@ export function bindWorkspace(
       const mod = e.ctrlKey || e.metaKey,
         key = e.key.toLowerCase();
       let action: (() => void) | undefined;
-      if (key === 'p' && !mod && !e.altKey) action = vector.start;
+      if (key === 'p' && !mod && !e.altKey)
+        action = () => penMenu.select(e.shiftKey ? 'pencil' : 'pen');
+      if (key === 'i' && !mod && !e.altKey && !e.shiftKey)
+        action = () => {
+          store.canvasColorMode = store.canvasColorMode === 'sample' ? null : 'sample';
+          store.refresh('all');
+        };
       if (key === 'a' && e.shiftKey && !mod && !e.altKey)
         action = () => new FeatureCommands(store).addLayout();
       if (key === 'r' && e.shiftKey && !mod && !e.altKey) action = () => guides.rulers();

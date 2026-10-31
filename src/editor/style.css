@@ -1034,6 +1034,9 @@ select:focus-visible {
   display: inline-flex;
   align-items: center;
 }
+.tool-group[hidden] {
+  display: none;
+}
 .toolbar .tool-more {
   width: 16px;
   height: 40px;

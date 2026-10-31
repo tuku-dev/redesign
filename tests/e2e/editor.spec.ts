@@ -473,22 +473,17 @@ test('canvas fill and pick color tools apply fill and shift-click stroke', async
   await page.getByLabel('Stroke width', { exact: true }).press('Tab');
   await page.getByLabel('Stroke color', { exact: true }).fill('#ff0000');
   await select(page, 'rect-a');
-  const pickColor = page.getByRole('button', { name: 'Pick color' });
+  await page.getByRole('button', { name: 'Pen options' }).click();
+  const pickColor = page.locator('#pick-color');
   await expect(pickColor).toBeVisible();
-  const toolbarBox = await page.locator('.toolbar').boundingBox(),
-    pickColorBox = await pickColor.boundingBox();
-  expect(toolbarBox).not.toBeNull();
-  expect(pickColorBox).not.toBeNull();
-  expect(pickColorBox!.y).toBeGreaterThan(toolbarBox!.y);
-  expect(
-    Math.abs(pickColorBox!.x + pickColorBox!.width / 2 - (toolbarBox!.x + toolbarBox!.width / 2)),
-  ).toBeLessThan(24);
   await pickColor.click();
+  await expect(page.locator('#pen-menu')).toBeHidden();
   await expect(pickColor).toHaveAttribute('aria-pressed', 'true');
   await page.locator('#scene ellipse[data-id="circle-b"]').click();
   doc = await saved(page);
   expect(doc.nodes.find((n) => n.id === 'rect-a')?.fill).toBe('#0000ff');
-  await pickColor.click();
+  await page.keyboard.press('i');
+  await expect(pickColor).toHaveAttribute('aria-pressed', 'true');
   await page.locator('#scene ellipse[data-id="circle-b"]').click({ modifiers: ['Shift'] });
   doc = await saved(page);
   const target = doc.nodes.find((n) => n.id === 'rect-a')!;
@@ -1389,6 +1384,37 @@ test('the shape menu draws arrows, polygons and ellipses and has keyboard shortc
   expect((await drag(100, 40)).name).toBe('Arrow');
   await page.keyboard.press('r');
   expect((await drag(100, 40)).type).toBe('rectangle');
+});
+
+test('the pen menu switches between pen and pencil and the pencil draws freehand', async ({
+  page,
+}) => {
+  const errors = await open(page, createDocument());
+  const box = (await page.locator('[aria-label="Design canvas"]').boundingBox())!;
+  const menu = page.locator('#pen-menu');
+  await page.getByLabel('Pen options').click();
+  await expect(menu.locator('[data-pen=pen]')).toHaveAttribute('aria-checked', 'true');
+  await expect(menu.getByRole('menuitemcheckbox', { name: 'Pick color' })).toBeVisible();
+  await menu.locator('[data-pen=pencil]').click();
+  await expect(menu).toBeHidden();
+  await expect(page.locator('#pen-tool')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#pen-tool')).toHaveAttribute('title', 'Pencil (Shift+P)');
+  await page.mouse.move(box.x + 300, box.y + 300);
+  await page.mouse.down();
+  for (let i = 1; i <= 20; i++)
+    await page.mouse.move(box.x + 300 + i * 8, box.y + 300 + Math.sin(i / 3) * 40);
+  await page.mouse.up();
+  const node = (await saved(page)).nodes.at(-1)!;
+  expect(node.vector?.closed).toBe(false);
+  expect(node.vector?.rings[0]?.length).toBeGreaterThan(2);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#pen-tool')).toHaveAttribute('aria-pressed', 'false');
+  await page.keyboard.press('Shift+P');
+  await expect(page.locator('#pen-tool')).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('p');
+  await expect(page.locator('#pen-tool')).toHaveAttribute('title', 'Pen (P)');
+  expect(errors).toEqual([]);
 });
 
 test('the Image item and Ctrl+Shift+K open the image picker', async ({ page }) => {

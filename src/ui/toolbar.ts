@@ -76,6 +76,7 @@ export function renderToolbar(el: EditorElements, store: EditorStore): void {
   el.snapGridEnabled.setAttribute('aria-pressed', String(store.gridSnappingEnabled));
   el.snapGridEnabled.classList.toggle('active', store.gridSnappingEnabled);
   el.pickColor.setAttribute('aria-pressed', String(store.canvasColorMode === 'sample'));
+  el.pickColor.setAttribute('aria-checked', String(store.canvasColorMode === 'sample'));
   el.pickColor.classList.toggle('active', store.canvasColorMode === 'sample');
   el.canvas.style.cursor = toolCursor(store);
   el.undo.disabled = !store.history.past.length;

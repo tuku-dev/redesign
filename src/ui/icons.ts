@@ -1,6 +1,7 @@
 // Original outline icons on a shared 24px grid. Color follows the control state.
 const paths = {
   pen: 'M3 21 6 10 14 4 20 10 14 18 3 21Z M3 21l7.5-7.5 M14 4l2-2 6 6-2 2 M13.5 12a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0',
+  pencil: 'M4 20l1-4L16.5 4.5a2 2 0 013 3L8 19zM14 7l3 3',
   path: 'M4 20 7 7 20 4 17 17 Z M7 7 17 17 M4 20 11 13',
   group: 'M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3zM15 15h6v6h-6z',
   lock: 'M7 10V7a5 5 0 0110 0v3M5 10h14v11H5zM12 14v3',

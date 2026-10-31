@@ -152,24 +152,51 @@
                 ><span class="label">Image…</span><kbd>Ctrl+Shift+K</kbd>
               </button>
             </div></span
-          ><button
-            id="pick-color"
-            type="button"
-            title="Pick color"
-            aria-label="Pick color"
-            aria-pressed="false"
-          >
-            <span data-icon="eyedropper"></span></button
           ><button data-tool="ellipse" title="Ellipse (O)" aria-label="Ellipse tool">
             <span data-icon="ellipse"></span></button
-          ><button
-            id="pen-tool"
-            type="button"
-            title="Pen (P)"
-            aria-label="Pen tool"
-            aria-pressed="false"
-          >
-            <span data-icon="pen"></span></button
+          ><span class="tool-group"
+            ><button
+              id="pen-tool"
+              type="button"
+              title="Pen (P)"
+              aria-label="Pen tool"
+              aria-pressed="false"
+            >
+              <span data-icon="pen"></span></button
+            ><button
+              id="pen-menu-toggle"
+              type="button"
+              class="tool-more"
+              title="Pen, pencil and color picker"
+              aria-label="Pen options"
+              aria-haspopup="menu"
+              aria-expanded="false"
+              aria-controls="pen-menu"
+            >
+              <span data-icon="chevronUp"></span>
+            </button>
+            <div id="pen-menu" class="shape-menu" role="menu" aria-label="Pen" hidden>
+              <button type="button" role="menuitemradio" data-pen="pen">
+                <span class="check" data-icon="check"></span><span data-icon="pen"></span
+                ><span class="label">Pen</span><kbd>P</kbd>
+              </button>
+              <button type="button" role="menuitemradio" data-pen="pencil">
+                <span class="check" data-icon="check"></span><span data-icon="pencil"></span
+                ><span class="label">Pencil</span><kbd>Shift+P</kbd>
+              </button>
+              <button
+                id="pick-color"
+                type="button"
+                role="menuitemcheckbox"
+                title="Pick color (I)"
+                aria-label="Pick color"
+                aria-pressed="false"
+                aria-checked="false"
+              >
+                <span class="check" data-icon="check"></span><span data-icon="eyedropper"></span
+                ><span class="label">Pick color</span><kbd>I</kbd>
+              </button>
+            </div></span
           ><button
             id="direct-select"
             type="button"
@@ -207,8 +234,8 @@
         <div class="shortcuts">
           <strong>Keyboard shortcuts</strong>
           <p>
-            V Move · F Frame · R Rectangle<br />L Line · Shift+L Arrow · O Ellipse<br />T Text · H
-            Hand · Ctrl+Shift+K Image
+            V Move · F Frame · R Rectangle<br />L Line · Shift+L Arrow · O Ellipse<br />P Pen ·
+            Shift+P Pencil · I Pick color<br />T Text · H Hand · Ctrl+Shift+K Image
           </p>
           <p>
             Shift-click Multi-select · Drag Marquee<br />Ctrl+A Select all · Ctrl+D Duplicate<br />Ctrl+C
