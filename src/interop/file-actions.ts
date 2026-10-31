@@ -9,6 +9,7 @@ import type { Notify } from '../ui/notifications.ts';
 import { requestDownloadName } from '../ui/save-dialog.ts';
 import { downloadFile } from './download.ts';
 import { exportSvg } from './svg-export.ts';
+import { rejectBinaryDocument } from './fig-container.ts';
 import { bindDocuments } from '../ui/documents.ts';
 interface OpenDocumentHandle extends DocumentFileHandle {
   getFile(): Promise<File>;
@@ -109,6 +110,7 @@ export function bindFileActions(
   });
   async function openFile(file: File, handle: DocumentFileHandle | null = null): Promise<void> {
     if (file.size > 100 * 1024 * 1024) throw new Error('File exceeds the 100 MB limit.');
+    await rejectBinaryDocument(file);
     const next = validateDocument(JSON.parse(await file.text()));
     prepareSave();
     next.name = documentNameFromFile(file.name);

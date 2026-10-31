@@ -329,3 +329,17 @@ test('Ctrl+Shift+S opens the app download dialog without using a browser prompt'
   expect(dialogs).toEqual([]);
   expect(errors).toEqual([]);
 });
+
+test('opening a .fig file reports that it is unsupported and keeps the document', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const before = await page.locator('#documents .document-row').count();
+  await page.locator('#file').setInputFiles({
+    name: 'design.fig',
+    mimeType: 'application/octet-stream',
+    buffer: Buffer.from('fig-kiwi\u0000\u0000\u0000\u0000'),
+  });
+  await expect(page.locator('#toast')).toContainText('.fig files are not supported');
+  await expect(page.locator('#documents .document-row')).toHaveCount(before);
+});

@@ -147,7 +147,7 @@ Status updated on 2026-10-31. **Basic** means an implementation exists but brows
 | --- | --- | --- |
 | IO-01 | Native reDesign files | Basic; editable versioned JSON round trip |
 | IO-02 | Native Figma import | Research; identify codec and preserve supported semantics |
-| IO-03 | Native Figma export | Research; genuine `.fig` accepted and editable in Figma |
+| IO-03 | Native Figma export | Research; Open detects `.fig` (fig-kiwi header or ZIP) and reports a clear unsupported message instead of a JSON error; no codec exists; genuine `.fig` accepted and editable in Figma |
 | IO-04 | Bidirectional round trips | Pending; edits preserved through both application journeys |
 | IO-05 | SVG export | Basic; whole document; Figma import and visual checks pending |
 | IO-06 | SVG import | Pending; safe parsing and editable path/paint conversion |
