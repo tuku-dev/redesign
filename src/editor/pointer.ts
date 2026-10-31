@@ -5,6 +5,7 @@ import type { EditorElements } from '../ui/elements.ts';
 import { errorMessage } from '../ui/elements.ts';
 import type { Notify } from '../ui/notifications.ts';
 import { isResizeHandle } from '../render/selection-overlay.ts';
+import { pointerCursor, rotateCursor, toolCursor } from '../render/cursors.ts';
 import { cornerRadii } from '../model/geometry.ts';
 import { center, rotatePoint } from '../model/rotation.ts';
 import { isLocked } from '../model/layer-state.ts';
@@ -26,6 +27,15 @@ export function bindPointer(
     return viewport.point({ x: e.clientX, y: e.clientY }, { x: r.left, y: r.top });
   };
   let lastCornerClick: { key: string; time: number } | undefined;
+  const setDragCursor = (value: string | null) => {
+    if (value) {
+      canvas.style.setProperty('--drag-cursor', value);
+      canvas.setAttribute('data-drag-cursor', '');
+    } else {
+      canvas.style.removeProperty('--drag-cursor');
+      canvas.removeAttribute('data-drag-cursor');
+    }
+  };
   let cornerDrag:
     | {
         before: DesignDocument;
@@ -114,6 +124,7 @@ export function bindPointer(
     canvas.setPointerCapture(e.pointerId);
     const p = local(e);
     if (store.space || store.tool === 'hand' || e.button === 1) {
+      setDragCursor('grabbing');
       gestures.startPan({ x: e.clientX, y: e.clientY });
       return;
     }
@@ -141,7 +152,7 @@ export function bindPointer(
             (lastCornerClick?.key === key && Date.now() - lastCornerClick.time < 500) || selected;
         lastCornerClick = undefined;
         if (individual) store.cornerRadiusVertex = { ring, index };
-        canvas.style.cursor = 'crosshair';
+        setDragCursor(pointerCursor);
         cornerDrag = {
           before: clone(store.doc),
           pointerId: e.pointerId,
@@ -189,7 +200,7 @@ export function bindPointer(
           };
         lastCornerClick = undefined;
         if (individual) store.cornerRadiusCorner = cornerName;
-        canvas.style.cursor = 'crosshair';
+        setDragCursor(pointerCursor);
         cornerDrag = {
           before: clone(store.doc),
           pointerId: e.pointerId,
@@ -207,6 +218,7 @@ export function bindPointer(
       }
     }
     if (target?.closest('[data-rotate]')) {
+      setDragCursor(rotateCursor);
       gestures.startRotate(p);
       return;
     }
@@ -282,15 +294,11 @@ export function bindPointer(
     );
   });
   const resetPointerCursor = () => {
-    canvas.style.cursor = store.canvasColorMode
-      ? 'crosshair'
-      : store.tool === 'hand'
-        ? 'grab'
-        : store.tool === 'select'
-          ? 'default'
-          : 'crosshair';
+    setDragCursor(null);
+    canvas.style.cursor = toolCursor(store);
   };
   canvas.addEventListener('pointerup', () => {
+    setDragCursor(null);
     if (cornerDrag) {
       finishCornerDrag(false);
       resetPointerCursor();
@@ -303,12 +311,14 @@ export function bindPointer(
     }
   });
   canvas.addEventListener('pointercancel', () => {
+    setDragCursor(null);
     if (cornerDrag) {
       finishCornerDrag(true);
       resetPointerCursor();
     } else gestures.cancel();
   });
   canvas.addEventListener('lostpointercapture', () => {
+    setDragCursor(null);
     if (cornerDrag) {
       finishCornerDrag(true);
       resetPointerCursor();

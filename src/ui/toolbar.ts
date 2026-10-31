@@ -5,6 +5,7 @@ import type { ViewportController } from '../editor/viewport.ts';
 import type { EditingCommands } from '../commands/editing.ts';
 import type { EditorElements } from './elements.ts';
 import type { Notify } from './notifications.ts';
+import { toolCursor } from '../render/cursors.ts';
 export function isTool(value: string | undefined): value is Tool {
   return (
     value !== undefined &&
@@ -73,13 +74,7 @@ export function renderToolbar(el: EditorElements, store: EditorStore): void {
   el.snapGridEnabled.classList.toggle('active', store.gridSnappingEnabled);
   el.pickColor.setAttribute('aria-pressed', String(store.canvasColorMode === 'sample'));
   el.pickColor.classList.toggle('active', store.canvasColorMode === 'sample');
-  el.canvas.style.cursor = store.canvasColorMode
-    ? 'crosshair'
-    : store.tool === 'hand'
-      ? 'grab'
-      : store.tool === 'select'
-        ? 'default'
-        : 'crosshair';
+  el.canvas.style.cursor = toolCursor(store);
   el.undo.disabled = !store.history.past.length;
   el.redo.disabled = !store.history.future.length;
 }

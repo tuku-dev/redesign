@@ -10,6 +10,7 @@ import { actionButton } from './action-button.ts';
 import { cornerRadii } from '../model/geometry.ts';
 import { bindNumberScrub } from './numeric-scrub.ts';
 import { createIcon } from './icons.ts';
+import { toolCursor } from '../render/cursors.ts';
 import type { IconName } from './icons.ts';
 import type { CornerName } from '../model/types.ts';
 import { bindColorPreview } from './color-preview.ts';
@@ -164,7 +165,7 @@ export function renderProperties(
           store.canvasColorMode = store.canvasColorMode === mode ? null : mode;
           store.canvasPaintColor = input.value;
           store.refresh('all');
-          if (store.canvasColorMode) canvas.style.cursor = 'crosshair';
+          if (store.canvasColorMode) canvas.style.cursor = toolCursor(store);
         };
         wrap.append(button);
       }

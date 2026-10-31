@@ -102,7 +102,7 @@ test('numeric labels scrub dimensions and corner radius controls edit individual
   await select(page, 'rect-a');
   await expect(page.locator('[data-corner-radius="topLeft"]')).toHaveAttribute(
     'cursor',
-    'crosshair',
+    /data:image\/svg\+xml/,
   );
   await expect(page.locator('[data-corner-radius="topLeft"] title')).toHaveText(
     'Drag to round corners. Double-click for one corner.',
@@ -271,7 +271,7 @@ test('canvas fill and pick color tools apply fill and shift-click stroke', async
   const fill = page.getByLabel('Fill', { exact: true });
   await fill.fill('#00ff00');
   await page.getByRole('button', { name: 'Apply fill' }).click();
-  await expect(page.locator('#canvas')).toHaveCSS('cursor', 'crosshair');
+  await expect(page.locator('#canvas')).toHaveCSS('cursor', /data:image\/svg\+xml/);
   await page.locator('#scene ellipse[data-id="circle-b"]').click();
   let doc = await saved(page);
   expect(doc.nodes.find((n) => n.id === 'circle-b')?.fill).toBe('#00ff00');

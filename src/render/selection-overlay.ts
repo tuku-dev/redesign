@@ -6,6 +6,7 @@ import type { Box, ResizeHandle } from '../model/types.ts';
 import type { EditorStore } from '../editor/store.ts';
 import type { GestureController } from '../editor/gestures.ts';
 import { svg } from './svg.ts';
+import { pointerCursor, rotateCursor } from './cursors.ts';
 import type { SvgAttributes } from './svg.ts';
 import { renderGuides } from './guides.ts';
 import { cornerRadii } from '../model/geometry.ts';
@@ -95,7 +96,7 @@ export function renderSelection(
           stroke: 'var(--accent)',
           'stroke-width': 1 / zoom,
           'data-rotate': 'true',
-          cursor: 'grab',
+          cursor: rotateCursor,
         }),
       );
       const addHandle = (cx: number, cy: number, selected: boolean, attrs: SvgAttributes) => {
@@ -105,7 +106,7 @@ export function renderSelection(
             r: (selected ? 5.5 : 4.5) / zoom,
             fill: 'var(--radius-handle)',
             'data-selected': String(selected),
-            cursor: 'crosshair',
+            cursor: pointerCursor,
             ...attrs,
           }),
           title = svg('title');

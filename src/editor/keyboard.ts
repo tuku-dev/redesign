@@ -24,8 +24,11 @@ export function bindKeyboard(
       return;
     }
     if (e.code === 'Space') {
-      store.space = true;
       e.preventDefault();
+      if (!store.space) {
+        store.space = true;
+        store.refresh();
+      }
       return;
     }
     if (gestures.active) {
@@ -90,10 +93,14 @@ export function bindKeyboard(
     }
   });
   document.addEventListener('keyup', (e) => {
-    if (e.code === 'Space') store.space = false;
+    if (e.code === 'Space') {
+      store.space = false;
+      store.refresh();
+    }
   });
   window.addEventListener('blur', () => {
     store.space = false;
+    store.refresh();
     gestures.cancel();
   });
 }

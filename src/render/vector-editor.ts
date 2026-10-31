@@ -1,5 +1,6 @@
 ﻿import type { VectorPoint } from '../model/features.ts';
 import { svg } from './svg.ts';
+import { pointerCursor } from './cursors.ts';
 /** Screen-sized anchors and tangent handles for both the pen draft and vector editing. */
 export function renderVectorPoints(
   group: SVGElement,
@@ -36,7 +37,7 @@ export function renderVectorPoints(
                   'data-vector-ring': r,
                   'data-vector-point': i,
                   'data-vector-handle': side,
-                  style: 'cursor:move',
+                  cursor: pointerCursor,
                 }
               : { 'pointer-events': 'none' }),
           }),
@@ -59,7 +60,7 @@ export function renderVectorPoints(
                 'data-vector-ring': r,
                 'data-vector-point': i,
                 'data-vector-anchor': 'true',
-                style: 'cursor:move',
+                cursor: pointerCursor,
               }
             : { 'pointer-events': 'none' }),
         }),

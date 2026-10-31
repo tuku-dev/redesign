@@ -6,6 +6,7 @@ import type { Notify } from './notifications.ts';
 import type { Point, DesignDocument } from '../model/types.ts';
 import type { VectorPoint } from '../model/features.ts';
 import { clone } from '../model/types.ts';
+import { toolCursor } from '../render/cursors.ts';
 import { rotatePoint, center } from '../model/rotation.ts';
 import { isLocked, isHidden } from '../model/layer-state.ts';
 import { bezierPathData, mapVectorPoint, moveAnchor, moveHandle } from '../model/bezier.ts';
@@ -126,13 +127,7 @@ export function bindVectorEditor(
       b.setAttribute('aria-pressed', String(active));
     });
     overlay.replaceChildren();
-    el.canvas.style.cursor = drawing
-      ? 'crosshair'
-      : store.tool === 'hand'
-        ? 'grab'
-        : store.tool === 'select'
-          ? 'default'
-          : 'crosshair';
+    el.canvas.style.cursor = toolCursor(store, drawing);
     if (drawing && points.length) {
       const preview = hover && !placing && !ctrlHeld ? [...points, hover] : points;
       overlay.append(
