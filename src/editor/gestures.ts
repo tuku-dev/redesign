@@ -29,7 +29,13 @@ interface BaseGesture {
 export type Gesture = BaseGesture &
   (
     | { kind: 'pan'; pan: Point }
-    | { kind: 'move'; nodes: DesignNode[]; roots: DesignNode[] }
+    | {
+        kind: 'move';
+        nodes: DesignNode[];
+        roots: DesignNode[];
+        moveAxis?: 'x' | 'y';
+        deselectOnClick?: string;
+      }
     | {
         kind: 'rotate';
         nodes: DesignNode[];
@@ -46,7 +52,7 @@ export type Gesture = BaseGesture &
         angle: number;
         pivot: Point;
       }
-    | { kind: 'marquee'; base: Set<string>; box?: Box }
+    | { kind: 'marquee'; base: Set<string>; box?: Box; nested?: boolean }
     | { kind: 'draw' }
   );
 export interface GestureModifiers {
@@ -54,16 +60,17 @@ export interface GestureModifiers {
   center: boolean;
   perfect?: boolean;
   disableSnap?: boolean;
+  deepSelect?: boolean;
 }
 export class GestureController {
   active: Gesture | null = null;
   guides: Guide[] = [];
   measurements: Measurement[] = [];
   constructor(private readonly store: EditorStore) {}
-  private base(start: Point): BaseGesture {
+  private base(start: Point, selection = this.store.selected): BaseGesture {
     this.guides = [];
     this.measurements = [];
-    return { before: clone(this.store.doc), selection: new Set(this.store.selected), start };
+    return { before: clone(this.store.doc), selection: new Set(selection), start };
   }
   private roots(): DesignNode[] {
     const s = this.store;
@@ -120,29 +127,43 @@ export class GestureController {
   }
   startSelection(point: Point, id: string | null, additive: boolean, deep = false): void {
     const s = this.store;
+    const previousSelection = new Set(s.selected);
+    let nestedMarquee = false;
     if (id) {
       const n = s.doc.nodes.find((n) => n.id === id);
       if (!n || isLocked(s.doc, n) || isHidden(s.doc, n)) return;
-      id = groupedTarget(s.doc, id, deep);
+      if (n.type === 'frame' && !s.selected.has(id) && !deep) {
+        nestedMarquee = true;
+        id = null;
+      } else if (!s.selected.has(id) || deep) id = groupedTarget(s.doc, id, deep);
     }
     if (id) {
+      const deselectOnClick = additive && s.selected.has(id) ? id : undefined;
       s.selected = additive
-        ? toggleId(s.selected, id)
+        ? deselectOnClick
+          ? s.selected
+          : toggleId(s.selected, id)
         : s.selected.has(id)
           ? s.selected
           : new Set([id]);
       if (s.selected.has(id)) {
         const roots = this.roots();
         this.active = {
-          ...this.base(point),
+          ...this.base(point, previousSelection),
           kind: 'move',
           roots,
           nodes: clone(descendants(s.doc, new Set(roots.map((n) => n.id)))),
+          deselectOnClick,
         };
       }
     } else {
       const base = additive ? new Set(s.selected) : new Set<string>();
-      this.active = { ...this.base(point), kind: 'marquee', base };
+      this.active = {
+        ...this.base(point, previousSelection),
+        kind: 'marquee',
+        base,
+        nested: nestedMarquee,
+      };
       s.selected = new Set(base);
     }
     s.refresh();
@@ -160,25 +181,39 @@ export class GestureController {
     else s.refresh();
   }
   move(point: Point, client: Point, modifiers: GestureModifiers): void {
-    const g = this.active,
-      s = this.store;
+    const g = this.active;
+    const s = this.store;
     if (!g) return;
     this.guides = [];
     this.measurements = [];
     if (g.kind === 'pan')
       s.pan = { x: g.pan.x + client.x - g.start.x, y: g.pan.y + client.y - g.start.y };
     else if (g.kind === 'move') {
+      const pointerDx = point.x - g.start.x,
+        pointerDy = point.y - g.start.y;
+      if (Math.hypot(pointerDx, pointerDy) * s.zoom < 3) return;
+      if (modifiers.aspect) {
+        g.moveAxis ??= Math.abs(pointerDx) >= Math.abs(pointerDy) ? 'x' : 'y';
+      } else g.moveAxis = undefined;
+      const dx = g.moveAxis === 'y' ? 0 : pointerDx,
+        dy = g.moveAxis === 'x' ? 0 : pointerDy;
       const box = bounds(g.roots.map(visualBox));
       if (box) {
         const result = snapTranslation(
           box,
           this.candidates(g),
-          Math.round(point.x - g.start.x),
-          Math.round(point.y - g.start.y),
+          Math.round(dx),
+          Math.round(dy),
           s.zoom,
           s.snappingEnabled && !modifiers.disableSnap,
           s.gridSnappingEnabled && !modifiers.disableSnap ? s.snapGridSize : undefined,
         );
+        if (g.moveAxis === 'x') result.dy = 0;
+        if (g.moveAxis === 'y') result.dx = 0;
+        if (g.moveAxis) {
+          result.guides = result.guides.filter((guide) => guide.axis === g.moveAxis);
+          result.measurements = [];
+        }
         translateNodes(s.doc, g.nodes, result.dx, result.dy);
         this.guides = result.guides;
         this.measurements = result.measurements;
@@ -253,7 +288,14 @@ export class GestureController {
         ...g.base,
         ...marqueeIds(
           s.doc.nodes
-            .filter((n) => !isLocked(s.doc, n) && !isHidden(s.doc, n))
+            .filter(
+              (n) =>
+                !isLocked(s.doc, n) &&
+                !isHidden(s.doc, n) &&
+                (g.nested
+                  ? n.parentId !== null && n.type !== 'frame' && n.type !== 'group'
+                  : n.parentId === null),
+            )
             .flatMap((n) => {
               const box = clippedVisualBox(s.doc, n);
               return box ? [{ ...n, ...box }] : [];
@@ -293,6 +335,12 @@ export class GestureController {
     if (g.kind === 'pan' || g.kind === 'marquee') this.store.refresh();
     else {
       try {
+        if (
+          g.kind === 'move' &&
+          g.deselectOnClick &&
+          JSON.stringify(g.before) === JSON.stringify(this.store.doc)
+        )
+          this.store.selected.delete(g.deselectOnClick);
         if (
           JSON.stringify(g.before) !== JSON.stringify(this.store.doc) &&
           (g.kind === 'move' || g.kind === 'draw')

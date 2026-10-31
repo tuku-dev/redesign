@@ -16,6 +16,10 @@ Use **Insert image**, drop raster files onto the canvas, or select a frame, rect
 
 Expand **Tools & resources** and choose **Show rulers** (Shift+R). Drag from a ruler to create a guide, drag guides to move them, double-click to remove, or use numeric guide controls. Escape cancels a drag. Visible guides participate in geometry snapping; Ctrl bypasses snapping. Select a frame to show a square, column or row layout grid in the inspector. Rulers, guides and frame grids are editor overlays and excluded from exports. Guides are currently document-wide.
 
+## Selecting nested layers
+
+Clicking a layer on the canvas selects that layer directly (grouped layers select as one unit). Clicking or dragging on the blank area of a frame does not select or move the frame; dragging there draws a marquee that selects the objects inside it. Right-click the blank area of a frame, or pick it in the Layers panel, to select the frame; once selected, drag it to move. Shift-click toggles individual layers, and Shift-drag moves in a straight line. Locking a frame also locks its descendants, matching Figma behavior.
+
 ## Numeric controls and corner radii
 
 Drag horizontally on a numeric field's label to scrub its value. Hold Shift for larger steps or Alt for finer steps; click the field to type a value. Only rectangles and frames expose corner-radius fields and canvas handles. The hollow canvas handles use the blue `#10a1cf` accent. Drag diagonally to change all corners together; double-click a handle to select that corner, then drag diagonally to adjust it alone. Setting the uniform radius links all corners again.

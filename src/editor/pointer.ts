@@ -227,12 +227,9 @@ export function bindPointer(
       return;
     }
     if (store.tool === 'select') {
-      gestures.startSelection(
-        p,
-        target?.closest('[data-id]')?.getAttribute('data-id') ?? null,
-        e.shiftKey,
-        e.ctrlKey || e.metaKey,
-      );
+      const id = target?.closest('[data-id]')?.getAttribute('data-id') ?? null,
+        deepSelect = e.ctrlKey || e.metaKey;
+      gestures.startSelection(p, id, e.shiftKey, deepSelect);
       return;
     }
     const text = store.tool === 'text';
@@ -290,7 +287,12 @@ export function bindPointer(
     gestures.move(
       local(e),
       { x: e.clientX, y: e.clientY },
-      { aspect: e.shiftKey, center: e.altKey, perfect: e.ctrlKey, disableSnap: e.ctrlKey },
+      {
+        aspect: e.shiftKey,
+        center: e.altKey,
+        perfect: e.ctrlKey,
+        disableSnap: e.ctrlKey || e.metaKey,
+      },
     );
   });
   const resetPointerCursor = () => {

@@ -42,8 +42,8 @@ Status updated on 2026-10-31. **Basic** means an implementation exists but brows
 | ID | Functionality | Status / required behavior |
 | --- | --- | --- |
 | EDIT-01 | Single selection | Basic; canvas and layer list |
-| EDIT-02 | Multiple selection | Basic; Shift toggle, intersection marquee, Shift-add and Ctrl/Cmd+A |
-| EDIT-03 | Nested selection | Basic; Ctrl/Cmd-click group drilling, parent/child selection, bounding-box Select layer menu |
+| EDIT-02 | Multiple selection | Basic; Shift toggle, top-level intersection marquee, drag on frame background marquee-selects nested objects, Shift-add and Ctrl/Cmd+A |
+| EDIT-03 | Nested selection | Basic; click selects child directly, right-click on frame background selects the frame, bounding-box Select layer menu |
 | EDIT-04 | Move and nudge | Basic; drag, arrows, Shift for 10px |
 | EDIT-05 | Resize | Basic; eight handles, multi-layer bounds, Shift aspect lock and Alt center resize; text metrics remain limited |
 | EDIT-06 | Rotation, flips and scale | Partial; subtree rotation handle/Angle field, 15-degree Shift snapping, rotated resizing and context-menu 90°/180° rotation plus horizontal/vertical flips; full scale transforms pending |

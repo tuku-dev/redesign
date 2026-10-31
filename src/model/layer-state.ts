@@ -22,11 +22,10 @@ export function editableNodes(doc: DesignDocument, ids: ReadonlySet<string>): De
 export function groupedTarget(doc: DesignDocument, id: string, deep = false): string {
   if (deep) return id;
   const byId = new Map(doc.nodes.map((n) => [n.id, n]));
-  let n = byId.get(id),
-    target = id;
-  while (n?.parentId) {
-    n = byId.get(n.parentId);
-    if (n?.type === 'group') target = n.id;
+  let target = id;
+  for (let p = byId.get(byId.get(id)?.parentId ?? ''); p?.type === 'group';) {
+    target = p.id;
+    p = byId.get(p.parentId ?? '');
   }
   return target;
 }

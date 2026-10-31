@@ -57,6 +57,63 @@ const select = (page: Page, id: string) =>
 const tools = (page: Page) => page.getByText('Tools & resources', { exact: true }).click();
 const saved = (page: Page) =>
   page.evaluate(() => JSON.parse(localStorage.getItem('redesign.document')!) as DesignDocument);
+test('clicking a child selects it and right-clicking frame background selects the frame', async ({
+  page,
+}) => {
+  const errors = await open(page);
+  await page.locator('#scene [data-id="rect-a"]').first().click();
+  await expect(page.locator('#layers .layer.active')).toHaveAttribute('data-layer-id', 'rect-a');
+  const box = await page.locator('#scene rect[data-id="screen-a"]').first().boundingBox();
+  if (!box) throw new Error('Frame shape is not visible.');
+  await page.mouse.click(box.x + box.width * 0.9, box.y + box.height * 0.9, { button: 'right' });
+  await expect(page.locator('#layers .layer.active')).toHaveAttribute('data-layer-id', 'screen-a');
+  expect(errors).toEqual([]);
+});
+test('dragging on a frame background marquee-selects nested layers', async ({ page }) => {
+  const errors = await open(page),
+    frame = page.locator('#scene rect[data-id="screen-a"]').first(),
+    box = await frame.boundingBox();
+  if (!box) throw new Error('Frame shape is not visible.');
+  await page.mouse.move(box.x + box.width * 0.8, box.y + box.height * 0.8);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.2, box.y + box.height * 0.2, { steps: 8 });
+  await page.mouse.up();
+  await expect(page.locator('#layers .layer.active')).toHaveCount(2);
+  await expect(page.locator('#layers .layer.active[data-layer-id="screen-a"]')).toHaveCount(0);
+  await expect(page.locator('#layers .layer.active[data-layer-id="rect-a"]')).toHaveCount(1);
+  await expect(page.locator('#layers .layer.active[data-layer-id="circle-b"]')).toHaveCount(1);
+  expect(errors).toEqual([]);
+});
+test('Shift-drag moves selected nested objects in a straight line', async ({ page }) => {
+  const errors = await open(page),
+    frame = page.locator('#scene rect[data-id="screen-a"]').first(),
+    frameBox = await frame.boundingBox();
+  if (!frameBox) throw new Error('Frame shape is not visible.');
+  await page.mouse.move(frameBox.x + frameBox.width * 0.8, frameBox.y + frameBox.height * 0.8);
+  await page.mouse.down();
+  await page.mouse.move(frameBox.x + frameBox.width * 0.2, frameBox.y + frameBox.height * 0.2, {
+    steps: 8,
+  });
+  await page.mouse.up();
+  await expect(page.locator('#layers .layer.active')).toHaveCount(2);
+  const rect = page.locator('#scene rect[data-id="rect-a"]').first(),
+    rectBox = await rect.boundingBox();
+  if (!rectBox) throw new Error('Nested rectangle is not visible.');
+  await page.keyboard.down('Shift');
+  await page.mouse.move(rectBox.x + 20, rectBox.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(rectBox.x + 80, rectBox.y + 55, { steps: 8 });
+  await page.mouse.up();
+  await page.keyboard.up('Shift');
+  const doc = await saved(page),
+    card = doc.nodes.find((node) => node.id === 'rect-a')!,
+    badge = doc.nodes.find((node) => node.id === 'circle-b')!;
+  expect(card.x).toBe(120);
+  expect(card.y).toBe(60);
+  expect(badge.x).toBe(240);
+  expect(badge.y).toBe(60);
+  expect(errors).toEqual([]);
+});
 test('layers can be reordered by dragging within a parent and undone', async ({ page }) => {
   const errors = await open(page);
   await page

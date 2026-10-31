@@ -6,6 +6,7 @@ import { descendants, hierarchyRows, selectionRoots } from '../src/model/hierarc
 import { EditorStore } from '../src/editor/store.ts';
 import { GestureController } from '../src/editor/gestures.ts';
 import { EditingCommands } from '../src/commands/editing.ts';
+import { SelectionCommands } from '../src/commands/selection.ts';
 import { encodeClipboard, decodeClipboard } from '../src/interop/clipboard-codec.ts';
 import { ClipboardController } from '../src/interop/clipboard-controller.ts';
 const modifiers = { aspect: false, center: false };
@@ -51,6 +52,7 @@ function setup() {
 test('moving a frame carries every descendant exactly once and undo restores the subtree', () => {
   const { store, gestures, frame } = setup(),
     before = clone(store.doc);
+  store.selected = new Set([frame.id]);
   gestures.startSelection({ x: 0, y: 0 }, frame.id, false);
   gestures.move({ x: 10, y: 20 }, { x: 10, y: 20 }, modifiers);
   gestures.move({ x: 40, y: 60 }, { x: 40, y: 60 }, modifiers);
@@ -65,6 +67,84 @@ test('moving a frame carries every descendant exactly once and undo restores the
   assert.deepEqual(store.doc, before);
   store.redo();
   assert.equal(store.doc.nodes[3].x, before.nodes[3].x + 40);
+});
+test('clicking a child selects it directly and never selects its frame', () => {
+  const { store, gestures, square, circle } = setup();
+  store.selected.clear();
+  gestures.startSelection({ x: 30, y: 40 }, square.id, false);
+  assert.deepEqual([...store.selected], [square.id]);
+  gestures.finish();
+  store.selected.clear();
+  gestures.startSelection({ x: 130, y: 130 }, circle.id, false);
+  assert.deepEqual([...store.selected], [circle.id]);
+  gestures.finish();
+});
+test('dragging on an unselected frame blank area marquee-selects inner objects and does not move it', () => {
+  const { store, gestures, frame, square } = setup(),
+    before = clone(frame);
+  store.selected.clear();
+  gestures.startSelection({ x: 10, y: 10 }, frame.id, false);
+  gestures.move({ x: 90, y: 90 }, { x: 90, y: 90 }, modifiers);
+  assert.deepEqual([...store.selected], [square.id]);
+  gestures.finish();
+  assert.deepEqual(store.doc.nodes[0], before);
+});
+test('right-click on a frame blank area selects the frame', () => {
+  const { store, frame } = setup();
+  store.selected.clear();
+  new SelectionCommands(store).context(frame.id);
+  assert.deepEqual([...store.selected], [frame.id]);
+});
+test('clicking an already-selected nested object preserves the multi-selection', () => {
+  const { store, gestures, square, circle } = setup();
+  store.selected = new Set([square.id, circle.id]);
+  gestures.startSelection({ x: 30, y: 40 }, square.id, false);
+  assert.deepEqual([...store.selected], [square.id, circle.id]);
+  gestures.cancel();
+});
+test('Shift-click removes a selected layer but Shift-drag moves the full selection', () => {
+  const { store, gestures, square, circle } = setup();
+  store.selected = new Set([square.id, circle.id]);
+  gestures.startSelection({ x: 30, y: 40 }, square.id, true, true);
+  gestures.finish();
+  assert.deepEqual([...store.selected], [circle.id]);
+
+  store.selected = new Set([square.id, circle.id]);
+  gestures.startSelection({ x: 30, y: 40 }, square.id, true, true);
+  gestures.move({ x: 70, y: 60 }, { x: 70, y: 60 }, { ...modifiers, aspect: true });
+  gestures.finish();
+  assert.equal(store.doc.nodes.find((node) => node.id === square.id)?.x, square.x + 40);
+  assert.equal(store.doc.nodes.find((node) => node.id === square.id)?.y, square.y);
+  assert.equal(store.doc.nodes.find((node) => node.id === circle.id)?.x, circle.x + 40);
+  assert.equal(store.doc.nodes.find((node) => node.id === circle.id)?.y, circle.y);
+});
+test('sub-threshold pointer jitter does not move a selected frame', () => {
+  const { store, gestures, frame } = setup(),
+    before = clone(frame);
+  store.selected = new Set([frame.id]);
+  gestures.startSelection({ x: 20, y: 20 }, frame.id, false);
+  gestures.move({ x: 22, y: 21 }, { x: 22, y: 21 }, modifiers);
+  gestures.finish();
+  assert.deepEqual(store.doc.nodes[0], before);
+  assert.equal(store.history.past.length, 0);
+});
+test('Shift constrains multi-layer movement to the dominant axis', () => {
+  const { store, gestures, square, circle } = setup();
+  store.selected = new Set([square.id, circle.id]);
+  const before = clone(store.doc);
+  gestures.startSelection({ x: 20, y: 30 }, square.id, true, true);
+  gestures.move({ x: 60, y: 50 }, { x: 60, y: 50 }, { ...modifiers, aspect: true });
+  assert.equal(store.doc.nodes.find((node) => node.id === square.id)?.x, before.nodes[1].x + 40);
+  assert.equal(store.doc.nodes.find((node) => node.id === square.id)?.y, before.nodes[1].y);
+  assert.equal(store.doc.nodes.find((node) => node.id === circle.id)?.x, before.nodes[3].x + 40);
+  assert.equal(store.doc.nodes.find((node) => node.id === circle.id)?.y, before.nodes[3].y);
+  gestures.cancel();
+
+  gestures.startSelection({ x: 20, y: 30 }, square.id, true, true);
+  gestures.move({ x: 30, y: 70 }, { x: 30, y: 70 }, { ...modifiers, aspect: true });
+  assert.equal(store.doc.nodes.find((node) => node.id === square.id)?.x, before.nodes[1].x);
+  assert.equal(store.doc.nodes.find((node) => node.id === square.id)?.y, before.nodes[1].y + 40);
+  gestures.cancel();
 });
 test('frame plus child selection does not double-move descendants during nudge or numeric editing', () => {
   const { store, commands, frame, square, circle } = setup();
@@ -107,16 +187,16 @@ test('drawing inside a frame assigns parent and drawing a frame around root obje
 test('dragging a layer out of and into a frame reparents it and cancellation restores ownership', () => {
   const { store, gestures, square, frame } = setup();
   store.selected = new Set([square.id]);
-  gestures.startSelection({ x: 20, y: 30 }, square.id, false);
+  gestures.startSelection({ x: 20, y: 30 }, square.id, false, true);
   gestures.move({ x: 800, y: 500 }, { x: 800, y: 500 }, modifiers);
   gestures.finish();
   assert.equal(store.current()?.parentId, null);
-  gestures.startSelection({ x: 800, y: 500 }, square.id, false);
+  gestures.startSelection({ x: 800, y: 500 }, square.id, false, true);
   gestures.move({ x: 20, y: 30 }, { x: 20, y: 30 }, modifiers);
   gestures.finish();
   assert.equal(store.current()?.parentId, frame.id);
   const before = clone(store.doc);
-  gestures.startSelection({ x: 20, y: 30 }, square.id, false);
+  gestures.startSelection({ x: 20, y: 30 }, square.id, false, true);
   gestures.move({ x: 800, y: 500 }, { x: 800, y: 500 }, modifiers);
   gestures.cancel();
   assert.deepEqual(store.doc, before);
