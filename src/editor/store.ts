@@ -26,6 +26,7 @@ export class EditorStore {
   editingTextId: string | null = null;
   editingVectorId: string | null = null;
   cornerRadiusCorner: CornerName | null = null;
+  cornerRadiusVertex: { ring: number; index: number } | null = null;
   readonly history = new History();
   private readonly listeners = new Set<(update: EditorUpdate) => void>();
   private cornerSelection = '';
@@ -46,7 +47,10 @@ export class EditorStore {
     updateGroupBounds(this.doc);
     this.selected = new Set(this.chosen().map((n) => n.id));
     const selection = [...this.selected].join(',');
-    if (selection !== this.cornerSelection) this.cornerRadiusCorner = null;
+    if (selection !== this.cornerSelection) {
+      this.cornerRadiusCorner = null;
+      this.cornerRadiusVertex = null;
+    }
     this.cornerSelection = selection;
     if (
       this.editingVectorId &&

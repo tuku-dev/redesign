@@ -140,7 +140,7 @@ test('canvas corner handles drag uniformly or select and edit one corner', async
   if (!position) throw new Error('Corner radius handle is not visible.');
   const startX = Number(await topLeft.getAttribute('cx')),
     startY = Number(await topLeft.getAttribute('cy'));
-  await expect(topLeft).toHaveCSS('stroke', 'rgb(16, 161, 207)');
+  await expect(topLeft).toHaveCSS('fill', 'rgb(16, 161, 207)');
   await page.mouse.move(position.x + position.width / 2, position.y + position.height / 2);
   await page.mouse.down();
   await page.mouse.move(
@@ -165,8 +165,7 @@ test('canvas corner handles drag uniformly or select and edit one corner', async
     { clickCount: 2 },
   );
   await expect(updatedHandle).toHaveAttribute('data-selected', 'true');
-  await expect(updatedHandle).toHaveAttribute('fill', 'var(--canvas-bg)');
-  await expect(updatedHandle).toHaveAttribute('stroke', 'var(--radius-handle)');
+  await expect(updatedHandle).toHaveAttribute('fill', 'var(--radius-handle)');
   await page.mouse.move(
     updatedPosition.x + updatedPosition.width / 2,
     updatedPosition.y + updatedPosition.height / 2,
@@ -861,6 +860,57 @@ test('selected vectors enter point editing with Enter or the visible action and 
   await expect(page.locator('[data-vector-anchor]')).toHaveCount(3);
   await page.getByRole('button', { name: 'Done', exact: true }).click();
   await expect(page.locator('[data-vector-anchor]')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+test('custom closed shapes get a radius handle on every corner and the pointer tool swaps with pen', async ({
+  page,
+}) => {
+  const vector = createNode('path', {
+    id: 'corner-vector',
+    x: 120,
+    y: 120,
+    width: 200,
+    height: 180,
+    vector: {
+      closed: true,
+      rings: [
+        [
+          { x: 0, y: 0 },
+          { x: 1, y: 0 },
+          { x: 1, y: 1 },
+          { x: 0, y: 1 },
+        ],
+      ],
+    },
+  });
+  const errors = await open(page, { ...createDocument(), nodes: [vector] });
+  const pen = page.getByRole('button', { name: 'Pen tool', exact: true }),
+    pointer = page.getByRole('button', { name: 'Pointer tool', exact: true });
+  await expect(pointer).toBeHidden();
+  await select(page, vector.id);
+  const handles = page.locator('[data-corner-radius="vertex"]');
+  await expect(handles).toHaveCount(4);
+  const box = (await handles.first().boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 20, box.y + box.height / 2 + 20);
+  await page.mouse.up();
+  const radius = (await saved(page)).nodes[0].radius;
+  expect(radius).toBeGreaterThan(5);
+  await page.keyboard.press('Enter');
+  await expect(handles).toHaveCount(0);
+  await expect(pointer).toBeVisible();
+  await expect(pen).toBeHidden();
+  await pointer.click();
+  await expect(pointer).toBeHidden();
+  await expect(pen).toBeVisible();
+  await pen.click();
+  await page.keyboard.down('Control');
+  await expect(pointer).toBeVisible();
+  await expect(pen).toBeHidden();
+  await page.keyboard.up('Control');
+  await expect(pen).toBeVisible();
+  await expect(pointer).toBeHidden();
   expect(errors).toEqual([]);
 });
 test('double-clicking a reopened curved stroke exposes anchors and tangent handles', async ({

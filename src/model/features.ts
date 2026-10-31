@@ -30,6 +30,8 @@ export interface VectorPoint extends Point {
   in?: Point;
   out?: Point;
   smooth?: boolean;
+  /** Per-corner radius in document units; falls back to the layer radius. */
+  radius?: number;
 }
 export interface VectorPath {
   rings: VectorPoint[][];

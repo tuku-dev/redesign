@@ -9,7 +9,8 @@ import { cornerRadii } from '../model/geometry.ts';
 import { center, rotatePoint } from '../model/rotation.ts';
 import { isLocked } from '../model/layer-state.ts';
 import { defaultAppearance } from '../model/features.ts';
-import type { CornerName, DesignDocument } from '../model/types.ts';
+import type { CornerName, DesignDocument, Point } from '../model/types.ts';
+import { vectorCorners } from '../model/vector.ts';
 import { clone } from '../model/types.ts';
 export function bindPointer(
   el: EditorElements,
@@ -24,13 +25,15 @@ export function bindPointer(
     const r = canvas.getBoundingClientRect();
     return viewport.point({ x: e.clientX, y: e.clientY }, { x: r.left, y: r.top });
   };
-  let lastCornerClick: { corner: CornerName; time: number } | undefined;
+  let lastCornerClick: { key: string; time: number } | undefined;
   let cornerDrag:
     | {
         before: DesignDocument;
         pointerId: number;
         nodeId: string;
-        corner: CornerName;
+        key: string;
+        corner: CornerName | null;
+        vertex?: { ring: number; index: number; direction: Point; sinHalf: number; max: number };
         individual: boolean;
         start: { x: number; y: number };
         direction: { x: number; y: number };
@@ -40,7 +43,7 @@ export function bindPointer(
     | undefined;
   const finishCornerDrag = (cancel: boolean) => {
     if (!cornerDrag) return;
-    const { before, changed, corner, individual } = cornerDrag;
+    const { before, changed, key, individual } = cornerDrag;
     cornerDrag = undefined;
     if (cancel) {
       store.doc = before;
@@ -48,7 +51,7 @@ export function bindPointer(
       return;
     }
     if (!changed) {
-      lastCornerClick = { corner, time: Date.now() };
+      lastCornerClick = { key, time: Date.now() };
       if (!cancel) store.refresh(individual ? 'all' : 'scene');
       return;
     }
@@ -118,6 +121,51 @@ export function bindPointer(
       corner = target?.closest('[data-corner-radius]')?.getAttribute('data-corner-radius'),
       handle = target?.closest('[data-resize]')?.getAttribute('data-resize');
     if (
+      corner === 'vertex' &&
+      store.chosen().length === 1 &&
+      store.current()?.vector?.closed &&
+      !isLocked(store.doc, store.current()!)
+    ) {
+      const node = store.current()!,
+        holder = target!.closest('[data-corner-radius]')!,
+        ring = Number(holder.getAttribute('data-vertex-ring')),
+        index = Number(holder.getAttribute('data-vertex-index')),
+        found = vectorCorners(node).find((c) => c.ring === ring && c.index === index);
+      if (found) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        const key = `vertex:${ring}:${index}`,
+          selected =
+            store.cornerRadiusVertex?.ring === ring && store.cornerRadiusVertex.index === index,
+          individual =
+            (lastCornerClick?.key === key && Date.now() - lastCornerClick.time < 500) || selected;
+        lastCornerClick = undefined;
+        if (individual) store.cornerRadiusVertex = { ring, index };
+        canvas.style.cursor = 'crosshair';
+        cornerDrag = {
+          before: clone(store.doc),
+          pointerId: e.pointerId,
+          nodeId: node.id,
+          key,
+          corner: null,
+          vertex: {
+            ring,
+            index,
+            direction: found.direction,
+            sinHalf: found.sinHalf,
+            max: found.maxRadius,
+          },
+          individual,
+          start: rotatePoint(local(e), center(node), -node.rotation),
+          direction: found.direction,
+          startRadius: found.radius,
+          changed: false,
+        };
+        canvas.setPointerCapture(e.pointerId);
+        return;
+      }
+    }
+    if (
       corner &&
       ['topLeft', 'topRight', 'bottomRight', 'bottomLeft'].includes(corner) &&
       store.chosen().length === 1
@@ -132,7 +180,7 @@ export function bindPointer(
         e.stopImmediatePropagation();
         const cornerName = corner as CornerName,
           isDoubleClick =
-            lastCornerClick?.corner === cornerName && Date.now() - lastCornerClick.time < 500,
+            lastCornerClick?.key === cornerName && Date.now() - lastCornerClick.time < 500,
           individual = isDoubleClick || store.cornerRadiusCorner === cornerName,
           p = rotatePoint(local(e), center(node), -node.rotation),
           direction = {
@@ -146,6 +194,7 @@ export function bindPointer(
           before: clone(store.doc),
           pointerId: e.pointerId,
           nodeId: node.id,
+          key: cornerName,
           corner: cornerName,
           individual,
           start: p,
@@ -186,14 +235,37 @@ export function bindPointer(
     if (cornerDrag?.pointerId === e.pointerId) {
       const node = store.doc.nodes.find((item) => item.id === cornerDrag!.nodeId);
       if (!node) return finishCornerDrag(true);
-      const p = rotatePoint(local(e), center(node), -node.rotation),
-        delta =
+      const p = rotatePoint(local(e), center(node), -node.rotation);
+      if (cornerDrag.vertex) {
+        const { ring, index, direction, sinHalf, max } = cornerDrag.vertex,
+          radius = Math.max(
+            0,
+            Math.min(
+              max,
+              cornerDrag.startRadius +
+                ((p.x - cornerDrag.start.x) * direction.x +
+                  (p.y - cornerDrag.start.y) * direction.y) *
+                  sinHalf,
+            ),
+          );
+        if (cornerDrag.individual) {
+          const point = node.vector?.rings[ring]?.[index];
+          if (point) point.radius = radius;
+        } else {
+          node.radius = radius;
+          node.vector?.rings.forEach((points) => points.forEach((point) => delete point.radius));
+        }
+        cornerDrag.changed = true;
+        store.refresh('all');
+        return;
+      }
+      const delta =
           ((p.x - cornerDrag.start.x) * cornerDrag.direction.x +
             (p.y - cornerDrag.start.y) * cornerDrag.direction.y) /
           Math.SQRT2,
         maximum = Math.min(node.width, node.height) / 2,
         radius = Math.max(0, Math.min(maximum, cornerDrag.startRadius + delta));
-      if (cornerDrag.individual)
+      if (cornerDrag.individual && cornerDrag.corner)
         node.cornerRadii = { ...cornerRadii(node), [cornerDrag.corner]: radius };
       else {
         node.radius = radius;
@@ -245,6 +317,16 @@ export function bindPointer(
   canvas.addEventListener('dblclick', (e) => {
     const target = e.target instanceof Element ? e.target.closest('[data-corner-radius]') : null,
       corner = target?.getAttribute('data-corner-radius');
+    if (corner === 'vertex') {
+      e.preventDefault();
+      e.stopPropagation();
+      store.cornerRadiusVertex = {
+        ring: Number(target!.getAttribute('data-vertex-ring')),
+        index: Number(target!.getAttribute('data-vertex-index')),
+      };
+      store.refresh('scene');
+      return;
+    }
     if (!corner || !['topLeft', 'topRight', 'bottomRight', 'bottomLeft'].includes(corner)) return;
     e.preventDefault();
     e.stopPropagation();

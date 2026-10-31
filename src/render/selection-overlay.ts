@@ -1,4 +1,4 @@
-import { selectionRoots } from '../model/hierarchy.ts';
+﻿import { selectionRoots } from '../model/hierarchy.ts';
 import { bounds } from '../model/geometry.ts';
 import { visualBox, center } from '../model/rotation.ts';
 import { isLocked } from '../model/layer-state.ts';
@@ -9,6 +9,7 @@ import { svg } from './svg.ts';
 import type { SvgAttributes } from './svg.ts';
 import { renderGuides } from './guides.ts';
 import { cornerRadii } from '../model/geometry.ts';
+import { vectorCorners } from '../model/vector.ts';
 export const handles: Record<ResizeHandle, readonly [number, number]> = {
   nw: [0, 0],
   n: [0.5, 0],
@@ -97,6 +98,37 @@ export function renderSelection(
           cursor: 'grab',
         }),
       );
+      const addHandle = (cx: number, cy: number, selected: boolean, attrs: SvgAttributes) => {
+        const hit = svg('circle', {
+            cx,
+            cy,
+            r: (selected ? 5.5 : 4.5) / zoom,
+            fill: 'var(--radius-handle)',
+            'data-selected': String(selected),
+            cursor: 'crosshair',
+            ...attrs,
+          }),
+          title = svg('title');
+        title.textContent = 'Drag to round corners. Double-click for one corner.';
+        hit.append(title);
+        controls.append(
+          hit,
+          svg('circle', {
+            cx,
+            cy,
+            r: (selected ? 3.7 : 3) / zoom,
+            fill: '#fff',
+            'pointer-events': 'none',
+          }),
+          svg('circle', {
+            cx,
+            cy,
+            r: 1.6 / zoom,
+            fill: 'var(--radius-handle)',
+            'pointer-events': 'none',
+          }),
+        );
+      };
       if (single && (single.type === 'rectangle' || single.type === 'frame')) {
         const radii = cornerRadii(single),
           corners = [
@@ -106,23 +138,32 @@ export function renderSelection(
             ['bottomLeft', box.x, box.y + box.height, 1, -1],
           ] as const;
         for (const [corner, x, y, directionX, directionY] of corners) {
-          const diagonal = radii[corner] / Math.SQRT2,
-            inset = 15 / zoom + diagonal,
-            handle = svg('circle', {
-              cx: x + directionX * inset,
-              cy: y + directionY * inset,
-              r: 4 / zoom,
-              fill: 'var(--canvas-bg)',
-              stroke: 'var(--radius-handle)',
-              'stroke-width': (store.cornerRadiusCorner === corner ? 3 : 2) / zoom,
+          const inset = 15 / zoom + radii[corner] / Math.SQRT2;
+          addHandle(
+            x + directionX * inset,
+            y + directionY * inset,
+            store.cornerRadiusCorner === corner,
+            {
               'data-corner-radius': corner,
-              'data-selected': String(store.cornerRadiusCorner === corner),
-              cursor: 'crosshair',
-            }),
-            title = svg('title');
-          title.textContent = 'Drag to round corners. Double-click for one corner.';
-          handle.append(title);
-          controls.append(handle);
+            },
+          );
+        }
+      } else if (single?.vector?.closed) {
+        for (const corner of vectorCorners(single)) {
+          const distance = (15 / zoom + corner.radius) / corner.sinHalf,
+            selected =
+              store.cornerRadiusVertex?.ring === corner.ring &&
+              store.cornerRadiusVertex.index === corner.index;
+          addHandle(
+            corner.point.x + corner.direction.x * distance,
+            corner.point.y + corner.direction.y * distance,
+            selected,
+            {
+              'data-corner-radius': 'vertex',
+              'data-vertex-ring': corner.ring,
+              'data-vertex-index': corner.index,
+            },
+          );
         }
       }
     }

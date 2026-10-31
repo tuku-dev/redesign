@@ -450,6 +450,13 @@ input[type='number'] {
 .toolbar button.active:hover {
   background: var(--accent-hover);
 }
+.toolbar button[hidden] {
+  display: none;
+}
+.toolbar button.active [data-icon='select'] path,
+.toolbar button.active [data-icon='directSelect'] path {
+  fill: currentColor;
+}
 .layer.active .symbol {
   color: var(--accent);
 }

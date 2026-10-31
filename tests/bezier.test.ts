@@ -17,6 +17,7 @@ import {
   normalizeVector,
   shapeRings,
   booleanRings,
+  vectorCorners,
 } from '../src/model/vector.ts';
 import { center, rotatePoint } from '../src/model/rotation.ts';
 import { EditorStore } from '../src/editor/store.ts';
@@ -65,7 +66,7 @@ test('radius rounds straight corners of closed custom shapes and leaves open pat
   const n = createNode('path', { ...vectorFromPoints([square], true), radius: 20 });
   const d = pathData(n);
   assert.equal((d.match(/C /g) ?? []).length, 4);
-  assert.ok(d.startsWith('M 0 20'));
+  assert.match(d, /^M 0 (19\.9999|20)/);
   const rounded = flattenRing(
     [
       { x: 20, y: 0, out: { x: 8.954, y: 0 } },
@@ -76,6 +77,33 @@ test('radius rounds straight corners of closed custom shapes and leaves open pat
   assert.ok(rounded.length > 2);
   const open = createNode('path', { ...vectorFromPoints([square], false), radius: 20 });
   assert.ok(!pathData(open).includes('C '));
+});
+test('corners beside curved segments also round and report a radius handle', () => {
+  const ring: VectorPoint[] = [
+    { x: 0, y: 0, out: { x: 60, y: -40 } },
+    { x: 100, y: 0, in: { x: 140, y: -60 } },
+    { x: 100, y: 100 },
+    { x: 0, y: 100 },
+  ];
+  const n = createNode('path', { ...vectorFromPoints([ring], true), radius: 12 });
+  assert.equal(vectorCorners(n).length, 4);
+  const rounded = pathData(n);
+  assert.ok((rounded.match(/C /g) ?? []).length >= 5);
+  assert.ok(!rounded.includes('NaN'));
+  const smooth = createNode('path', {
+    ...vectorFromPoints(
+      [
+        [
+          { x: 0, y: 50, in: { x: 0, y: 80 }, out: { x: 0, y: 20 }, smooth: true },
+          { x: 50, y: 0 },
+          { x: 50, y: 100 },
+        ],
+      ],
+      true,
+    ),
+    radius: 10,
+  });
+  assert.equal(vectorCorners(smooth).length, 2);
 });
 test('normalizing curves retains handles outside tight bounds and SVG uses cubic segments', () => {
   const n = createNode('path', { ...vectorFromPoints([arch()], false) });

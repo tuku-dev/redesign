@@ -96,6 +96,7 @@ export class EditingCommands {
         if (key === 'radius') {
           n.radius = value;
           delete n.cornerRadii;
+          n.vector?.rings.forEach((ring) => ring.forEach((p) => delete p.radius));
         } else if (key === 'topLeftRadius') {
           n.cornerRadii = { ...cornerRadii(n), topLeft: value };
         } else if (key === 'topRightRadius') {

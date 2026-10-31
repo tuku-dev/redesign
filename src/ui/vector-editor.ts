@@ -25,6 +25,13 @@ export function bindVectorEditor(
     points: VectorPoint[] = [],
     hover: Point | null = null;
   let placing: { index: number; pointerId: number; before: VectorPoint[] } | null = null;
+  let ctrlHeld = false;
+  let draftDrag: {
+    index: number;
+    side: HandleSide | null;
+    pointerId: number;
+    before: VectorPoint[];
+  } | null = null;
   let drag: {
     ring: number;
     index: number;
@@ -83,21 +90,14 @@ export function bindVectorEditor(
     el.canvas.focus();
     store.refresh();
   }
-  function directSelect(): void {
-    const current = store.current();
-    if (current?.vector) enterEdit(current.id);
-    else {
-      gestures.cancel();
-      stop(true);
-      drawing = false;
-      points = [];
-      hover = null;
-      store.editingVectorId = null;
-      store.tool = 'select';
-      store.refresh();
-    }
-  }
-  document.querySelector<HTMLButtonElement>('#direct-select')!.onclick = directSelect;
+  const directButton = document.querySelector<HTMLButtonElement>('#direct-select');
+  if (!directButton) throw new Error('Missing pointer tool button');
+  directButton.onclick = () => {
+    if (!isEditing()) return;
+    store.editingVectorId = null;
+    store.refresh();
+    el.canvas.focus();
+  };
   modeButton.onclick = () => {
     if (isEditing()) {
       store.editingVectorId = null;
@@ -113,12 +113,13 @@ export function bindVectorEditor(
     modeText.textContent = active ? 'Editing vector - drag anchors or handles' : 'Vector selected';
     modeButton.textContent = active ? 'Done' : 'Edit vector';
     el.canvas.toggleAttribute('data-vector-editing', active);
+    const pointerShown = active || (drawing && ctrlHeld);
     const penButton = document.querySelector<HTMLButtonElement>('#pen-tool');
+    if (penButton) penButton.hidden = pointerShown;
     penButton?.classList.toggle('active', drawing);
     penButton?.setAttribute('aria-pressed', String(drawing));
-    const directButton = document.querySelector<HTMLButtonElement>('#direct-select');
-    directButton?.classList.toggle('active', active && !drawing);
-    directButton?.setAttribute('aria-pressed', String(active && !drawing));
+    directButton!.hidden = !pointerShown;
+    directButton!.classList.toggle('active', pointerShown);
     el.toolButtons.forEach((b) => {
       const active = !drawing && b.dataset.tool === store.tool && !isEditing();
       b.classList.toggle('active', active);
@@ -133,7 +134,7 @@ export function bindVectorEditor(
           ? 'default'
           : 'crosshair';
     if (drawing && points.length) {
-      const preview = hover && !placing ? [...points, hover] : points;
+      const preview = hover && !placing && !ctrlHeld ? [...points, hover] : points;
       overlay.append(
         svg('path', {
           d: bezierPathData([preview], false),
@@ -144,7 +145,7 @@ export function bindVectorEditor(
           'data-pen-preview': 'true',
         }),
       );
-      renderVectorPoints(overlay, [points], store.zoom, false);
+      renderVectorPoints(overlay, [points], store.zoom, ctrlHeld);
     }
     const n = store.current();
     if (n?.vector && !drawing && !isHidden(store.doc, n)) {
@@ -196,6 +197,11 @@ export function bindVectorEditor(
     }
   }
   function stop(cancel: boolean): void {
+    if (draftDrag) {
+      if (cancel) points = draftDrag.before;
+      draftDrag = null;
+      render();
+    }
     if (placing) {
       if (cancel) points = placing.before;
       placing = null;
@@ -283,6 +289,18 @@ export function bindVectorEditor(
       if (!drawing) return;
       e.stopImmediatePropagation();
       e.preventDefault();
+      if (ctrlHeld) {
+        if (r !== null && i !== null && points[Number(i)]) {
+          draftDrag = {
+            index: Number(i),
+            side: side === 'in' || side === 'out' ? side : null,
+            pointerId: e.pointerId,
+            before: clone(points),
+          };
+          el.canvas.setPointerCapture(e.pointerId);
+        }
+        return;
+      }
       let p = local(e);
       const first = points[0],
         canClose = points.length >= 3 || (points.length >= 2 && points.some((p) => p.in || p.out));
@@ -301,6 +319,15 @@ export function bindVectorEditor(
     true,
   );
   el.canvas.addEventListener('pointermove', (e) => {
+    if (draftDrag && draftDrag.pointerId === e.pointerId) {
+      const point = points[draftDrag.index];
+      if (point) {
+        if (draftDrag.side) moveHandle(point, draftDrag.side, local(e), e.altKey);
+        else moveAnchor(point, local(e));
+      }
+      render();
+      return;
+    }
     if (placing && placing.pointerId === e.pointerId) {
       const p = points[placing.index];
       let handle = local(e);
@@ -409,13 +436,20 @@ export function bindVectorEditor(
     },
     true,
   );
+  const trackCtrl = (e: KeyboardEvent, down: boolean) => {
+    if (e.key !== 'Control' || ctrlHeld === down) return;
+    ctrlHeld = down;
+    if (drawing) render();
+  };
+  document.addEventListener('keydown', (e) => trackCtrl(e, true), true);
+  document.addEventListener('keyup', (e) => trackCtrl(e, false), true);
   document.addEventListener(
     'keydown',
     (e) => {
       if ((e.target as Element)?.closest?.('input,textarea,select,dialog,[contenteditable]'))
         return;
       if (e.key === 'Escape') lastTap = null;
-      if ((drag || placing) && e.key === 'Escape') {
+      if ((drag || placing || draftDrag) && e.key === 'Escape') {
         e.stopImmediatePropagation();
         e.preventDefault();
         stop(true);
@@ -432,19 +466,6 @@ export function bindVectorEditor(
         e.preventDefault();
         store.editingVectorId = null;
         store.refresh();
-        return;
-      }
-      if (
-        !drawing &&
-        e.key.toLowerCase() === 'a' &&
-        !e.ctrlKey &&
-        !e.metaKey &&
-        !e.altKey &&
-        !e.shiftKey
-      ) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        directSelect();
         return;
       }
       if (
@@ -491,6 +512,7 @@ export function bindVectorEditor(
   window.addEventListener('blur', () => {
     lastHit = null;
     lastTap = null;
+    ctrlHeld = false;
     stop(true);
   });
   let pageId = store.doc.workspace?.activePageId;

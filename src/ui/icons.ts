@@ -32,9 +32,8 @@ const paths = {
   cornerBottomLeft: 'M20 20H9a5 5 0 01-5-5V4',
   paint: 'M12 3l8 8-8 8-8-8 8-8zM4 20h16M8 11h8',
   eyedropper: 'M14 4l6 6M4 20l5-1 10-10-4-4L5 16l-1 4zM13 5l6 6',
-  snapGrid:
-    'M5 3v18M10 3v18M2 7h11M2 12h11M2 17h11M14 6h3a6 6 0 010 12h-3zM14 10h3a2 2 0 010 4h-3',
-  directSelect: 'M5 3l14 10-7 1-3 7z M13 14l5 6',
+  snapGrid: 'M5 3v18M10 3v18M2 7h11M2 12h11M2 17h11M14 6h3a6 6 0 010 12h-3zM14 10h3a2 2 0 010 4h-3',
+  directSelect: 'M19 3l-14 10 7 1 3 7z',
 };
 export type IconName = keyof typeof paths;
 export function createIcon(name: IconName): SVGSVGElement {
