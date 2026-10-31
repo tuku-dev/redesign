@@ -55,7 +55,7 @@ Status updated on 2026-10-31. **Basic** means an implementation exists but brows
 | EDIT-12 | Undo/redo | Basic; 100 snapshots, one entry per changed gesture, no entry for selection/no-op clicks |
 | EDIT-13 | Context menus and commands | Partial; functional canvas/layer context menus with nested actions and keyboard navigation; command search pending |
 | EDIT-14 | Cancel interactions | Basic; Escape, pointer cancellation, capture loss and blur restore pre-gesture state without history entries |
-| EDIT-15 | Selection/property synchronization | Partial; mixed appearance values and batch fill/opacity/radius/font size; batch geometry pending |
+| EDIT-15 | Selection/property synchronization | Partial; mixed appearance and geometry values; batch fill/opacity/radius/font size and shared X/Y/width/height edits across selected roots; richer batch geometry transforms pending |
 | EDIT-16 | Keyboard accessibility | Partial; editor shortcuts plus keyboard-navigable menus; full accessibility audit pending |
 
 ## 4. Layers, containers and geometry

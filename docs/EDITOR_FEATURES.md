@@ -20,6 +20,8 @@ Expand **Tools & resources** and choose **Show rulers** (Shift+R). Drag from a r
 
 Drag horizontally on a numeric field's label to scrub its value. Hold Shift for larger steps or Alt for finer steps; click the field to type a value. Only rectangles and frames expose corner-radius fields and canvas handles. The hollow canvas handles use the blue `#10a1cf` accent. Drag diagonally to change all corners together; double-click a handle to select that corner, then drag diagonally to adjust it alone. Setting the uniform radius links all corners again.
 
+With multiple layers selected, X, Y, W and H fields show a shared value or **Mixed**. Entering a value applies that coordinate or dimension to each selected root; moving a frame also moves its descendants, and resizing a frame continues to honor child constraints.
+
 Use **Apply fill** beside Fill to paint the current color onto a clicked canvas layer. The eyedropper at the bottom-center toolbar samples a clicked layer's fill onto the current selection; Shift-click samples its stroke. Press Escape to cancel.
 
 Use the **Snap to grid** icon above the canvas to snap drawing and layer movement to the 8-unit grid. Geometry snapping can be toggled separately.

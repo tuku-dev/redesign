@@ -15,6 +15,7 @@ import type { IconName } from './icons.ts';
 import type { CornerName } from '../model/types.ts';
 import { bindColorPreview } from './color-preview.ts';
 import { selectedNodes } from '../model/selection.ts';
+import { selectionRoots } from '../model/hierarchy.ts';
 import { FeatureCommands } from '../commands/features.ts';
 import { defaultAppearance } from '../model/features.ts';
 import { isLocked } from '../model/layer-state.ts';
@@ -69,6 +70,7 @@ export function renderProperties(
     return;
   }
   const multi = nodes.length > 1,
+    geometryNodes = multi ? selectionRoots(store.doc, store.selected) : [n],
     group = document.createElement('div');
   group.className = 'property-group';
   const title = document.createElement('h3');
@@ -85,6 +87,10 @@ export function renderProperties(
   );
   const fields: Field[] = multi
     ? [
+        ['x', 'X', 'number'],
+        ['y', 'Y', 'number'],
+        ['width', 'W', 'number'],
+        ['height', 'H', 'number'],
         ...(canRoundCorners ? [['radius', 'Radius', 'number'] as const] : []),
         ['opacity', 'Opacity', 'number'],
         ['fill', 'Fill', 'color'],
@@ -126,8 +132,9 @@ export function renderProperties(
     const input = document.createElement('input');
     input.type = type;
     input.setAttribute('aria-label', label);
-    const value = propertyValue(n, key),
-      mixed = value === undefined || nodes.some((item) => propertyValue(item, key) !== value);
+    const values = ['x', 'y', 'width', 'height'].includes(key) ? geometryNodes : nodes;
+    const value = propertyValue(values[0] ?? n, key),
+      mixed = value === undefined || values.some((item) => propertyValue(item, key) !== value);
     if (mixed && type !== 'color') {
       input.value = '';
       input.placeholder = 'Mixed';

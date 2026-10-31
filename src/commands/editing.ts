@@ -67,7 +67,7 @@ export class EditingCommands {
     if (s.chosen().some((n) => isLocked(s.doc, n))) return;
     const beforeResize = clone(next);
     const targets =
-      key === 'x' || key === 'y'
+      key === 'x' || key === 'y' || key === 'width' || key === 'height'
         ? selectionRoots(next, s.selected)
         : selectedNodes(next, s.selected);
     for (const n of targets) {

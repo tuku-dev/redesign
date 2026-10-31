@@ -162,6 +162,25 @@ test('multi-selection exposes icon alignment and justification controls', async 
   expect(savedDoc.nodes.find((node) => node.id === 'circle-b')?.y).toBe(150);
   expect(errors).toEqual([]);
 });
+test('multi-selection geometry fields apply values to each selected layer', async ({ page }) => {
+  const errors = await open(page);
+  await select(page, 'rect-a');
+  await page.locator('[data-layer-id="circle-b"] .layer-select').click({ modifiers: ['Shift'] });
+  await expect(page.getByLabel('X', { exact: true })).toHaveAttribute('placeholder', 'Mixed');
+  await expect(page.getByLabel('W', { exact: true })).toHaveAttribute('placeholder', 'Mixed');
+  await page.getByLabel('X', { exact: true }).fill('100');
+  await page.getByLabel('X', { exact: true }).press('Tab');
+  await page.getByLabel('W', { exact: true }).fill('120');
+  await page.getByLabel('W', { exact: true }).press('Tab');
+  const doc = await saved(page),
+    rectangle = doc.nodes.find((node) => node.id === 'rect-a')!,
+    ellipse = doc.nodes.find((node) => node.id === 'circle-b')!;
+  expect(rectangle.x).toBe(100);
+  expect(ellipse.x).toBe(100);
+  expect(rectangle.width).toBe(120);
+  expect(ellipse.width).toBe(120);
+  expect(errors).toEqual([]);
+});
 test('numeric labels scrub dimensions and corner radius controls edit individual corners', async ({
   page,
 }) => {

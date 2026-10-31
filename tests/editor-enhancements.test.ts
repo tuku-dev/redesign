@@ -180,6 +180,32 @@ test('numeric frame resize applies child constraints on both axes and undo is at
   commands.setProperty('height', 200);
   assert.equal(store.doc.nodes[1].height, 120);
 });
+test('multi-selection geometry fields edit all selected roots while preserving frame descendants', () => {
+  const doc = createDocument(),
+    frame = createNode('frame', { x: 0, y: 0, width: 100, height: 100 }),
+    child = createNode('rectangle', { x: 10, y: 10, width: 20, height: 20, parentId: frame.id }),
+    rectangle = createNode('rectangle', { x: 200, y: 20, width: 60, height: 40 });
+  doc.nodes = [frame, child, rectangle];
+  const store = new EditorStore(doc),
+    commands = new EditingCommands(store);
+  store.selected = new Set([frame.id, rectangle.id]);
+  commands.setProperty('x', 30);
+  assert.equal(store.doc.nodes[0].x, 30);
+  assert.equal(store.doc.nodes[1].x, 40);
+  assert.equal(store.doc.nodes[2].x, 30);
+  store.undo();
+  assert.equal(store.doc.nodes[0].x, 0);
+  assert.equal(store.doc.nodes[1].x, 10);
+  assert.equal(store.doc.nodes[2].x, 200);
+  store.selected = new Set([frame.id, rectangle.id]);
+  commands.setProperty('width', 200);
+  assert.equal(store.doc.nodes[0].width, 200);
+  assert.equal(store.doc.nodes[1].width, 20);
+  assert.equal(store.doc.nodes[2].width, 200);
+  store.undo();
+  assert.equal(store.doc.nodes[0].width, 100);
+  assert.equal(store.doc.nodes[2].width, 60);
+});
 test('constraints propagate through nested frames and preserve rotated parent axes', () => {
   const { store, commands, options, child } = frameEditor();
   const inner = store.doc.nodes[1];
