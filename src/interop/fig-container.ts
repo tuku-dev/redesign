@@ -17,7 +17,5 @@ export async function rejectBinaryDocument(file: File): Promise<void> {
   const kind = detectContainer(head);
   const isFigName = /\.fig$/i.test(file.name);
   if (kind === 'unknown' && !isFigName) return;
-  throw new Error(
-    'Figma .fig files are not supported yet. Open a .redesign file instead.',
-  );
+  throw new Error('Figma .fig files are not supported yet. Open a .redesign file instead.');
 }
