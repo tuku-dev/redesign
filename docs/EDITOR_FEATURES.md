@@ -1,4 +1,4 @@
-﻿# Editor Feature Guide
+# Editor Feature Guide
 
 ## Auto layout
 
@@ -24,7 +24,7 @@ Double-clicking a rectangle or ellipse converts it to an editable vector (corner
 
 ## Numeric controls and corner radii
 
-Drag horizontally on a numeric field's label to scrub its value. Hold Shift for larger steps or Alt for finer steps; click the field to type a value. Only rectangles and frames expose corner-radius fields and canvas handles. The hollow canvas handles use the blue `#10a1cf` accent. Drag diagonally to change all corners together; double-click a handle to select that corner, then drag diagonally to adjust it alone. Setting the uniform radius links all corners again.
+Drag horizontally on a numeric field's label to scrub its value. Hold Shift for larger steps or Alt for finer steps; click the field to type a value. Only rectangles and closed custom shapes expose corner-radius fields and canvas handles; frames are plain containers with no radius controls. The hollow canvas handles use the blue `#10a1cf` accent. Drag diagonally to change all corners together; double-click a handle to select that corner, then drag diagonally to adjust it alone. Setting the uniform radius links all corners again.
 
 With multiple layers selected, X, Y, W and H fields show a shared value or **Mixed**. Entering a value applies that coordinate or dimension to each selected root; moving a frame also moves its descendants, and resizing a frame continues to honor child constraints.
 

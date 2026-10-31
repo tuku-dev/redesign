@@ -82,9 +82,7 @@ export function renderProperties(
   const grid = document.createElement('div');
   grid.className = 'property-grid';
   group.append(grid);
-  const canRoundCorners = nodes.every(
-    (item) => item.type === 'rectangle' || item.type === 'frame' || item.vector?.closed,
-  );
+  const canRoundCorners = nodes.every((item) => item.type === 'rectangle' || item.vector?.closed);
   const fields: Field[] = multi
     ? [
         ['x', 'X', 'number'],
@@ -105,7 +103,7 @@ export function renderProperties(
         ['opacity', 'Opacity', 'number'],
         ['fill', 'Fill', 'color'],
       ];
-  if (!multi && (n.type === 'rectangle' || n.type === 'frame'))
+  if (!multi && n.type === 'rectangle')
     fields.splice(
       6,
       0,

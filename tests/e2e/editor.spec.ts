@@ -446,6 +446,15 @@ test('corner radius controls are not shown for circles', async ({ page }) => {
   await expect(page.locator('[data-corner-radius]')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
+test('frames expose no radius field or corner handles', async ({ page }) => {
+  const frame = createNode('frame', { id: 'plain-frame', x: 100, y: 100, width: 300, height: 200 });
+  const errors = await open(page, { ...createDocument(), nodes: [frame] });
+  await select(page, frame.id);
+  await expect(page.getByLabel('Radius', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('spinbutton', { name: 'Top-left radius' })).toHaveCount(0);
+  await expect(page.locator('[data-corner-radius]')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
 test('canvas fill and pick color tools apply fill and shift-click stroke', async ({ page }) => {
   const errors = await open(page);
   await select(page, 'rect-a');

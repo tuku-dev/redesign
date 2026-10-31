@@ -182,11 +182,7 @@ export function bindPointer(
       store.chosen().length === 1
     ) {
       const node = store.current();
-      if (
-        node &&
-        (node.type === 'rectangle' || node.type === 'frame') &&
-        !isLocked(store.doc, node)
-      ) {
+      if (node && node.type === 'rectangle' && !isLocked(store.doc, node)) {
         e.preventDefault();
         e.stopImmediatePropagation();
         const cornerName = corner as CornerName,

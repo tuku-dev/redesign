@@ -130,7 +130,7 @@ export function renderSelection(
           }),
         );
       };
-      if (single && (single.type === 'rectangle' || single.type === 'frame')) {
+      if (single && single.type === 'rectangle') {
         const radii = cornerRadii(single),
           corners = [
             ['topLeft', box.x, box.y, 1, 1],
