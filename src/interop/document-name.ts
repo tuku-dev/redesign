@@ -1,9 +1,9 @@
-﻿/** Document titles exclude the file extension; local filenames must be portable. */
+/** Document titles exclude the file extension; local filenames must be portable. */
 export function documentNameFromFile(filename: string): string {
   return (
     filename
       .trim()
-      .replace(/\.(redesign|json)$/i, '')
+      .replace(/\.(redesign|json|svg)$/i, '')
       .trim() || 'Untitled'
   );
 }

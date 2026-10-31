@@ -10,6 +10,7 @@ import { requestDownloadName } from '../ui/save-dialog.ts';
 import { downloadFile } from './download.ts';
 import { exportSvg } from './svg-export.ts';
 import { rejectBinaryDocument } from './fig-container.ts';
+import { importSvg, looksLikeSvg } from './svg-import.ts';
 import { bindDocuments } from '../ui/documents.ts';
 interface OpenDocumentHandle extends DocumentFileHandle {
   getFile(): Promise<File>;
@@ -111,11 +112,20 @@ export function bindFileActions(
   async function openFile(file: File, handle: DocumentFileHandle | null = null): Promise<void> {
     if (file.size > 100 * 1024 * 1024) throw new Error('File exceeds the 100 MB limit.');
     await rejectBinaryDocument(file);
-    const next = validateDocument(JSON.parse(await file.text()));
+    const text = await file.text();
+    // An SVG is imported as a new document; it never keeps a handle, so Save cannot overwrite the .svg.
+    const svgImport = looksLikeSvg(file, text);
+    const next = svgImport
+      ? importSvg(text, documentNameFromFile(file.name))
+      : validateDocument(JSON.parse(text));
     prepareSave();
     next.name = documentNameFromFile(file.name);
-    documents.open(next, handle);
-    el.saveStatus.textContent = handle ? 'Opened local file' : 'Saved in this browser';
+    documents.open(next, svgImport ? null : handle);
+    el.saveStatus.textContent = svgImport
+      ? 'Imported SVG'
+      : handle
+        ? 'Opened local file'
+        : 'Saved in this browser';
   }
   el.open.onclick = () => {
     if (window.isSecureContext && pickerWindow.showOpenFilePicker) {
@@ -125,7 +135,10 @@ export function bindFileActions(
           types: [
             {
               description: 'reDesign document',
-              accept: { 'application/json': ['.redesign', '.json'] },
+              accept: {
+                'application/json': ['.redesign', '.json'],
+                'image/svg+xml': ['.svg'],
+              },
             },
           ],
         })

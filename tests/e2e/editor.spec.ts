@@ -1272,3 +1272,53 @@ test('the rectangle drop-up draws stars that use Up and Down for points, and lin
   expect(line.vector?.closed).toBe(false);
   expect(line.vector?.rings[0]).toHaveLength(2);
 });
+
+test('opening an SVG file imports its shapes, colors and curves as a new document', async ({
+  page,
+}) => {
+  await open(page, createDocument());
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">' +
+    '<rect x="10" y="10" width="40" height="30" rx="4" fill="#ff0000"/>' +
+    '<g transform="translate(50 50)"><circle cx="20" cy="20" r="10" fill="rgb(0,0,255)" stroke="#00ff00" stroke-width="3"/>' +
+    '<path d="M0 0c10 0 10 10 0 10z" style="fill:#123456;opacity:.5"/></g>' +
+    '<line x1="0" y1="0" x2="50" y2="50" stroke="black"/>' +
+    '<text x="5" y="90" font-size="12">Hi</text></svg>';
+  await page.locator('#file').setInputFiles({
+    name: 'logo.svg',
+    mimeType: 'image/svg+xml',
+    buffer: Buffer.from(svg),
+  });
+  await expect(page.locator('#toast')).toBeHidden();
+  const doc = await saved(page);
+  expect(doc.name).toBe('logo');
+  const byName = (name: string) => doc.nodes.find((n) => n.name === name)!;
+  expect(byName('Rectangle').fill).toBe('#ff0000');
+  expect(byName('Rectangle').radius).toBe(4);
+  const circle = byName('Ellipse');
+  expect([circle.x, circle.y, circle.width]).toEqual([60, 60, 20]);
+  expect(circle.fill).toBe('#0000ff');
+  expect(circle.appearance?.stroke).toBe('#00ff00');
+  const path = byName('Path');
+  expect(path.opacity).toBe(0.5);
+  expect(path.vector?.closed).toBe(true);
+  expect(byName('Line').vector?.closed).toBe(false);
+  expect(byName('Hi').type).toBe('text');
+});
+
+test('opening a broken or empty SVG shows an error and keeps the document', async ({ page }) => {
+  await open(page, createDocument());
+  const before = await page.locator('#documents .document-row').count();
+  for (const body of [
+    '<svg xmlns="http://www.w3.org/2000/svg"><rect',
+    '<svg xmlns="http://www.w3.org/2000/svg"/>',
+  ]) {
+    await page.locator('#file').setInputFiles({
+      name: 'bad.svg',
+      mimeType: 'image/svg+xml',
+      buffer: Buffer.from(body),
+    });
+    await expect(page.locator('#toast')).toContainText(/SVG/);
+  }
+  await expect(page.locator('#documents .document-row')).toHaveCount(before);
+});

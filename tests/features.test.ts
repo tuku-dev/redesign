@@ -18,6 +18,7 @@ import {
   snapLineAngle,
   starPoints,
 } from '../src/model/shapes.ts';
+import { parsePathData } from '../src/interop/svg-import.ts';
 import { PrototypeSession } from '../src/model/prototype.ts';
 import { guideCandidates } from '../src/render/layout-grid.ts';
 import { cornerRadii, roundedRectPath } from '../src/model/geometry.ts';
@@ -717,4 +718,18 @@ test('snapLineAngle snaps to the nearest 45 degrees', () => {
   assert.ok(Math.abs(flat.y) < 1e-9);
   const diagonal = snapLineAngle({ x: 0, y: 0 }, { x: 80, y: 70 });
   assert.ok(Math.abs(diagonal.x - diagonal.y) < 1e-9);
+});
+
+test('parsePathData handles relative commands, compact arcs, curves and closing', () => {
+  const [square] = parsePathData('M10 10h20v20H10z');
+  assert.equal(square?.closed, true);
+  assert.equal(square?.points.length, 4);
+  const [curve] = parsePathData('M0 0c10 0 10 10 0 10s-10 10 0 10');
+  assert.equal(curve?.closed, false);
+  assert.equal(curve?.points.length, 3);
+  assert.ok(curve?.points[0]?.out);
+  const [arc] = parsePathData('M0 0a5 5 0 1010 0');
+  assert.ok((arc?.points.length ?? 0) >= 3);
+  assert.equal(parsePathData('M0 0L5 5M9 9L12 12Z').length, 2);
+  assert.throws(() => parsePathData('M0 0X5'));
 });
