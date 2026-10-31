@@ -6,6 +6,7 @@ import { createDocument, validateDocument } from '../model/document.ts';
 import { selectedNodes } from '../model/selection.ts';
 import { clone } from '../model/types.ts';
 import type { CornerName, DesignDocument, DesignNode, Point, Tool } from '../model/types.ts';
+import type { DrawShape } from '../model/shapes.ts';
 import { History } from '../commands/history.ts';
 export interface EditorUpdate {
   view: 'scene' | 'all';
@@ -15,6 +16,7 @@ export class EditorStore {
   doc: DesignDocument;
   selected = new Set<string>();
   tool: Tool = 'select';
+  drawShape: DrawShape = 'rectangle';
   zoom = 1;
   pan: Point = { x: 80, y: 80 };
   space = false;

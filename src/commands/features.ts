@@ -21,7 +21,7 @@ import { visualBox } from '../model/rotation.ts';
 import { bounds } from '../model/geometry.ts';
 import { detachInstance } from '../model/components.ts';
 import { booleanRings, vectorFromPoints } from '../model/vector.ts';
-import { linePoints, polygonPoints, starPoints } from '../model/shapes.ts';
+import { LINE_STROKE, linePoints, polygonPoints, starPoints } from '../model/shapes.ts';
 import type { ShapeKind } from '../model/shapes.ts';
 import type { BooleanOperation } from '../model/vector.ts';
 export class FeatureCommands {
@@ -197,16 +197,21 @@ export class FeatureCommands {
         : kind === 'polygon'
           ? polygonPoints(center, 80, count)
           : starPoints(center, 80, count);
-    this.path(points, kind !== 'line', kind[0]!.toUpperCase() + kind.slice(1));
+    this.path(
+      points,
+      kind !== 'line',
+      kind[0]!.toUpperCase() + kind.slice(1),
+      kind === 'line' ? LINE_STROKE : undefined,
+    );
   }
-  path(points: VectorPoint[], closed: boolean, name = 'Vector'): void {
+  path(points: VectorPoint[], closed: boolean, name = 'Vector', stroke = '#1e1e1e'): void {
     const s = this.store;
     s.change(() => {
       const n = createNode('path', {
         ...vectorFromPoints([points], closed),
         name,
         appearance: {
-          stroke: '#1e1e1e',
+          stroke,
           strokeWidth: closed ? 0 : 2,
           gradient: { enabled: false, end: '#0d99ff', angle: 90 },
           shadow: { enabled: false, x: 0, y: 4, blur: 8, color: '#000000', opacity: 0.25 },

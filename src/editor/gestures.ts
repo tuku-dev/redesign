@@ -3,7 +3,17 @@ import type { SnapBox } from '../model/snapping.ts';
 import { clippedVisualBox } from '../model/render-bounds.ts';
 import { editableNodes, isLocked, isHidden, groupedTarget } from '../model/layer-state.ts';
 import { drawingBox } from '../model/drawing.ts';
-import { MAX_SIDES, MIN_SIDES, RECTANGLE_SIDES, applyPolygonSides } from '../model/shapes.ts';
+import {
+  DEFAULT_STAR_POINTS,
+  MAX_SIDES,
+  MIN_SIDES,
+  RECTANGLE_SIDES,
+  applyLine,
+  applyPolygonSides,
+  applyStarPoints,
+  snapLineAngle,
+} from '../model/shapes.ts';
+import type { DrawShape } from '../model/shapes.ts';
 import {
   descendants,
   selectionRoots,
@@ -54,7 +64,7 @@ export type Gesture = BaseGesture &
         pivot: Point;
       }
     | { kind: 'marquee'; base: Set<string>; box?: Box; nested?: boolean }
-    | { kind: 'draw'; sides: number; rectangle: boolean }
+    | { kind: 'draw'; shape: DrawShape | null; sides: number }
   );
 export interface GestureModifiers {
   aspect: boolean;
@@ -173,26 +183,30 @@ export class GestureController {
     const s = this.store;
     if (s.tool === 'select' || s.tool === 'hand') return;
     const start = s.gridSnappingEnabled ? snapToGrid(point, s.snapGridSize, s.zoom).point : point;
+    const shape = s.tool === 'rectangle' ? s.drawShape : null;
     this.active = {
       ...this.base(start),
       kind: 'draw',
-      sides: RECTANGLE_SIDES,
-      rectangle: s.tool === 'rectangle',
+      shape,
+      sides: shape === 'star' ? DEFAULT_STAR_POINTS : RECTANGLE_SIDES,
     };
     const text = s.tool === 'text',
       n = createNode(s.tool, { ...start, width: text ? 240 : 1, height: text ? 40 : 1 });
+    if (shape === 'star') applyStarPoints(n, DEFAULT_STAR_POINTS);
+    if (shape === 'line') applyLine(n, start, start);
     s.doc.nodes.push(n);
     s.selected = new Set([n.id]);
     if (text) this.finish();
     else s.refresh();
   }
-  /** While drawing with the rectangle tool, changes the side count: 4 is a rectangle, 3-60 a regular polygon. */
+  /** While drawing a rectangle or star, changes its side or point count (3-60); a 4-sided rectangle is a plain rectangle. */
   adjustSides(delta: number): boolean {
     const g = this.active,
       n = this.store.current();
-    if (g?.kind !== 'draw' || !g.rectangle || !n) return false;
+    if (g?.kind !== 'draw' || !n || (g.shape !== 'rectangle' && g.shape !== 'star')) return false;
     g.sides = Math.min(MAX_SIDES, Math.max(MIN_SIDES, g.sides + delta));
-    applyPolygonSides(n, g.sides);
+    if (g.shape === 'star') applyStarPoints(n, g.sides);
+    else applyPolygonSides(n, g.sides);
     this.store.refresh('scene');
     return true;
   }
@@ -329,13 +343,15 @@ export class GestureController {
       }
       if (n && s.gridSnappingEnabled && !modifiers.disableSnap)
         end = snapToGrid(end, s.snapGridSize, s.zoom).point;
-      if (n)
+      if (n && g.shape === 'line')
+        applyLine(n, g.start, modifiers.aspect ? snapLineAngle(g.start, end) : end);
+      else if (n)
         Object.assign(
           n,
           drawingBox(
             g.start,
             end,
-            modifiers.perfect === true && (n.type === 'rectangle' || n.type === 'ellipse'),
+            modifiers.perfect === true && (s.tool === 'rectangle' || s.tool === 'ellipse'),
           ),
         );
     }

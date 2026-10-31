@@ -8,6 +8,8 @@ export function getElements() {
     canvas: required('canvas', SVGSVGElement),
     workspace: required('workspace', HTMLElement),
     snapGridEnabled: required('snap-grid-enabled', HTMLButtonElement),
+    shapeMenuToggle: required('shape-menu-toggle', HTMLButtonElement),
+    shapeMenu: required('shape-menu', HTMLElement),
     pickColor: required('pick-color', HTMLButtonElement),
     viewport: required('viewport', SVGGElement),
     scene: required('scene', SVGGElement),

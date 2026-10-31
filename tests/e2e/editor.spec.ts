@@ -1235,3 +1235,40 @@ test('Up and Down while dragging a rectangle change it into a polygon with that 
   await page.mouse.up();
   expect((await saved(page)).nodes.at(-1)?.type).toBe('rectangle');
 });
+
+test('the rectangle drop-up draws stars that use Up and Down for points, and lines', async ({
+  page,
+}) => {
+  await open(page, createDocument());
+  const box = (await page.locator('[aria-label="Design canvas"]').boundingBox())!;
+  const x = box.x + 300,
+    y = box.y + 300;
+  const menu = page.locator('#shape-menu');
+  await expect(menu).toBeHidden();
+  await page.getByLabel('Shape options').click();
+  await expect(menu.getByRole('menuitemradio')).toHaveCount(3);
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+  await page.getByLabel('Shape options').click();
+  await menu.locator('[data-shape=star]').click();
+  await expect(menu).toBeHidden();
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + 160, y + 160, { steps: 4 });
+  for (const key of ['ArrowUp', 'ArrowUp', 'ArrowDown']) await page.keyboard.press(key);
+  await page.mouse.up();
+  const star = (await saved(page)).nodes.at(-1)!;
+  expect(star.name).toBe('Star');
+  expect(star.vector?.rings[0]).toHaveLength(12);
+  await page.getByLabel('Shape options').click();
+  await menu.locator('[data-shape=line]').click();
+  await page.mouse.move(x + 200, y);
+  await page.mouse.down();
+  await page.mouse.move(x + 320, y + 80, { steps: 4 });
+  await page.keyboard.press('ArrowUp');
+  await page.mouse.up();
+  const line = (await saved(page)).nodes.at(-1)!;
+  expect(line.name).toBe('Line');
+  expect(line.vector?.closed).toBe(false);
+  expect(line.vector?.rings[0]).toHaveLength(2);
+});

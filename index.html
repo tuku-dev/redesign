@@ -107,8 +107,32 @@
           ><span class="separator"></span
           ><button data-tool="frame" title="Frame (F)" aria-label="Frame tool">
             <span data-icon="frame"></span></button
-          ><button data-tool="rectangle" title="Rectangle (R)" aria-label="Rectangle tool">
-            <span data-icon="rectangle"></span></button
+          ><span class="tool-group"
+            ><button data-tool="rectangle" title="Rectangle (R)" aria-label="Rectangle tool">
+              <span data-icon="rectangle"></span></button
+            ><button
+              id="shape-menu-toggle"
+              type="button"
+              class="tool-more"
+              title="Rectangle, line or star"
+              aria-label="Shape options"
+              aria-haspopup="menu"
+              aria-expanded="false"
+              aria-controls="shape-menu"
+            >
+              <span data-icon="chevronUp"></span>
+            </button>
+            <div id="shape-menu" class="shape-menu" role="menu" aria-label="Shape" hidden>
+              <button type="button" role="menuitemradio" data-shape="rectangle">
+                <span data-icon="rectangle"></span>Rectangle
+              </button>
+              <button type="button" role="menuitemradio" data-shape="line">
+                <span data-icon="line"></span>Line
+              </button>
+              <button type="button" role="menuitemradio" data-shape="star">
+                <span data-icon="star"></span>Star
+              </button>
+            </div></span
           ><button
             id="pick-color"
             type="button"

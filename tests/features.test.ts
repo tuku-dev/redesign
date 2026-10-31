@@ -9,7 +9,15 @@ import { EditingCommands } from '../src/commands/editing.ts';
 import { defaultLayout, defaultAppearance, defaultGrid } from '../src/model/features.ts';
 import { allNodes } from '../src/model/workspace.ts';
 import { booleanRings, insideRing, shapeRings } from '../src/model/vector.ts';
-import { applyPolygonSides, linePoints, polygonPoints, starPoints } from '../src/model/shapes.ts';
+import {
+  applyLine,
+  applyPolygonSides,
+  applyStarPoints,
+  linePoints,
+  polygonPoints,
+  snapLineAngle,
+  starPoints,
+} from '../src/model/shapes.ts';
 import { PrototypeSession } from '../src/model/prototype.ts';
 import { guideCandidates } from '../src/render/layout-grid.ts';
 import { cornerRadii, roundedRectPath } from '../src/model/geometry.ts';
@@ -679,4 +687,34 @@ test('drawing a rectangle can become a polygon and back without losing its box',
   applyPolygonSides(node, 4);
   assert.equal(node.type, 'rectangle');
   assert.equal(node.vector, undefined);
+});
+
+test('applyStarPoints builds a 2n-point closed star path', () => {
+  const node = createNode('rectangle', { width: 100, height: 100 });
+  applyStarPoints(node, 6);
+  assert.equal(node.type, 'path');
+  assert.equal(node.name, 'Star');
+  assert.equal(node.vector?.rings[0]?.length, 12);
+});
+
+test('applyLine makes an open two-point path and keeps flat lines visible', () => {
+  const node = createNode('rectangle', { width: 1, height: 1 });
+  applyLine(node, { x: 10, y: 20 }, { x: 110, y: 20 });
+  assert.equal(node.type, 'path');
+  assert.equal(node.name, 'Line');
+  assert.equal(node.vector?.closed, false);
+  assert.equal(node.vector?.rings[0]?.length, 2);
+  assert.ok(node.height >= 1);
+  assert.ok(node.vector?.rings[0]?.every((p) => Number.isFinite(p.x) && Number.isFinite(p.y)));
+  assert.ok((node.appearance?.strokeWidth ?? 0) > 0);
+  const dot = createNode('rectangle', { width: 1, height: 1 });
+  applyLine(dot, { x: 5, y: 5 }, { x: 5, y: 5 });
+  assert.ok(dot.width >= 1);
+});
+
+test('snapLineAngle snaps to the nearest 45 degrees', () => {
+  const flat = snapLineAngle({ x: 0, y: 0 }, { x: 100, y: 14 });
+  assert.ok(Math.abs(flat.y) < 1e-9);
+  const diagonal = snapLineAngle({ x: 0, y: 0 }, { x: 80, y: 70 });
+  assert.ok(Math.abs(diagonal.x - diagonal.y) < 1e-9);
 });

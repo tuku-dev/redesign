@@ -12,6 +12,9 @@ const paths = {
   hand: 'M8 12V5a2 2 0 014 0v7-7a2 2 0 014 0v8-5a2 2 0 014 0v8c0 4-3 7-7 7h-1c-2 0-4-1-5-3l-4-6a2 2 0 013-2l2 2',
   frame: 'M8 3v18M16 3v18M3 8h18M3 16h18',
   rectangle: 'M5 4h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z',
+  line: 'M5 19L19 5',
+  star: 'M12 3L14.23 9.43L21.03 9.56L15.61 13.67L17.58 20.19L12 16.3L6.42 20.19L8.39 13.67L2.97 9.56L9.77 9.43Z',
+  chevronUp: 'M6 15l6-6 6 6',
   ellipse: 'M20 12a8 8 0 11-16 0 8 8 0 0116 0',
   text: 'M5 7V4h14v3M12 4v16M8 20h8',
   undo: 'M8 5L3 10l5 5M3 10h11a6 6 0 010 12',
@@ -45,7 +48,8 @@ const paths = {
   justifyHorizontal: 'M5 4v16M19 4v16M9 7h6M8 12h8M9 17h6',
   justifyVertical: 'M4 5h16M4 19h16M7 9v6M12 8v8M17 9v6',
   paint: 'M12 3l8 8-8 8-8-8 8-8zM4 20h16M8 11h8',
-  eyedropper: 'M14 4l6 6M4 20l5-1 10-10-4-4L5 16l-1 4zM13 5l6 6',
+  eyedropper:
+    'M4 20l1-4.5 8-8 3.5 3.5-8 8zM12 5.5l6.5 6.5M14.5 8.5l4-4a2.1 2.1 0 013 3l-4 4M16.5 6.5l3 3M6 15l3 3',
   snapGrid: 'M5 3v18M10 3v18M2 7h11M2 12h11M2 17h11M14 6h3a6 6 0 010 12h-3zM14 10h3a2 2 0 010 4h-3',
   directSelect: 'M19 3l-14 10 7 1 3 7z',
 };

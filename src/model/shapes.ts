@@ -1,4 +1,5 @@
 import type { DesignNode, Point } from './types.ts';
+import { defaultAppearance } from './features.ts';
 import { vectorFromPoints } from './vector.ts';
 
 export type ShapeKind = 'line' | 'polygon' | 'star';
@@ -6,6 +7,13 @@ export type ShapeKind = 'line' | 'polygon' | 'star';
 export const MIN_SIDES = 3;
 export const MAX_SIDES = 60;
 export const RECTANGLE_SIDES = 4;
+export const DEFAULT_STAR_POINTS = 5;
+/** Mid gray so a new line stays visible on both the light and dark canvas. */
+export const LINE_STROKE = '#8c8c8c';
+
+/** What the rectangle tool draws; chosen from the toolbar drop-up. */
+export type DrawShape = 'rectangle' | 'line' | 'star';
+export const DRAW_SHAPES: readonly DrawShape[] = ['rectangle', 'line', 'star'];
 
 function clampCount(value: number, min = MIN_SIDES): number {
   if (!Number.isFinite(value)) return min;
@@ -59,4 +67,27 @@ export function applyPolygonSides(node: DesignNode, sides: number): void {
   node.type = 'path';
   node.name = 'Polygon';
   node.vector = vectorFromPoints([polygonPoints({ x: 0, y: 0 }, 1, sides)]).vector;
+}
+export function applyStarPoints(node: DesignNode, points: number): void {
+  node.type = 'path';
+  node.name = 'Star';
+  node.vector = vectorFromPoints([starPoints({ x: 0, y: 0 }, 1, points)]).vector;
+}
+
+/** Snaps the direction from start to end to the nearest 45 degrees. */
+export function snapLineAngle(start: Point, end: Point): Point {
+  const dx = end.x - start.x,
+    dy = end.y - start.y,
+    length = Math.hypot(dx, dy),
+    angle = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * (Math.PI / 4);
+  return { x: start.x + length * Math.cos(angle), y: start.y + length * Math.sin(angle) };
+}
+
+/** Makes the node an open two-point path from start to end; a zero-length drag stays one pixel long. */
+export function applyLine(node: DesignNode, start: Point, end: Point): void {
+  const to = start.x === end.x && start.y === end.y ? { x: end.x + 1, y: end.y } : end;
+  Object.assign(node, vectorFromPoints([[start, to]], false));
+  node.type = 'path';
+  node.name = 'Line';
+  node.appearance ??= { ...defaultAppearance(), stroke: LINE_STROKE, strokeWidth: 2 };
 }
