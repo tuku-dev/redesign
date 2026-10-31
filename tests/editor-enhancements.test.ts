@@ -1,6 +1,6 @@
 ﻿import test from 'node:test';
 import assert from 'node:assert/strict';
-import { snapTranslation, snapPoint } from '../src/model/snapping.ts';
+import { snapTranslation, snapPoint, snapToGrid } from '../src/model/snapping.ts';
 import { createDocument, createNode, validateDocument } from '../src/model/document.ts';
 import { EditorStore } from '../src/editor/store.ts';
 import { GestureController } from '../src/editor/gestures.ts';
@@ -60,6 +60,26 @@ test('drawing/resize points snap to candidate geometry without snapping distant 
   const candidate = { x: 100, y: 100, width: 40, height: 40 };
   assert.deepEqual(snapPoint({ x: 99, y: 121 }, [candidate], 1).point, { x: 100, y: 120 });
   assert.deepEqual(snapPoint({ x: 50, y: 50 }, [candidate], 1).point, { x: 50, y: 50 });
+});
+test('grid snapping aligns moves and drawing points independently of geometry snapping', () => {
+  const moved = snapTranslation({ x: 0, y: 0, width: 20, height: 20 }, [], 5, 5, 1, false, 8);
+  assert.deepEqual({ dx: moved.dx, dy: moved.dy }, { dx: 6, dy: 6 });
+  assert.deepEqual(snapToGrid({ x: 23, y: 34 }, 8, 1).point, { x: 24, y: 32 });
+  assert.deepEqual(snapToGrid({ x: 21, y: 37 }, 8, 4).point, { x: 21, y: 37 });
+});
+test('drawing starts and ends on the grid when grid snapping is enabled', () => {
+  const { store, gestures } = frameEditor();
+  store.selected.clear();
+  store.tool = 'rectangle';
+  store.gridSnappingEnabled = true;
+  gestures.startDrawing({ x: 13, y: 19 });
+  assert.deepEqual({ x: store.current()!.x, y: store.current()!.y }, { x: 16, y: 16 });
+  gestures.move({ x: 35, y: 43 }, { x: 35, y: 43 }, modifiers);
+  assert.deepEqual(
+    { width: store.current()!.width, height: store.current()!.height },
+    { width: 16, height: 24 },
+  );
+  gestures.cancel();
 });
 test('drag guides are transient, Ctrl bypasses snapping, and finish creates one undo step', () => {
   const doc = createDocument(),

@@ -5,6 +5,13 @@ export interface Point {
   x: number;
   y: number;
 }
+export interface CornerRadii {
+  topLeft: number;
+  topRight: number;
+  bottomRight: number;
+  bottomLeft: number;
+}
+export type CornerName = keyof CornerRadii;
 export interface Box extends Point {
   width: number;
   height: number;
@@ -33,6 +40,7 @@ export interface DesignNode extends Box, NodeOptions, NodeFeatures {
   fill: string;
   opacity: number;
   radius: number;
+  cornerRadii?: CornerRadii;
   text: string;
   fontSize: number;
 }
@@ -47,5 +55,17 @@ export type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
 export type Alignment = 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom';
 export type Axis = 'x' | 'y';
 export type EditableProperty =
-  'name' | 'x' | 'y' | 'width' | 'height' | 'radius' | 'opacity' | 'fill' | 'fontSize';
+  | 'name'
+  | 'x'
+  | 'y'
+  | 'width'
+  | 'height'
+  | 'radius'
+  | 'topLeftRadius'
+  | 'topRightRadius'
+  | 'bottomRightRadius'
+  | 'bottomLeftRadius'
+  | 'opacity'
+  | 'fill'
+  | 'fontSize';
 export const clone = <T>(value: T): T => structuredClone(value);

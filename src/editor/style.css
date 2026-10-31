@@ -9,6 +9,7 @@
   --text-secondary: #757575;
   --accent: #0d99ff;
   --accent-hover: #007be5;
+  --radius-handle: #10a1cf;
   --selection-bg: #e5f4ff;
   --danger: #d92d20;
   --disabled: #aaa;
@@ -264,6 +265,91 @@ aside {
 .field input[type='color'] {
   height: 24px;
   padding: 0;
+}
+.field > span.scrubbable,
+.feature-field > span.scrubbable {
+  cursor: ew-resize;
+  touch-action: none;
+  user-select: none;
+}
+.corner-radius-field {
+  gap: 4px;
+  padding: 4px 6px;
+}
+.corner-radius-icon {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  padding: 4px;
+  color: var(--text-secondary);
+}
+.corner-radius-icon[aria-pressed='true'] {
+  color: var(--accent);
+  background: var(--selection-bg);
+}
+.corner-radius-icon .icon {
+  width: 18px;
+  height: 18px;
+}
+.canvas-color-field {
+  grid-column: 1 / -1;
+  gap: 4px;
+  padding: 4px 6px;
+}
+.canvas-color-mode {
+  width: 25px;
+  height: 26px;
+  flex: 0 0 25px;
+  padding: 4px;
+  color: var(--text-secondary);
+}
+.canvas-color-mode[aria-pressed='true'] {
+  color: var(--accent);
+  background: var(--selection-bg);
+}
+.canvas-color-mode .icon {
+  width: 17px;
+  height: 17px;
+}
+.stroke-field {
+  grid-column: 1 / -1;
+  width: 100%;
+  gap: 6px;
+  white-space: nowrap;
+}
+.stroke-field > span:first-child {
+  flex: 0 0 auto;
+}
+.stroke-field input[type='number'] {
+  width: 54px;
+  flex: 0 0 54px;
+}
+.stroke-field input[type='checkbox'] {
+  width: auto;
+  margin: 0;
+  flex: 0 0 auto;
+}
+.stroke-field input[type='color'] {
+  appearance: none;
+  width: 32px;
+  height: 24px;
+  min-width: 32px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  flex: 0 0 32px;
+}
+.stroke-field input[type='color']::-webkit-color-swatch-wrapper {
+  padding: 1px;
+}
+.stroke-field input[type='color']::-webkit-color-swatch {
+  border: 0;
+  border-radius: 2px;
+}
+.stroke-field input[type='color']::-moz-color-swatch {
+  border: 0;
+  border-radius: 2px;
 }
 .full {
   grid-column: 1/-1;
@@ -594,22 +680,27 @@ textarea {
   overflow: auto;
   min-height: 0;
 }
-.snap-toggle {
+.snap-grid-toggle {
   position: absolute;
   top: 14px;
   right: 16px;
-  display: flex;
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
   align-items: center;
-  gap: 6px;
-  color: var(--text-secondary);
-  font-size: 10px;
-  padding: 5px 8px;
+  justify-content: center;
+  padding: 5px;
+  border: 1px solid var(--border);
   border-radius: 5px;
   background: var(--surface);
 }
-.snap-toggle input {
-  margin: 0;
-  accent-color: var(--accent);
+.snap-grid-toggle[aria-pressed='true'] {
+  color: var(--accent);
+  background: var(--selection-bg);
+}
+.snap-grid-toggle .icon {
+  width: 18px;
+  height: 18px;
 }
 .design-options {
   border-top: 1px solid var(--border);

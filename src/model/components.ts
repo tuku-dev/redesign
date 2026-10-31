@@ -8,6 +8,7 @@ const inherited = [
   'fill',
   'opacity',
   'radius',
+  'cornerRadii',
   'text',
   'fontSize',
   'fontFamily',

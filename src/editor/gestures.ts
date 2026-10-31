@@ -13,7 +13,7 @@ import { createNode } from '../model/document.ts';
 import { bounds } from '../model/geometry.ts';
 import { boxBetween, marqueeIds, toggleId } from '../model/selection.ts';
 import { center, rotatePoint, visualBox, angleAt, normalizeAngle } from '../model/rotation.ts';
-import { snapTranslation, snapPoint } from '../model/snapping.ts';
+import { snapTranslation, snapPoint, snapToGrid } from '../model/snapping.ts';
 import type { Guide, Measurement } from '../model/snapping.ts';
 import { resizeFrame } from '../model/constraints.ts';
 import { clone } from '../model/types.ts';
@@ -150,9 +150,10 @@ export class GestureController {
   startDrawing(point: Point): void {
     const s = this.store;
     if (s.tool === 'select' || s.tool === 'hand') return;
-    this.active = { ...this.base(point), kind: 'draw' };
+    const start = s.gridSnappingEnabled ? snapToGrid(point, s.snapGridSize, s.zoom).point : point;
+    this.active = { ...this.base(start), kind: 'draw' };
     const text = s.tool === 'text',
-      n = createNode(s.tool, { ...point, width: text ? 240 : 1, height: text ? 40 : 1 });
+      n = createNode(s.tool, { ...start, width: text ? 240 : 1, height: text ? 40 : 1 });
     s.doc.nodes.push(n);
     s.selected = new Set([n.id]);
     if (text) this.finish();
@@ -176,6 +177,7 @@ export class GestureController {
           Math.round(point.y - g.start.y),
           s.zoom,
           s.snappingEnabled && !modifiers.disableSnap,
+          s.gridSnappingEnabled && !modifiers.disableSnap ? s.snapGridSize : undefined,
         );
         translateNodes(s.doc, g.nodes, result.dx, result.dy);
         this.guides = result.guides;
@@ -190,7 +192,7 @@ export class GestureController {
       let world = point;
       if (
         !g.angle &&
-        s.snappingEnabled &&
+        (s.snappingEnabled || s.gridSnappingEnabled) &&
         !modifiers.disableSnap &&
         !modifiers.aspect &&
         !modifiers.center
@@ -211,10 +213,16 @@ export class GestureController {
           x: anchor.x + point.x - g.start.x,
           y: anchor.y + point.y - g.start.y,
         };
-        const snapped = snapPoint(movingAnchor, this.candidates(g), s.zoom);
+        const snapped = s.snappingEnabled
+          ? snapPoint(movingAnchor, this.candidates(g), s.zoom)
+          : { point: movingAnchor, guides: [] };
+        const aligned =
+          s.gridSnappingEnabled && !modifiers.disableSnap
+            ? snapToGrid(snapped.point, s.snapGridSize, s.zoom).point
+            : snapped.point;
         world = {
-          x: point.x + snapped.point.x - movingAnchor.x,
-          y: point.y + snapped.point.y - movingAnchor.y,
+          x: point.x + aligned.x - movingAnchor.x,
+          y: point.y + aligned.y - movingAnchor.y,
         };
         this.guides = snapped.guides.filter((guide) =>
           guide.axis === 'x'
@@ -261,6 +269,8 @@ export class GestureController {
         end = result.point;
         this.guides = result.guides;
       }
+      if (n && s.gridSnappingEnabled && !modifiers.disableSnap)
+        end = snapToGrid(end, s.snapGridSize, s.zoom).point;
       if (n)
         Object.assign(
           n,

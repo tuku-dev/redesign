@@ -10,15 +10,23 @@ Select a frame or loose layers and choose **Create component** (Ctrl/Cmd+Alt+K).
 
 ## Images
 
-Use **Insert image**, drop raster files onto the canvas, or select a shape and choose **Set image fill**. PNG, JPEG, WebP and GIF files up to 8 MB are embedded in the document. Choose crop/cover, fit or stretch; crop X/Y values move the focal point from 0 to 1. Images survive save/open and SVG export. Document imports allow up to 100 MB; browser autosave remains subject to storage quota, so download image-heavy documents. Animated GIF playback follows browser behavior. Clipboard raster import, tiling and color adjustments remain pending.
+Use **Insert image**, drop raster files onto the canvas, or select a frame, rectangle or ellipse and choose **Set image fill**. Image fills are clipped to the selected shape (including its corner radius). PNG, JPEG, WebP and GIF files up to 8 MB are embedded in the document. Choose crop/cover, fit or stretch; crop X/Y values move the focal point from 0 to 1. Images survive save/open and SVG export. Document imports allow up to 100 MB; browser autosave remains subject to storage quota, so download image-heavy documents. Animated GIF playback follows browser behavior. Clipboard raster import, tiling and color adjustments remain pending.
 
 ## Rulers, guides and grids
 
-Expand **Tools & resources** and choose **Show rulers** (Shift+R). Drag from a ruler to create a guide, drag guides to move them, double-click to remove, or use numeric guide controls. Escape cancels a drag. Visible guides participate in geometry snapping; Ctrl bypasses snapping. Frame inspectors support square, column or row grids. These overlays are excluded from exports. Guides are currently document-wide.
+Expand **Tools & resources** and choose **Show rulers** (Shift+R). Drag from a ruler to create a guide, drag guides to move them, double-click to remove, or use numeric guide controls. Escape cancels a drag. Visible guides participate in geometry snapping; Ctrl bypasses snapping. Select a frame to show a square, column or row layout grid in the inspector. Rulers, guides and frame grids are editor overlays and excluded from exports. Guides are currently document-wide.
+
+## Numeric controls and corner radii
+
+Drag horizontally on a numeric field's label to scrub its value. Hold Shift for larger steps or Alt for finer steps; click the field to type a value. Only rectangles and frames expose corner-radius fields and canvas handles. The hollow canvas handles use the blue `#10a1cf` accent. Drag diagonally to change all corners together; double-click a handle to select that corner, then drag diagonally to adjust it alone. Setting the uniform radius links all corners again.
+
+Use **Apply fill** beside Fill to paint the current color onto a clicked canvas layer. The eyedropper at the bottom-center toolbar samples a clicked layer's fill onto the current selection; Shift-click samples its stroke. Press Escape to cancel.
+
+Use the **Snap to grid** icon above the canvas to snap drawing and layer movement to the 8-unit grid. Geometry snapping can be toggled separately.
 
 ## Styling
 
-The inspector provides two-color linear gradients with angle, one centered stroke, a drop shadow and layer blur. Shadows expose offset, blur, color and opacity. Canvas and SVG export share paint definitions; conservative effect bounds protect export edges. These are shape paints: radial/complex gradients, effect stacks, inner shadows, background blur and arbitrary group effects remain pending.
+Fill and Stroke controls sit together in the inspector; Stroke's enable toggle, visible color picker and width share one row. The inspector also provides two-color linear gradients with angle, a drop shadow and layer blur. Color edits preview live while the picker is open. Shadows expose offset, blur, color and opacity. Canvas and SVG export share paint definitions; conservative effect bounds protect export edges. These are shape paints: radial/complex gradients, effect stacks, inner shadows, background blur and arbitrary group effects remain pending.
 
 ## Vector editing
 
@@ -37,7 +45,6 @@ Select a hotspot layer, choose an **On click** destination frame, then select in
 ## Verification and compatibility
 
 Run `npm test` for geometry, document, command and undo regressions. Run `npm run test:e2e` for real Chrome interactions, image/file workflows, exports and prototype navigation. Type checks, lint, formatting and production builds are separate commands listed in the README. Chrome tests do not establish Firefox/Safari support or Figma parity. Native `.fig` import/export remains a separate, unimplemented milestone.
-
 
 ## Save and Save As
 

@@ -5,7 +5,7 @@ import { updateGroupBounds } from '../model/groups.ts';
 import { createDocument, validateDocument } from '../model/document.ts';
 import { selectedNodes } from '../model/selection.ts';
 import { clone } from '../model/types.ts';
-import type { DesignDocument, DesignNode, Point, Tool } from '../model/types.ts';
+import type { CornerName, DesignDocument, DesignNode, Point, Tool } from '../model/types.ts';
 import { History } from '../commands/history.ts';
 export interface EditorUpdate {
   view: 'scene' | 'all';
@@ -19,10 +19,16 @@ export class EditorStore {
   pan: Point = { x: 80, y: 80 };
   space = false;
   snappingEnabled = true;
+  gridSnappingEnabled = false;
+  snapGridSize = 8;
+  canvasColorMode: 'apply' | 'sample' | null = null;
+  canvasPaintColor = '#000000';
   editingTextId: string | null = null;
   editingVectorId: string | null = null;
+  cornerRadiusCorner: CornerName | null = null;
   readonly history = new History();
   private readonly listeners = new Set<(update: EditorUpdate) => void>();
+  private cornerSelection = '';
   constructor(doc: DesignDocument = createDocument()) {
     this.doc = validateDocument(doc);
   }
@@ -39,6 +45,9 @@ export class EditorStore {
   refresh(view: EditorUpdate['view'] = 'all', persist = false): void {
     updateGroupBounds(this.doc);
     this.selected = new Set(this.chosen().map((n) => n.id));
+    const selection = [...this.selected].join(',');
+    if (selection !== this.cornerSelection) this.cornerRadiusCorner = null;
+    this.cornerSelection = selection;
     if (
       this.editingVectorId &&
       (!this.selected.has(this.editingVectorId) || this.selected.size !== 1)

@@ -4,6 +4,7 @@ import type { DesignDocument, DesignNode } from '../model/types.ts';
 import { center } from '../model/rotation.ts';
 import { svg } from './svg.ts';
 import { renderShape } from './shapes.ts';
+import { roundedRectPath } from '../model/geometry.ts';
 let sequence = 0;
 export function renderDocument(
   doc: DesignDocument,
@@ -48,14 +49,19 @@ export function renderDocument(
         clip = svg('clipPath', { id, clipPathUnits: 'userSpaceOnUse' }),
         c = center(n);
       clip.append(
-        svg('rect', {
-          x: n.x,
-          y: n.y,
-          width: n.width,
-          height: n.height,
-          rx: n.radius,
-          transform: `rotate(${n.rotation} ${c.x} ${c.y})`,
-        }),
+        n.cornerRadii
+          ? svg('path', {
+              d: roundedRectPath(n),
+              transform: `rotate(${n.rotation} ${c.x} ${c.y})`,
+            })
+          : svg('rect', {
+              x: n.x,
+              y: n.y,
+              width: n.width,
+              height: n.height,
+              rx: n.radius,
+              transform: `rotate(${n.rotation} ${c.x} ${c.y})`,
+            }),
       );
       defs.append(clip);
       wrapper.append(defs);

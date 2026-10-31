@@ -95,6 +95,227 @@ test('auto layout controls arrange children and undo restores original positions
   await expect(page.getByLabel('Direction', { exact: true })).toHaveValue('horizontal');
   expect(errors).toEqual([]);
 });
+test('numeric labels scrub dimensions and corner radius controls edit individual corners', async ({
+  page,
+}) => {
+  const errors = await open(page);
+  await select(page, 'rect-a');
+  await expect(page.locator('[data-corner-radius="topLeft"]')).toHaveAttribute(
+    'cursor',
+    'crosshair',
+  );
+  await expect(page.locator('[data-corner-radius="topLeft"] title')).toHaveText(
+    'Drag to round corners. Double-click for one corner.',
+  );
+  await expect(page.getByRole('button', { name: 'Top-left radius' })).toHaveAttribute(
+    'title',
+    'Top-left radius',
+  );
+  const caption = page
+      .locator('.field')
+      .filter({ has: page.getByLabel('W', { exact: true }) })
+      .locator('span'),
+    box = await caption.boundingBox();
+  if (!box) throw new Error('Width label is not visible.');
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 20, box.y + box.height / 2);
+  await page.mouse.up();
+  await expect(page.getByLabel('W', { exact: true })).toHaveValue('85');
+  await page.getByRole('spinbutton', { name: 'Top-left radius' }).fill('24');
+  await page.getByRole('spinbutton', { name: 'Top-left radius' }).press('Tab');
+  const doc = await saved(page),
+    shape = doc.nodes.find((n) => n.id === 'rect-a')!;
+  expect(shape.width).toBe(85);
+  expect(shape.cornerRadii?.topLeft).toBe(24);
+  expect(shape.cornerRadii?.topRight).toBe(0);
+  expect(errors).toEqual([]);
+});
+test('canvas corner handles drag uniformly or select and edit one corner', async ({ page }) => {
+  const errors = await open(page);
+  await select(page, 'rect-a');
+  const handle = (corner: string) => page.locator(`[data-corner-radius="${corner}"]`),
+    topLeft = handle('topLeft'),
+    position = await topLeft.boundingBox();
+  if (!position) throw new Error('Corner radius handle is not visible.');
+  const startX = Number(await topLeft.getAttribute('cx')),
+    startY = Number(await topLeft.getAttribute('cy'));
+  await expect(topLeft).toHaveCSS('stroke', 'rgb(16, 161, 207)');
+  await page.mouse.move(position.x + position.width / 2, position.y + position.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(
+    position.x + position.width / 2 + 12,
+    position.y + position.height / 2 + 12,
+  );
+  await page.mouse.up();
+  let shape = (await saved(page)).nodes.find((n) => n.id === 'rect-a')!;
+  expect(shape.radius).toBeCloseTo(16.97);
+  expect(shape.cornerRadii).toBeUndefined();
+  const endX = Number(await topLeft.getAttribute('cx')),
+    endY = Number(await topLeft.getAttribute('cy'));
+  expect(endX - startX).toBeCloseTo(12);
+  expect(endY - startY).toBeCloseTo(12);
+
+  const updatedHandle = handle('topRight'),
+    updatedPosition = await updatedHandle.boundingBox();
+  if (!updatedPosition) throw new Error('Corner radius handle disappeared.');
+  await page.mouse.click(
+    updatedPosition.x + updatedPosition.width / 2,
+    updatedPosition.y + updatedPosition.height / 2,
+    { clickCount: 2 },
+  );
+  await expect(updatedHandle).toHaveAttribute('data-selected', 'true');
+  await expect(updatedHandle).toHaveAttribute('fill', 'var(--canvas-bg)');
+  await expect(updatedHandle).toHaveAttribute('stroke', 'var(--radius-handle)');
+  await page.mouse.move(
+    updatedPosition.x + updatedPosition.width / 2,
+    updatedPosition.y + updatedPosition.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    updatedPosition.x + updatedPosition.width / 2 - 2,
+    updatedPosition.y + updatedPosition.height / 2 + 2,
+  );
+  await page.mouse.up();
+  shape = (await saved(page)).nodes.find((n) => n.id === 'rect-a')!;
+  expect(shape.cornerRadii?.topRight).toBeCloseTo(19.8);
+  expect(shape.cornerRadii?.topLeft).toBeCloseTo(16.97);
+  const bottomLeft = handle('bottomLeft'),
+    bottomLeftPosition = await bottomLeft.boundingBox();
+  if (!bottomLeftPosition) throw new Error('Bottom-left radius handle is not visible.');
+  await page.mouse.click(
+    bottomLeftPosition.x + bottomLeftPosition.width / 2,
+    bottomLeftPosition.y + bottomLeftPosition.height / 2,
+  );
+  await page.mouse.move(
+    bottomLeftPosition.x + bottomLeftPosition.width / 2,
+    bottomLeftPosition.y + bottomLeftPosition.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    bottomLeftPosition.x + bottomLeftPosition.width / 2 + 1,
+    bottomLeftPosition.y + bottomLeftPosition.height / 2 - 1,
+  );
+  await page.mouse.up();
+  shape = (await saved(page)).nodes.find((n) => n.id === 'rect-a')!;
+  expect(shape.cornerRadii?.bottomLeft).toBeCloseTo(18.38);
+  expect(shape.cornerRadii?.bottomRight).toBeCloseTo(16.97);
+  expect(errors).toEqual([]);
+});
+test('fill color previews immediately and stroke controls expose width and color', async ({
+  page,
+}) => {
+  const errors = await open(page);
+  await select(page, 'rect-a');
+  const fill = page.getByLabel('Fill', { exact: true });
+  await fill.evaluate((input: HTMLInputElement) => {
+    input.value = '#00ff00';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await expect(page.locator('#scene [data-id="rect-a"]')).toHaveAttribute('fill', '#00ff00');
+  await expect(fill).toBeVisible();
+  await fill.evaluate((input: HTMLInputElement) =>
+    input.dispatchEvent(new Event('change', { bubbles: true })),
+  );
+  const fillField = page.locator('.canvas-color-field'),
+    strokeField = page.locator('.stroke-field');
+  await expect(strokeField).toBeVisible();
+  await expect(fillField).toBeVisible();
+  await expect(fill).toHaveAttribute('title', 'Fill color');
+  await expect(page.getByLabel('Enable stroke', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Stroke color', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Stroke width', { exact: true })).toBeVisible();
+  const strokeWidthBox = await page.getByLabel('Stroke width', { exact: true }).boundingBox(),
+    strokeColorBox = await page.getByLabel('Stroke color', { exact: true }).boundingBox(),
+    strokeToggleBox = await page.getByLabel('Enable stroke', { exact: true }).boundingBox();
+  expect(strokeWidthBox).not.toBeNull();
+  expect(strokeColorBox).not.toBeNull();
+  expect(strokeToggleBox).not.toBeNull();
+  expect(Math.abs(strokeWidthBox!.y - strokeColorBox!.y)).toBeLessThan(5);
+  expect(Math.abs(strokeWidthBox!.y - strokeToggleBox!.y)).toBeLessThan(5);
+  expect(strokeColorBox!.width).toBeGreaterThan(24);
+  expect(
+    await fillField.evaluate(
+      (element) =>
+        element.compareDocumentPosition(document.querySelector('.stroke-field')!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ),
+  ).toBeTruthy();
+  await page.getByLabel('Enable stroke', { exact: true }).check();
+  await page.getByLabel('Stroke width', { exact: true }).fill('3');
+  await page.getByLabel('Stroke width', { exact: true }).press('Tab');
+  await page.getByLabel('Stroke color', { exact: true }).evaluate((input: HTMLInputElement) => {
+    input.value = '#ff0000';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await page
+    .getByLabel('Stroke color', { exact: true })
+    .evaluate((input: HTMLInputElement) =>
+      input.dispatchEvent(new Event('change', { bubbles: true })),
+    );
+  const shape = (await saved(page)).nodes.find((n) => n.id === 'rect-a')!;
+  expect(shape.fill).toBe('#00ff00');
+  expect(shape.appearance?.stroke).toBe('#ff0000');
+  expect(shape.appearance?.strokeWidth).toBe(3);
+  expect(errors).toEqual([]);
+});
+test('corner radius controls are not shown for circles', async ({ page }) => {
+  const errors = await open(page);
+  await select(page, 'circle-b');
+  await expect(page.getByLabel('Radius', { exact: true })).toHaveCount(0);
+  await expect(page.locator('[data-corner-radius]')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+test('canvas fill and pick color tools apply fill and shift-click stroke', async ({ page }) => {
+  const errors = await open(page);
+  await select(page, 'rect-a');
+  const fill = page.getByLabel('Fill', { exact: true });
+  await fill.fill('#00ff00');
+  await page.getByRole('button', { name: 'Apply fill' }).click();
+  await expect(page.locator('#canvas')).toHaveCSS('cursor', 'crosshair');
+  await page.locator('#scene ellipse[data-id="circle-b"]').click();
+  let doc = await saved(page);
+  expect(doc.nodes.find((n) => n.id === 'circle-b')?.fill).toBe('#00ff00');
+
+  await select(page, 'circle-b');
+  await page.getByLabel('Fill', { exact: true }).fill('#0000ff');
+  await page.getByLabel('Enable stroke', { exact: true }).check();
+  await page.getByLabel('Stroke width', { exact: true }).fill('3');
+  await page.getByLabel('Stroke width', { exact: true }).press('Tab');
+  await page.getByLabel('Stroke color', { exact: true }).fill('#ff0000');
+  await select(page, 'rect-a');
+  const pickColor = page.getByRole('button', { name: 'Pick color' });
+  await expect(pickColor).toBeVisible();
+  const toolbarBox = await page.locator('.toolbar').boundingBox(),
+    pickColorBox = await pickColor.boundingBox();
+  expect(toolbarBox).not.toBeNull();
+  expect(pickColorBox).not.toBeNull();
+  expect(pickColorBox!.y).toBeGreaterThan(toolbarBox!.y);
+  expect(
+    Math.abs(pickColorBox!.x + pickColorBox!.width / 2 - (toolbarBox!.x + toolbarBox!.width / 2)),
+  ).toBeLessThan(24);
+  await pickColor.click();
+  await expect(pickColor).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#scene ellipse[data-id="circle-b"]').click();
+  doc = await saved(page);
+  expect(doc.nodes.find((n) => n.id === 'rect-a')?.fill).toBe('#0000ff');
+  await pickColor.click();
+  await page.locator('#scene ellipse[data-id="circle-b"]').click({ modifiers: ['Shift'] });
+  doc = await saved(page);
+  const target = doc.nodes.find((n) => n.id === 'rect-a')!;
+  expect(target.appearance?.stroke).toBe('#ff0000');
+  expect(target.appearance?.strokeWidth).toBeGreaterThan(0);
+  expect(errors).toEqual([]);
+});
+test('snap to grid can be enabled independently of geometry snapping', async ({ page }) => {
+  const errors = await open(page);
+  const gridSnap = page.getByRole('button', { name: 'Snap to grid', exact: true });
+  await expect(gridSnap).toHaveAttribute('title', 'Snap to grid');
+  await expect(gridSnap).toHaveAttribute('aria-pressed', 'false');
+  await gridSnap.click();
+  await expect(gridSnap).toHaveAttribute('aria-pressed', 'true');
+  expect(errors).toEqual([]);
+});
 test('component controls create linked instances, preserve overrides and detach', async ({
   page,
 }) => {

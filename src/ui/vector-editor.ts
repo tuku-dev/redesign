@@ -83,6 +83,21 @@ export function bindVectorEditor(
     el.canvas.focus();
     store.refresh();
   }
+  function directSelect(): void {
+    const current = store.current();
+    if (current?.vector) enterEdit(current.id);
+    else {
+      gestures.cancel();
+      stop(true);
+      drawing = false;
+      points = [];
+      hover = null;
+      store.editingVectorId = null;
+      store.tool = 'select';
+      store.refresh();
+    }
+  }
+  document.querySelector<HTMLButtonElement>('#direct-select')!.onclick = directSelect;
   modeButton.onclick = () => {
     if (isEditing()) {
       store.editingVectorId = null;
@@ -101,8 +116,11 @@ export function bindVectorEditor(
     const penButton = document.querySelector<HTMLButtonElement>('#pen-tool');
     penButton?.classList.toggle('active', drawing);
     penButton?.setAttribute('aria-pressed', String(drawing));
+    const directButton = document.querySelector<HTMLButtonElement>('#direct-select');
+    directButton?.classList.toggle('active', active && !drawing);
+    directButton?.setAttribute('aria-pressed', String(active && !drawing));
     el.toolButtons.forEach((b) => {
-      const active = !drawing && b.dataset.tool === store.tool;
+      const active = !drawing && b.dataset.tool === store.tool && !isEditing();
       b.classList.toggle('active', active);
       b.setAttribute('aria-pressed', String(active));
     });
@@ -414,6 +432,19 @@ export function bindVectorEditor(
         e.preventDefault();
         store.editingVectorId = null;
         store.refresh();
+        return;
+      }
+      if (
+        !drawing &&
+        e.key.toLowerCase() === 'a' &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey &&
+        !e.shiftKey
+      ) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        directSelect();
         return;
       }
       if (

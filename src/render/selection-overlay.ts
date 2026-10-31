@@ -1,4 +1,4 @@
-﻿import { selectionRoots } from '../model/hierarchy.ts';
+import { selectionRoots } from '../model/hierarchy.ts';
 import { bounds } from '../model/geometry.ts';
 import { visualBox, center } from '../model/rotation.ts';
 import { isLocked } from '../model/layer-state.ts';
@@ -8,6 +8,7 @@ import type { GestureController } from '../editor/gestures.ts';
 import { svg } from './svg.ts';
 import type { SvgAttributes } from './svg.ts';
 import { renderGuides } from './guides.ts';
+import { cornerRadii } from '../model/geometry.ts';
 export const handles: Record<ResizeHandle, readonly [number, number]> = {
   nw: [0, 0],
   n: [0.5, 0],
@@ -96,6 +97,34 @@ export function renderSelection(
           cursor: 'grab',
         }),
       );
+      if (single && (single.type === 'rectangle' || single.type === 'frame')) {
+        const radii = cornerRadii(single),
+          corners = [
+            ['topLeft', box.x, box.y, 1, 1],
+            ['topRight', box.x + box.width, box.y, -1, 1],
+            ['bottomRight', box.x + box.width, box.y + box.height, -1, -1],
+            ['bottomLeft', box.x, box.y + box.height, 1, -1],
+          ] as const;
+        for (const [corner, x, y, directionX, directionY] of corners) {
+          const diagonal = radii[corner] / Math.SQRT2,
+            inset = 15 / zoom + diagonal,
+            handle = svg('circle', {
+              cx: x + directionX * inset,
+              cy: y + directionY * inset,
+              r: 4 / zoom,
+              fill: 'var(--canvas-bg)',
+              stroke: 'var(--radius-handle)',
+              'stroke-width': (store.cornerRadiusCorner === corner ? 3 : 2) / zoom,
+              'data-corner-radius': corner,
+              'data-selected': String(store.cornerRadiusCorner === corner),
+              cursor: 'crosshair',
+            }),
+            title = svg('title');
+          title.textContent = 'Drag to round corners. Double-click for one corner.';
+          handle.append(title);
+          controls.append(handle);
+        }
+      }
     }
     overlay.append(controls);
     if (gestures.active?.kind === 'rotate') {

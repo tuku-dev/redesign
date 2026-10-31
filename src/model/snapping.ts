@@ -17,6 +17,19 @@ export interface SnapResult {
   guides: Guide[];
   measurements: Measurement[];
 }
+export function snapToGrid(
+  point: Point,
+  size: number,
+  zoom: number,
+): { point: Point; guides: Guide[] } {
+  if (!Number.isFinite(size) || size <= 0) return { point: { ...point }, guides: [] };
+  const result = { ...point };
+  for (const axis of ['x', 'y'] as const) {
+    const nearest = Math.round(point[axis] / size) * size;
+    if (Math.abs(nearest - point[axis]) <= 6 / zoom) result[axis] = nearest;
+  }
+  return { point: result, guides: [] };
+}
 const anchors = (box: SnapBox, axis: 'x' | 'y') =>
   box.snapAxis && box.snapAxis !== axis
     ? []
@@ -69,6 +82,7 @@ export function snapTranslation(
   dy: number,
   zoom: number,
   enabled = true,
+  gridSize?: number,
 ): SnapResult {
   const moving = { ...box, x: box.x + dx, y: box.y + dy },
     tolerance = 6 / zoom,
@@ -131,6 +145,25 @@ export function snapTranslation(
         });
       }
     }
+  if (gridSize && Number.isFinite(gridSize) && gridSize > 0) {
+    for (const axis of ['x', 'y'] as const) {
+      let nearest: number | undefined;
+      for (const anchor of anchors(moving, axis)) {
+        const gridAnchor = Math.round(anchor / gridSize) * gridSize,
+          delta = gridAnchor - anchor;
+        if (
+          Math.abs(delta) <= tolerance &&
+          (nearest === undefined || Math.abs(delta) < Math.abs(nearest))
+        )
+          nearest = delta;
+      }
+      if (nearest !== undefined) {
+        moving[axis] += nearest;
+        if (axis === 'x') dx += nearest;
+        else dy += nearest;
+      }
+    }
+  }
   return { dx, dy, guides, measurements: measureSpacing(moving, candidates) };
 }
 export function snapPoint(

@@ -19,9 +19,14 @@ export function bindToolbar(
   commands: EditingCommands,
   notify: Notify,
 ): (selectionOnly: boolean) => void {
-  el.snapEnabled.onchange = () => {
-    store.snappingEnabled = el.snapEnabled.checked;
+  el.snapGridEnabled.onclick = () => {
+    store.gridSnappingEnabled = !store.gridSnappingEnabled;
     store.refresh('scene');
+    renderToolbar(el, store);
+  };
+  el.pickColor.onclick = () => {
+    store.canvasColorMode = store.canvasColorMode === 'sample' ? null : 'sample';
+    store.refresh('all');
   };
   const center = () => ({ x: el.canvas.clientWidth / 2, y: el.canvas.clientHeight / 2 });
   el.zoomIn.onclick = () => viewport.setZoom(store.zoom * 1.2, center());
@@ -64,8 +69,17 @@ export function renderToolbar(el: EditorElements, store: EditorStore): void {
     b.classList.toggle('active', b.dataset.tool === store.tool);
     b.setAttribute('aria-pressed', String(b.dataset.tool === store.tool));
   });
-  el.canvas.style.cursor =
-    store.tool === 'hand' ? 'grab' : store.tool === 'select' ? 'default' : 'crosshair';
+  el.snapGridEnabled.setAttribute('aria-pressed', String(store.gridSnappingEnabled));
+  el.snapGridEnabled.classList.toggle('active', store.gridSnappingEnabled);
+  el.pickColor.setAttribute('aria-pressed', String(store.canvasColorMode === 'sample'));
+  el.pickColor.classList.toggle('active', store.canvasColorMode === 'sample');
+  el.canvas.style.cursor = store.canvasColorMode
+    ? 'crosshair'
+    : store.tool === 'hand'
+      ? 'grab'
+      : store.tool === 'select'
+        ? 'default'
+        : 'crosshair';
   el.undo.disabled = !store.history.past.length;
   el.redo.disabled = !store.history.future.length;
 }

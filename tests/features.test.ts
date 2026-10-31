@@ -11,6 +11,7 @@ import { allNodes } from '../src/model/workspace.ts';
 import { booleanRings, insideRing, shapeRings } from '../src/model/vector.ts';
 import { PrototypeSession } from '../src/model/prototype.ts';
 import { guideCandidates } from '../src/render/layout-grid.ts';
+import { cornerRadii, roundedRectPath } from '../src/model/geometry.ts';
 import { snapPoint, snapTranslation } from '../src/model/snapping.ts';
 import type { DesignNode, Point } from '../src/model/types.ts';
 function editor(nodes: DesignNode[]) {
@@ -538,4 +539,40 @@ test('ellipse booleans use bounded polygon approximations and preserve rotated g
     r = createNode('rectangle', { x: -100, y: -100, width: 400, height: 400 });
   const rings = booleanRings([e, r], 'intersection');
   assert.ok(Math.abs(area(rings) - Math.PI * 2500) < 20);
+});
+test('individual corner radii render, persist and return to a uniform radius', () => {
+  const shape = createNode('rectangle', { width: 100, height: 40, radius: 8 }),
+    { s, edit } = editor([shape]);
+  s.selected = new Set([shape.id]);
+  edit.setProperty('topLeftRadius', 24);
+  assert.deepEqual(cornerRadii(node(s, shape.id)), {
+    topLeft: 24,
+    topRight: 8,
+    bottomRight: 8,
+    bottomLeft: 8,
+  });
+  assert.match(roundedRectPath(node(s, shape.id)), /A 24 24 0 0 1/);
+  assert.equal(validateDocument(s.doc).nodes[0].cornerRadii?.topLeft, 24);
+  edit.setProperty('radius', 12);
+  assert.equal(node(s, shape.id).radius, 12);
+  assert.equal(node(s, shape.id).cornerRadii, undefined);
+  assert.throws(() =>
+    validateDocument({
+      ...createDocument(),
+      nodes: [
+        { ...shape, cornerRadii: { topLeft: -1, topRight: 0, bottomRight: 0, bottomLeft: 0 } },
+      ],
+    }),
+  );
+});
+test('individual corner radii propagate from component frames to instances', () => {
+  const frame = createNode('frame'),
+    { s, c, edit } = editor([frame]);
+  s.selected = new Set([frame.id]);
+  c.createComponent();
+  c.instantiate();
+  const instanceId = s.current()!.id;
+  s.selected = new Set([frame.id]);
+  edit.setProperty('topLeftRadius', 16);
+  assert.equal(node(s, instanceId).cornerRadii?.topLeft, 16);
 });

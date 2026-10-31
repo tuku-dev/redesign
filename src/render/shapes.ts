@@ -4,6 +4,7 @@ import type { DesignNode } from '../model/types.ts';
 import { svg } from './svg.ts';
 import { renderText } from './text.ts';
 import { center } from '../model/rotation.ts';
+import { roundedRectPath } from '../model/geometry.ts';
 export function renderShape(n: DesignNode): SVGElement {
   const attrs = { fill: n.fill, opacity: n.opacity, 'data-id': n.id };
   let shape: SVGElement;
@@ -32,6 +33,11 @@ export function renderShape(n: DesignNode): SVGElement {
       'fill-rule': 'evenodd',
     });
   else if (n.type === 'text') shape = renderText(n, attrs);
+  else if (n.cornerRadii)
+    shape = svg('path', {
+      ...attrs,
+      d: roundedRectPath(n),
+    });
   else
     shape = svg('rect', {
       ...attrs,

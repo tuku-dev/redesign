@@ -123,13 +123,19 @@ export function renderFeatureProperties(
     container.append(layout);
   }
   if (n.type !== 'group') {
-    const appearance = section('Fill, stroke & effects'),
+    const appearance = section('Fill & effects'),
       a = n.appearance ?? defaultAppearance();
     const paint = (action: (value: typeof a) => void) => {
       const next = clone(a);
       action(next);
       command.appearance(next);
     };
+    const previewPaint = (action: (value: typeof a) => void) =>
+      store.chosen().forEach((node) => {
+        const next = clone(node.appearance ?? defaultAppearance());
+        action(next);
+        node.appearance = next;
+      });
     checkbox(
       appearance,
       'Gradient fill',
@@ -145,6 +151,7 @@ export function renderFeatureProperties(
         'color',
         (v) => paint((a) => (a.gradient.end = v)),
         notify,
+        { store, preview: (color) => previewPaint((value) => (value.gradient.end = color)) },
       );
       inputField(
         appearance,
@@ -155,22 +162,6 @@ export function renderFeatureProperties(
         notify,
       );
     }
-    inputField(
-      appearance,
-      'Stroke',
-      a.stroke,
-      'color',
-      (v) => paint((a) => (a.stroke = v)),
-      notify,
-    );
-    inputField(
-      appearance,
-      'Stroke width',
-      a.strokeWidth,
-      'number',
-      (v) => paint((a) => (a.strokeWidth = Number(v))),
-      notify,
-    );
     checkbox(
       appearance,
       'Drop shadow',
@@ -195,6 +186,7 @@ export function renderFeatureProperties(
         'color',
         (v) => paint((a) => (a.shadow.color = v)),
         notify,
+        { store, preview: (color) => previewPaint((value) => (value.shadow.color = color)) },
       );
     }
     inputField(

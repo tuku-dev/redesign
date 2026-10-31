@@ -59,7 +59,7 @@ store.subscribe((update) => {
   if (update.view === 'all') {
     renderToolbar(elements, store);
     renderLayers(elements.layers, store);
-    renderProperties(elements.properties, store, commands, clipboard, notify);
+    renderProperties(elements.properties, store, commands, clipboard, notify, elements.canvas);
   }
 });
 const fit = bindToolbar(elements, store, gestures, viewport, commands, notify);

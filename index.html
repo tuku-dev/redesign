@@ -83,13 +83,28 @@
             <g id="selection"></g>
           </g>
         </svg>
-        <label class="snap-toggle"
-          ><input id="snap-enabled" type="checkbox" checked /> Snap to geometry</label
+        <button
+          id="snap-grid-enabled"
+          class="snap-grid-toggle"
+          type="button"
+          title="Snap to grid"
+          aria-label="Snap to grid"
+          aria-pressed="false"
         >
+          <span data-icon="snapGrid"></span>
+        </button>
         <div class="canvas-hint">Drag to draw · Space + drag to pan · Scroll to zoom</div>
         <nav class="toolbar" aria-label="Drawing tools">
           <button data-tool="select" title="Move (V)" aria-label="Move tool">
             <span data-icon="select"></span></button
+          ><button
+            id="direct-select"
+            type="button"
+            title="Direct selection (A)"
+            aria-label="Direct selection tool"
+            aria-pressed="false"
+          >
+            <span data-icon="directSelect"></span></button
           ><button data-tool="hand" title="Hand (H)" aria-label="Hand tool">
             <span data-icon="hand"></span></button
           ><span class="separator"></span
@@ -97,6 +112,14 @@
             <span data-icon="frame"></span></button
           ><button data-tool="rectangle" title="Rectangle (R)" aria-label="Rectangle tool">
             <span data-icon="rectangle"></span></button
+          ><button
+            id="pick-color"
+            type="button"
+            title="Pick color"
+            aria-label="Pick color"
+            aria-pressed="false"
+          >
+            <span data-icon="eyedropper"></span></button
           ><button data-tool="ellipse" title="Ellipse (O)" aria-label="Ellipse tool">
             <span data-icon="ellipse"></span></button
           ><button

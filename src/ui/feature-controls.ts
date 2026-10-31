@@ -1,5 +1,8 @@
 import type { Notify } from './notifications.ts';
 import { errorMessage } from './elements.ts';
+import { bindNumberScrub } from './numeric-scrub.ts';
+import type { EditorStore } from '../editor/store.ts';
+import { bindColorPreview } from './color-preview.ts';
 export function section(title: string): HTMLDivElement {
   const el = document.createElement('div');
   el.className = 'property-group feature-section';
@@ -55,6 +58,7 @@ export function inputField(
   type: 'number' | 'text' | 'color',
   change: (v: string) => void,
   notify: Notify,
+  liveColor?: { store: EditorStore; preview: (v: string) => void },
 ): HTMLInputElement {
   const wrap = document.createElement('label');
   wrap.className = 'feature-field';
@@ -64,8 +68,13 @@ export function inputField(
   input.type = type;
   input.value = String(value);
   input.setAttribute('aria-label', label);
-  if (type === 'number') input.step = 'any';
-  input.onchange = () => run(notify, () => change(input.value));
+  if (type === 'number') {
+    input.step = 'any';
+    bindNumberScrub(caption, input);
+  }
+  if (type === 'color' && liveColor)
+    bindColorPreview(input, liveColor.store, liveColor.preview, notify);
+  else input.onchange = () => run(notify, () => change(input.value));
   wrap.append(caption, input);
   parent.append(wrap);
   return input;

@@ -4,6 +4,7 @@ import type { NodeOptions, ConstraintMode } from '../model/types.ts';
 import { isLocked } from '../model/layer-state.ts';
 import type { Notify } from './notifications.ts';
 import { errorMessage } from './elements.ts';
+import { bindNumberScrub } from './numeric-scrub.ts';
 export function renderDesignOptions(area: HTMLElement, store: EditorStore, notify: Notify): void {
   const nodes = store.chosen(),
     first = nodes[0];
@@ -38,6 +39,7 @@ export function renderDesignOptions(area: HTMLElement, store: EditorStore, notif
     input.step = step;
     input.disabled = disabled;
     input.setAttribute('aria-label', label);
+    bindNumberScrub(text, input);
     if (nodes.some((n) => n[key] !== first[key])) input.placeholder = 'Mixed';
     else input.value = String(first[key]);
     input.onchange = () => {

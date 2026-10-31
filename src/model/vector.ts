@@ -4,17 +4,47 @@ import clipping from 'polygon-clipping';
 import type { MultiPolygon, Ring } from 'polygon-clipping';
 import type { DesignNode, Point } from './types.ts';
 import { center, rotatePoint } from './rotation.ts';
+const isSharp = (p: VectorPoint) => !p.in && !p.out;
+/** Replaces straight-edged corners with arcs; curved anchors are left untouched. */
+export function roundRing(ring: VectorPoint[], radius: number): VectorPoint[] {
+  const count = ring.length;
+  if (radius <= 0 || count < 3) return ring;
+  const result: VectorPoint[] = [];
+  ring.forEach((p, i) => {
+    const prev = ring[(i + count - 1) % count],
+      next = ring[(i + 1) % count];
+    if (!isSharp(p) || !isSharp(prev) || !isSharp(next)) return void result.push(p);
+    const ux = prev.x - p.x,
+      uy = prev.y - p.y,
+      vx = next.x - p.x,
+      vy = next.y - p.y,
+      lu = Math.hypot(ux, uy),
+      lv = Math.hypot(vx, vy);
+    if (!lu || !lv) return void result.push(p);
+    const cos = Math.max(-1, Math.min(1, (ux * vx + uy * vy) / (lu * lv))),
+      angle = Math.acos(cos),
+      tangent = Math.tan(angle / 2);
+    if (tangent < 1e-6 || angle > Math.PI - 1e-6) return void result.push(p);
+    const distance = Math.min(radius / tangent, lu / 2, lv / 2),
+      arc = distance * tangent,
+      handle = (4 / 3) * Math.tan((Math.PI - angle) / 4) * arc,
+      start = { x: p.x + (ux / lu) * distance, y: p.y + (uy / lu) * distance },
+      end = { x: p.x + (vx / lv) * distance, y: p.y + (vy / lv) * distance };
+    result.push(
+      { ...start, out: { x: start.x - (ux / lu) * handle, y: start.y - (uy / lu) * handle } },
+      { ...end, in: { x: end.x - (vx / lv) * handle, y: end.y - (vy / lv) * handle } },
+    );
+  });
+  return result;
+}
+function worldRings(n: DesignNode): VectorPoint[][] {
+  const rings = n.vector!.rings.map((r) =>
+    r.map((p) => mapVectorPoint(p, (q) => ({ x: n.x + q.x * n.width, y: n.y + q.y * n.height }))),
+  );
+  return n.vector!.closed && n.radius > 0 ? rings.map((r) => roundRing(r, n.radius)) : rings;
+}
 export function pathData(n: DesignNode): string {
-  return n.vector
-    ? bezierPathData(
-        n.vector.rings.map((r) =>
-          r.map((p) =>
-            mapVectorPoint(p, (q) => ({ x: n.x + q.x * n.width, y: n.y + q.y * n.height })),
-          ),
-        ),
-        n.vector.closed,
-      )
-    : '';
+  return n.vector ? bezierPathData(worldRings(n), n.vector.closed) : '';
 }
 export function vectorFromPoints(
   rings: VectorPoint[][],
@@ -48,15 +78,7 @@ export function insideRing(p: Point, ring: Point[]): boolean {
 }
 export function shapeRings(n: DesignNode): Point[][] {
   let rings: Point[][];
-  if (n.type === 'path' && n.vector?.closed)
-    rings = n.vector.rings.map((r) =>
-      flattenRing(
-        r.map((p) =>
-          mapVectorPoint(p, (q) => ({ x: n.x + q.x * n.width, y: n.y + q.y * n.height })),
-        ),
-        true,
-      ),
-    );
+  if (n.type === 'path' && n.vector?.closed) rings = worldRings(n).map((r) => flattenRing(r, true));
   else if (n.type === 'ellipse')
     rings = [
       Array.from({ length: 64 }, (_, i) => ({

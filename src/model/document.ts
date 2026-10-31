@@ -62,6 +62,19 @@ function isNode(value: unknown): value is ImportedNode {
     const n = value[key];
     if (typeof n !== 'number' || !Number.isFinite(n) || Math.abs(n) > 1000000) return false;
   }
+  const radii = value.cornerRadii;
+  if (radii !== undefined) {
+    if (!['frame', 'rectangle'].includes(String(value.type)) || !record(radii)) return false;
+    if (
+      !['topLeft', 'topRight', 'bottomRight', 'bottomLeft'].every((key) => {
+        const radius = radii[key];
+        return (
+          typeof radius === 'number' && Number.isFinite(radius) && radius >= 0 && radius <= 1e6
+        );
+      })
+    )
+      return false;
+  }
   return (
     Number(value.width) >= 1 &&
     Number(value.height) >= 1 &&

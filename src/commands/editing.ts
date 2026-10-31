@@ -10,6 +10,7 @@ import { createNode, validateDocument } from '../model/document.ts';
 import { clone } from '../model/types.ts';
 import type { Alignment, Axis, EditableProperty } from '../model/types.ts';
 import { selectedNodes } from '../model/selection.ts';
+import { cornerRadii } from '../model/geometry.ts';
 import type { EditorStore } from '../editor/store.ts';
 import { cloneNodes, translateNodes } from './transforms.ts';
 import { alignNodes, distributeNodes } from './alignment.ts';
@@ -92,7 +93,18 @@ export class EditingCommands {
         n[key] = value;
       } else {
         if (typeof value !== 'number') throw new Error('Expected numeric value.');
-        n[key] = value;
+        if (key === 'radius') {
+          n.radius = value;
+          delete n.cornerRadii;
+        } else if (key === 'topLeftRadius') {
+          n.cornerRadii = { ...cornerRadii(n), topLeft: value };
+        } else if (key === 'topRightRadius') {
+          n.cornerRadii = { ...cornerRadii(n), topRight: value };
+        } else if (key === 'bottomRightRadius') {
+          n.cornerRadii = { ...cornerRadii(n), bottomRight: value };
+        } else if (key === 'bottomLeftRadius') {
+          n.cornerRadii = { ...cornerRadii(n), bottomLeft: value };
+        } else Object.assign(n, { [key]: value });
       }
     }
     validateDocument(next);

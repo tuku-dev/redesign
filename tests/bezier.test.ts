@@ -55,6 +55,28 @@ test('straight legacy paths keep line commands and need no new fields', () => {
     { x: 1, y: 1 },
   ]);
 });
+test('radius rounds straight corners of closed custom shapes and leaves open paths alone', () => {
+  const square = [
+    { x: 0, y: 0 },
+    { x: 100, y: 0 },
+    { x: 100, y: 100 },
+    { x: 0, y: 100 },
+  ];
+  const n = createNode('path', { ...vectorFromPoints([square], true), radius: 20 });
+  const d = pathData(n);
+  assert.equal((d.match(/C /g) ?? []).length, 4);
+  assert.ok(d.startsWith('M 0 20'));
+  const rounded = flattenRing(
+    [
+      { x: 20, y: 0, out: { x: 8.954, y: 0 } },
+      { x: 0, y: 20, in: { x: 0, y: 8.954 } },
+    ],
+    false,
+  );
+  assert.ok(rounded.length > 2);
+  const open = createNode('path', { ...vectorFromPoints([square], false), radius: 20 });
+  assert.ok(!pathData(open).includes('C '));
+});
 test('normalizing curves retains handles outside tight bounds and SVG uses cubic segments', () => {
   const n = createNode('path', { ...vectorFromPoints([arch()], false) });
   assert.equal(n.height, 75);
