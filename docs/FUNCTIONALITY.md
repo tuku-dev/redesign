@@ -46,7 +46,7 @@ Status updated on 2026-10-31. **Basic** means an implementation exists but brows
 | EDIT-03 | Nested selection | Basic; Ctrl/Cmd-click group drilling, parent/child selection, bounding-box Select layer menu |
 | EDIT-04 | Move and nudge | Basic; drag, arrows, Shift for 10px |
 | EDIT-05 | Resize | Basic; eight handles, multi-layer bounds, Shift aspect lock and Alt center resize; text metrics remain limited |
-| EDIT-06 | Rotation, flips and scale | Partial; subtree rotation handle/Angle field, 15-degree Shift snapping and rotated resizing; flips and full scale transforms pending |
+| EDIT-06 | Rotation, flips and scale | Partial; subtree rotation handle/Angle field, 15-degree Shift snapping, rotated resizing and context-menu 90°/180° rotation plus horizontal/vertical flips; full scale transforms pending |
 | EDIT-07 | Snapping and measurements | Basic; edge/center and equal-gap drag snapping, drawing/resize snapping, magenta guides and spacing measurements; grid/ruler snapping pending |
 | EDIT-08 | Alignment and distribution | Basic; six edge/center alignments and equal-gap horizontal/vertical distribution |
 | EDIT-09 | Duplicate and delete | Basic; full selection duplicated/deleted in one transaction |
@@ -76,7 +76,7 @@ Status updated on 2026-10-31. **Basic** means an implementation exists but brows
 | NODE-12 | Boolean operations | Partial; union, subtract, intersect and exclude create editable compound paths with holes; operands recover through undo, live boolean containers pending; curves polygonized |
 | NODE-13 | Flatten and outline strokes | Pending; predictable conversion to vector geometry |
 | NODE-14 | Corner controls | Basic uniform radius; independent corners and smoothing pending |
-| NODE-15 | Image layers | Partial; PNG/JPEG/WebP/GIF picker and drop, embedded image fills, cover/contain/stretch and focal crop; clipboard images, tiling and adjustments pending |
+| NODE-15 | Image layers | Partial; PNG/JPEG/WebP/GIF picker and drop, embedded image fills, cover/contain/stretch, focal crop and non-destructive brightness/contrast/saturation; clipboard images and tiling pending |
 
 ## 5. Appearance and rendering
 
@@ -89,7 +89,7 @@ Status updated on 2026-10-31. **Basic** means an implementation exists but brows
 | PAINT-05 | Opacity and blend modes | Basic layer opacity; blend modes pending |
 | PAINT-06 | Shadows and blur | Partial; one drop shadow and layer blur via shared SVG filters; conservative export bounds; inner/background blur and effect stacks pending |
 | PAINT-07 | Color picker | Basic browser picker; hex/RGB/HSL/alpha, eyedropper and shared swatches pending |
-| PAINT-08 | Image adjustments | Pending; non-destructive adjustments |
+| PAINT-08 | Image adjustments | Partial; non-destructive brightness, contrast and saturation controls (0–200%) for image fills |
 | PAINT-09 | Rendering fidelity | Research; antialiasing, compositing, clipping and export consistency |
 
 ## 6. Typography

@@ -2,7 +2,14 @@ import { moveAnchor, moveHandle, pointKind } from '../model/bezier.ts';
 import type { VectorPoint } from '../model/features.ts';
 import type { EditorStore } from '../editor/store.ts';
 import type { DesignNode, Point } from '../model/types.ts';
-import type { AutoLayout, Appearance, ImageFill, LayoutGrid, Sizing } from '../model/features.ts';
+import type {
+  AutoLayout,
+  Appearance,
+  ImageAdjustments,
+  ImageFill,
+  LayoutGrid,
+  Sizing,
+} from '../model/features.ts';
 import { defaultLayout, isRasterData } from '../model/features.ts';
 import { createNode } from '../model/document.ts';
 import { descendants, selectionRoots, containingFrame } from '../model/hierarchy.ts';
@@ -78,6 +85,19 @@ export class FeatureCommands {
       this.editable()
         .filter((n) => n.type === 'rectangle' || n.type === 'ellipse' || n.type === 'frame')
         .forEach((n) => (n.image = clone(value))),
+    );
+  }
+  imageAdjustments(value: ImageAdjustments): void {
+    if (
+      ![value.brightness, value.contrast, value.saturation].every(
+        (v) => Number.isFinite(v) && v >= 0 && v <= 200,
+      )
+    )
+      throw new Error('Image adjustments must be between 0 and 200.');
+    this.store.change(() =>
+      this.editable().forEach((n) => {
+        if (n.image) n.image.adjustments = clone(value);
+      }),
     );
   }
   insertImage(image: ImageFill, size: { width: number; height: number }, point: Point): void {

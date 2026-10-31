@@ -10,7 +10,7 @@ Select a frame or loose layers and choose **Create component** (Ctrl/Cmd+Alt+K).
 
 ## Images
 
-Use **Insert image**, drop raster files onto the canvas, or select a frame, rectangle or ellipse and choose **Set image fill**. Image fills are clipped to the selected shape (including its corner radius). PNG, JPEG, WebP and GIF files up to 8 MB are embedded in the document. Choose crop/cover, fit or stretch; crop X/Y values move the focal point from 0 to 1. Images survive save/open and SVG export. Document imports allow up to 100 MB; browser autosave remains subject to storage quota, so download image-heavy documents. Animated GIF playback follows browser behavior. Clipboard raster import, tiling and color adjustments remain pending.
+Use **Insert image**, drop raster files onto the canvas, or select a frame, rectangle or ellipse and choose **Set image fill**. Image fills are clipped to the selected shape (including its corner radius). PNG, JPEG, WebP and GIF files up to 8 MB are embedded in the document. Choose crop/cover, fit or stretch; crop X/Y values move the focal point from 0 to 1. The image inspector provides non-destructive brightness, contrast and saturation controls from 0% to 200%, with a reset action. Images survive save/open and SVG export. Document imports allow up to 100 MB; browser autosave remains subject to storage quota, so download image-heavy documents. Animated GIF playback follows browser behavior. Clipboard raster import and tiling remain pending.
 
 ## Rulers, guides and grids
 
@@ -23,6 +23,10 @@ Drag horizontally on a numeric field's label to scrub its value. Hold Shift for 
 Use **Apply fill** beside Fill to paint the current color onto a clicked canvas layer. The eyedropper at the bottom-center toolbar samples a clicked layer's fill onto the current selection; Shift-click samples its stroke. Press Escape to cancel.
 
 Use the **Snap to grid** icon above the canvas to snap drawing and layer movement to the 8-unit grid. Geometry snapping can be toggled separately.
+
+## Align and justify
+
+Select two or more layers to show alignment controls in the Properties panel. **Align Objects** aligns layers to the selection's left, horizontal center, right, top, vertical center or bottom. With three or more layers, **Distribute Objects** spaces the selected edges or centers evenly while keeping the outer layers in place; **Distribute Spacing** instead equalizes the gaps between layers. Hover over an icon for its tooltip; each icon also has an accessible name.
 
 ## Styling
 

@@ -17,6 +17,11 @@ export interface Appearance {
   shadow: { enabled: boolean; x: number; y: number; blur: number; color: string; opacity: number };
   blur: number;
 }
+export interface ImageAdjustments {
+  brightness: number;
+  contrast: number;
+  saturation: number;
+}
 export interface ImageFill {
   src: string;
   fit: 'cover' | 'contain' | 'stretch';
@@ -24,6 +29,7 @@ export interface ImageFill {
   focalY: number;
   naturalWidth: number;
   naturalHeight: number;
+  adjustments?: ImageAdjustments;
 }
 /** Coordinates are normalized to the layer box; rings support holes and compound paths. */
 export interface VectorPoint extends Point {
@@ -78,6 +84,9 @@ export function defaultAppearance(): Appearance {
     shadow: { enabled: false, x: 0, y: 4, blur: 8, color: '#000000', opacity: 0.25 },
     blur: 0,
   };
+}
+export function defaultImageAdjustments(): ImageAdjustments {
+  return { brightness: 100, contrast: 100, saturation: 100 };
 }
 export function defaultLayout(): AutoLayout {
   return {
@@ -155,7 +164,12 @@ export function validFeatures(n: Record<string, unknown>): boolean {
       !num(i.focalX, 0, 1) ||
       !num(i.focalY, 0, 1) ||
       !num(i.naturalWidth, 1, 100000) ||
-      !num(i.naturalHeight, 1, 100000))
+      !num(i.naturalHeight, 1, 100000) ||
+      (i.adjustments !== undefined &&
+        (!object(i.adjustments) ||
+          !num(i.adjustments.brightness, 0, 200) ||
+          !num(i.adjustments.contrast, 0, 200) ||
+          !num(i.adjustments.saturation, 0, 200))))
   )
     return false;
   if (

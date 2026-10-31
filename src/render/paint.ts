@@ -67,6 +67,7 @@ export function paintShape(shape: SVGElement, n: DesignNode): SVGElement {
   group.append(shape);
   if (n.image) {
     const i = n.image,
+      adjustments = { brightness: 100, contrast: 100, saturation: 100, ...i.adjustments },
       clip = svg('clipPath', { id: id + '-clip', clipPathUnits: 'userSpaceOnUse' }),
       mask = shape.cloneNode(true) as SVGElement;
     mask.removeAttribute('data-id');
@@ -96,6 +97,40 @@ export function paintShape(shape: SVGElement, n: DesignNode): SVGElement {
       opacity: 1,
       'data-id': n.id,
     });
+    if (
+      adjustments.brightness !== 100 ||
+      adjustments.contrast !== 100 ||
+      adjustments.saturation !== 100
+    ) {
+      const filter = svg('filter', {
+        id: id + '-image-adjustments',
+        filterUnits: 'userSpaceOnUse',
+        x: n.x,
+        y: n.y,
+        width: n.width,
+        height: n.height,
+        'color-interpolation-filters': 'sRGB',
+      });
+      const brightness = adjustments.brightness / 100,
+        contrast = adjustments.contrast / 100,
+        channel = {
+          type: 'linear',
+          slope: brightness * contrast,
+          intercept: (brightness * (1 - contrast)) / 2,
+        },
+        transfer = svg('feComponentTransfer');
+      transfer.append(svg('feFuncR', channel), svg('feFuncG', channel), svg('feFuncB', channel));
+      filter.append(transfer);
+      if (adjustments.saturation !== 100)
+        filter.append(
+          svg('feColorMatrix', {
+            type: 'saturate',
+            values: adjustments.saturation / 100,
+          }),
+        );
+      defs.append(filter);
+      image.setAttribute('filter', `url(#${id}-image-adjustments)`);
+    }
     group.append(image);
     if (a?.strokeWidth) {
       const outline = shape.cloneNode(true) as SVGElement;
