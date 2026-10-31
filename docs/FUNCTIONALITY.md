@@ -70,7 +70,7 @@ Status updated on 2026-10-31. **Basic** means an implementation exists but brows
 | NODE-06 | Layer naming | Basic through property field, context menu and F2; inline and batch rename pending |
 | NODE-07 | Visibility and locking | Basic; persisted/inherited visibility and locking, layer-panel toggles, mutation protection and export filtering |
 | NODE-08 | Clipping and masks | Partial; nested frame clipping in canvas/export and clipped hit filtering; masks pending |
-| NODE-09 | Lines, arrows, polygons and stars | Partial; Insert line, polygon (3-60 sides) and star create editable vector paths; live geometry parameters (side count, inner radius) and arrowheads pending |
+| NODE-09 | Lines, arrows, polygons and stars | Partial; Insert line, polygon (3-60 sides) and star create editable vector paths; while dragging with the Rectangle tool, Up/Down switch between a triangle, rectangle (4) and 60-sided polygon; live geometry parameters (side count, inner radius) and arrowheads pending |
 | NODE-10 | Pen and vector editing | Partial; straight and cubic Bezier pen paths, click-drag mirrored handles, anchor/handle editing, independent handles, smooth/corner conversion, open/closed compound paths and exact cubic bounds; vector networks and segment insertion pending |
 | NODE-11 | Pencil/freehand | Pending; smoothing and editable paths |
 | NODE-12 | Boolean operations | Partial; union, subtract, intersect and exclude create editable compound paths with holes; operands recover through undo, live boolean containers pending; curves polygonized |

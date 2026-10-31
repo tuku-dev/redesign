@@ -3,6 +3,7 @@ import type { SnapBox } from '../model/snapping.ts';
 import { clippedVisualBox } from '../model/render-bounds.ts';
 import { editableNodes, isLocked, isHidden, groupedTarget } from '../model/layer-state.ts';
 import { drawingBox } from '../model/drawing.ts';
+import { MAX_SIDES, MIN_SIDES, RECTANGLE_SIDES, applyPolygonSides } from '../model/shapes.ts';
 import {
   descendants,
   selectionRoots,
@@ -53,7 +54,7 @@ export type Gesture = BaseGesture &
         pivot: Point;
       }
     | { kind: 'marquee'; base: Set<string>; box?: Box; nested?: boolean }
-    | { kind: 'draw' }
+    | { kind: 'draw'; sides: number; rectangle: boolean }
   );
 export interface GestureModifiers {
   aspect: boolean;
@@ -172,13 +173,28 @@ export class GestureController {
     const s = this.store;
     if (s.tool === 'select' || s.tool === 'hand') return;
     const start = s.gridSnappingEnabled ? snapToGrid(point, s.snapGridSize, s.zoom).point : point;
-    this.active = { ...this.base(start), kind: 'draw' };
+    this.active = {
+      ...this.base(start),
+      kind: 'draw',
+      sides: RECTANGLE_SIDES,
+      rectangle: s.tool === 'rectangle',
+    };
     const text = s.tool === 'text',
       n = createNode(s.tool, { ...start, width: text ? 240 : 1, height: text ? 40 : 1 });
     s.doc.nodes.push(n);
     s.selected = new Set([n.id]);
     if (text) this.finish();
     else s.refresh();
+  }
+  /** While drawing with the rectangle tool, changes the side count: 4 is a rectangle, 3-60 a regular polygon. */
+  adjustSides(delta: number): boolean {
+    const g = this.active,
+      n = this.store.current();
+    if (g?.kind !== 'draw' || !g.rectangle || !n) return false;
+    g.sides = Math.min(MAX_SIDES, Math.max(MIN_SIDES, g.sides + delta));
+    applyPolygonSides(n, g.sides);
+    this.store.refresh('scene');
+    return true;
   }
   move(point: Point, client: Point, modifiers: GestureModifiers): void {
     const g = this.active;

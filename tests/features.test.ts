@@ -9,7 +9,7 @@ import { EditingCommands } from '../src/commands/editing.ts';
 import { defaultLayout, defaultAppearance, defaultGrid } from '../src/model/features.ts';
 import { allNodes } from '../src/model/workspace.ts';
 import { booleanRings, insideRing, shapeRings } from '../src/model/vector.ts';
-import { linePoints, polygonPoints, starPoints } from '../src/model/shapes.ts';
+import { applyPolygonSides, linePoints, polygonPoints, starPoints } from '../src/model/shapes.ts';
 import { PrototypeSession } from '../src/model/prototype.ts';
 import { guideCandidates } from '../src/render/layout-grid.ts';
 import { cornerRadii, roundedRectPath } from '../src/model/geometry.ts';
@@ -667,4 +667,16 @@ test('inserting lines, polygons and stars creates one undoable editable vector e
   s.undo();
   assert.equal(s.doc.nodes.length, 2);
   assert.doesNotThrow(() => validateDocument(JSON.parse(JSON.stringify(s.doc))));
+});
+
+test('drawing a rectangle can become a polygon and back without losing its box', () => {
+  const node = createNode('rectangle', { x: 10, y: 20, width: 100, height: 80 });
+  applyPolygonSides(node, 5);
+  assert.equal(node.type, 'path');
+  assert.equal(node.vector?.rings[0]?.length, 5);
+  assert.deepEqual([node.x, node.y, node.width, node.height], [10, 20, 100, 80]);
+  for (const p of node.vector!.rings[0]!) assert.ok(p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1);
+  applyPolygonSides(node, 4);
+  assert.equal(node.type, 'rectangle');
+  assert.equal(node.vector, undefined);
 });

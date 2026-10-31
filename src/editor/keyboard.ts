@@ -32,6 +32,13 @@ export function bindKeyboard(
       return;
     }
     if (gestures.active) {
+      if (
+        (e.key === 'ArrowUp' || e.key === 'ArrowDown') &&
+        gestures.adjustSides(e.key === 'ArrowUp' ? 1 : -1)
+      ) {
+        e.preventDefault();
+        return;
+      }
       if (e.ctrlKey || e.metaKey || ['Delete', 'Backspace'].includes(e.key)) e.preventDefault();
       return;
     }

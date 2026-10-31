@@ -1208,3 +1208,30 @@ test('shape buttons insert editable vectors and paint controls style them', asyn
   await expect(page.locator('#canvas [style*="mix-blend-mode:multiply"]')).toHaveCount(1);
   await expect(page.locator('#canvas [stroke-dasharray]')).toHaveCount(1);
 });
+
+test('Up and Down while dragging a rectangle change it into a polygon with that many sides', async ({
+  page,
+}) => {
+  await open(page, createDocument());
+  const box = (await page.locator('[aria-label="Design canvas"]').boundingBox())!;
+  const x = box.x + 300,
+    y = box.y + 300;
+  await page.keyboard.press('r');
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + 150, y + 150, { steps: 4 });
+  for (const key of ['ArrowUp', 'ArrowUp', 'ArrowUp', 'ArrowDown']) await page.keyboard.press(key);
+  await page.mouse.up();
+  const node = (await saved(page)).nodes.at(-1)!;
+  expect(node.type).toBe('path');
+  expect(node.vector?.rings[0]).toHaveLength(6);
+  expect(node.width).toBe(150);
+  await page.keyboard.press('r');
+  await page.mouse.move(x + 200, y);
+  await page.mouse.down();
+  await page.mouse.move(x + 300, y + 100, { steps: 4 });
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('ArrowDown');
+  await page.mouse.up();
+  expect((await saved(page)).nodes.at(-1)?.type).toBe('rectangle');
+});

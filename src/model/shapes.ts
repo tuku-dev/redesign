@@ -1,9 +1,11 @@
-import type { Point } from './types.ts';
+import type { DesignNode, Point } from './types.ts';
+import { vectorFromPoints } from './vector.ts';
 
 export type ShapeKind = 'line' | 'polygon' | 'star';
 
-const MIN_SIDES = 3;
-const MAX_SIDES = 60;
+export const MIN_SIDES = 3;
+export const MAX_SIDES = 60;
+export const RECTANGLE_SIDES = 4;
 
 function clampCount(value: number, min = MIN_SIDES): number {
   if (!Number.isFinite(value)) return min;
@@ -41,4 +43,20 @@ export function linePoints(center: Point, length: number): Point[] {
     { x: center.x - half, y: center.y },
     { x: center.x + half, y: center.y },
   ];
+}
+
+/**
+ * Turns a node being drawn into a regular polygon that fills its box, or back into a
+ * rectangle when the side count is 4. Vector points are box-relative, so later resizing keeps working.
+ */
+export function applyPolygonSides(node: DesignNode, sides: number): void {
+  if (sides === RECTANGLE_SIDES) {
+    node.type = 'rectangle';
+    node.name = 'Rectangle';
+    delete node.vector;
+    return;
+  }
+  node.type = 'path';
+  node.name = 'Polygon';
+  node.vector = vectorFromPoints([polygonPoints({ x: 0, y: 0 }, 1, sides)]).vector;
 }

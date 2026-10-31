@@ -70,3 +70,5 @@ Use Ctrl+S to save. Supporting browsers connect a disk file on the first save an
 ## Shapes, blend modes and stroke styles
 
 Under **Tools & resources > Shapes**, choose **Insert line**, **Insert polygon** or **Insert star**; the shape is placed at the viewport center as an editable vector (polygon and star use the side/point count field, 3-60). In the inspector, **Blend mode** and **Stroke style** (solid, dashed, dotted) apply to the selected layer and are included in SVG rendering. Live parameters, arrowheads and per-fill blending remain pending.
+
+Draw a rectangle (R, then drag; hold Ctrl for a perfect square) and, without releasing the mouse, press **Up** or **Down**: the shape becomes a regular polygon with 5, 6, 7... sides (up to 60) or 3 sides at minimum, and 4 sides returns the plain rectangle. The polygon fills the dragged box and is an ordinary editable vector once released.
