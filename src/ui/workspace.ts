@@ -31,6 +31,7 @@ export function bindWorkspace(
   penButton.onclick = vector.start;
   bindRulers(el, store, notify);
   let shapeCount = 5;
+  let shapesInserted = 0;
   const render = () => {
     renderPages(pages, store, notify);
     tools.replaceChildren();
@@ -68,10 +69,13 @@ export function bindWorkspace(
     }
     tools.append(insert);
     const shapes = section('Shapes');
-    const center = () => ({
-      x: (el.canvas.clientWidth / 2 - store.pan.x) / store.zoom,
-      y: (el.canvas.clientHeight / 2 - store.pan.y) / store.zoom,
-    });
+    const center = () => {
+      const step = ((shapesInserted++ % 8) * 24) / store.zoom;
+      return {
+        x: (el.canvas.clientWidth / 2 - store.pan.x) / store.zoom + step,
+        y: (el.canvas.clientHeight / 2 - store.pan.y) / store.zoom + step,
+      };
+    };
     inputField(
       shapes,
       'Polygon sides / star points',
