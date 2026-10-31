@@ -139,7 +139,7 @@ test('fit view centers negative-coordinate content with padding and handles empt
   assert.equal(fitView(box, 0, 600), null);
 });
 
-import { alignNodes, distributeNodes } from '../src/commands/alignment.ts';
+import { alignNodes, distributeAlignedNodes, distributeNodes } from '../src/commands/alignment.ts';
 import { encodeClipboard, decodeClipboard } from '../src/interop/clipboard-codec.ts';
 test('all alignment modes use selection bounds and preserve unselected layers', () => {
   for (const mode of ['left', 'center', 'right', 'top', 'middle', 'bottom'] as Alignment[]) {
@@ -177,6 +177,30 @@ test('distribution equalizes edge gaps without moving endpoints or changing stac
       doc.nodes.map((n) => n.id),
       before.nodes.map((n) => n.id),
     );
+  }
+});
+test('distribute objects spaces each selected alignment edge evenly and preserves endpoints', () => {
+  for (const mode of ['left', 'center', 'right', 'top', 'middle', 'bottom'] as Alignment[]) {
+    const doc = fixture();
+    doc.nodes.push(createNode('rectangle', { x: 500, y: 400 }));
+    const before = clone(doc),
+      ids = new Set(doc.nodes.slice(0, 3).map((n) => n.id)),
+      horizontal = mode === 'left' || mode === 'center' || mode === 'right',
+      axis = horizontal ? 'x' : 'y',
+      size = horizontal ? 'width' : 'height',
+      offset =
+        mode === 'center' || mode === 'middle'
+          ? 0.5
+          : mode === 'right' || mode === 'bottom'
+            ? 1
+            : 0,
+      coordinate = (node: (typeof doc.nodes)[number]) => node[axis] + node[size] * offset;
+    distributeAlignedNodes(doc, ids, mode);
+    const [first, middle, last] = doc.nodes;
+    near(first[axis], before.nodes[0][axis]);
+    near(last[axis], before.nodes[2][axis]);
+    near(coordinate(middle), (coordinate(first) + coordinate(last)) / 2);
+    assert.deepEqual(doc.nodes[3], before.nodes[3]);
   }
 });
 test('clipboard transfers validate data, preserve Unicode and reject foreign or malformed payloads', () => {

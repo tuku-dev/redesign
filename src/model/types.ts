@@ -19,6 +19,8 @@ export interface Box extends Point {
 export type ConstraintMode = 'start' | 'end' | 'center' | 'stretch' | 'scale';
 export interface NodeOptions {
   rotation: number;
+  flipX: boolean;
+  flipY: boolean;
   clipContent: boolean;
   constraintX: ConstraintMode;
   constraintY: ConstraintMode;

@@ -45,3 +45,35 @@ export function distributeNodes(doc: DesignDocument, ids: ReadonlySet<string>, a
     cursor += n[size] + gap;
   }
 }
+export function distributeAlignedNodes(
+  doc: DesignDocument,
+  ids: ReadonlySet<string>,
+  mode: Alignment,
+): void {
+  const horizontal = mode === 'left' || mode === 'center' || mode === 'right',
+    axis = horizontal ? 'x' : 'y',
+    size = horizontal ? 'width' : 'height',
+    offset =
+      mode === 'center' || mode === 'middle' ? 0.5 : mode === 'right' || mode === 'bottom' ? 1 : 0,
+    coordinate = (node: DesignNode) => node[axis] + node[size] * offset,
+    nodes = selectionRoots(doc, new Set(editableNodes(doc, ids).map((n) => n.id))).sort(
+      (a, b) => coordinate(a) - coordinate(b),
+    );
+  if (nodes.length < 3) return;
+  const first = nodes[0],
+    last = nodes.at(-1);
+  if (!first || !last) return;
+  const start = coordinate(first),
+    step = (coordinate(last) - start) / (nodes.length - 1);
+  for (let index = 1; index < nodes.length - 1; index++) {
+    const node = nodes[index];
+    if (!node) continue;
+    const delta = start + step * index - coordinate(node);
+    translateNodes(
+      doc,
+      clone(descendants(doc, new Set([node.id]))),
+      horizontal ? delta : 0,
+      horizontal ? 0 : delta,
+    );
+  }
+}

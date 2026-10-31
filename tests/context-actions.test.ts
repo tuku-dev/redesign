@@ -6,6 +6,7 @@ import { createDocument, createNode, validateDocument } from '../src/model/docum
 import { clone } from '../src/model/types.ts';
 import { isLocked, isHidden, groupedTarget } from '../src/model/layer-state.ts';
 import { hierarchyRows, descendants } from '../src/model/hierarchy.ts';
+import { localPoint, pointInNode, transformNodePoint } from '../src/model/rotation.ts';
 import { EditingCommands } from '../src/commands/editing.ts';
 import { StructureCommands } from '../src/commands/structure.ts';
 import { LayerStateCommands } from '../src/commands/layer-state.ts';
@@ -206,6 +207,7 @@ test('context menu exposes real selection commands, nested actions and correct d
   assert.equal(menu.find((item) => item.id === 'rename')?.disabled, true);
   assert.equal(menu.find((item) => item.id === 'align-left')?.disabled, undefined);
   assert.equal(menu.find((item) => item.id === 'distribute-x')?.disabled, true);
+  assert.equal(menu.find((item) => item.id === 'rotate-flip')?.disabled, false);
   menu.find((item) => item.id === 'group')!.run!();
   assert.equal(s.store.current()?.type, 'group');
   const grouped = entries(buildContextMenu(s, { x: 15, y: 25 }));
@@ -214,6 +216,60 @@ test('context menu exposes real selection commands, nested actions and correct d
   const locked = entries(buildContextMenu(s, { x: 15, y: 25 }));
   assert.equal(locked.find((item) => item.id === 'delete')?.disabled, true);
   assert.equal(locked.find((item) => item.id === 'lock')?.label, 'Unlock selection');
+});
+test('rotation and flip menu actions transform the selection and are undoable', () => {
+  const s = setup(),
+    selectedIds = [...s.store.selected],
+    getEntry = (id: string) =>
+      entries(buildContextMenu(s, { x: 15, y: 25 })).find((item) => item.id === id)!,
+    restoreSelection = () => {
+      s.store.selected = new Set(selectedIds);
+    },
+    [a, b] = s.store.doc.nodes;
+  getEntry('rotate-90-cw').run!();
+  assert.equal(s.store.doc.nodes[0].rotation, 90);
+  assert.equal(s.store.doc.nodes[0].x, 40);
+  assert.equal(s.store.doc.nodes[1].rotation, 90);
+  assert.equal(s.store.doc.nodes[1].x, 35);
+  s.store.undo();
+  assert.deepEqual(s.store.doc.nodes.slice(0, 2), [a, b]);
+  restoreSelection();
+  getEntry('rotate-180').run!();
+  assert.equal(s.store.doc.nodes[0].rotation, -180);
+  s.store.undo();
+  restoreSelection();
+  getEntry('rotate-90-ccw').run!();
+  assert.equal(s.store.doc.nodes[0].rotation, -90);
+  s.store.undo();
+  restoreSelection();
+  getEntry('flip-horizontal').run!();
+  assert.equal(s.store.doc.nodes[0].x, 70);
+  assert.equal(s.store.doc.nodes[1].x, 10);
+  assert.equal(s.store.doc.nodes[0].flipX, true);
+  assert.equal(s.store.doc.nodes[0].rotation, 0);
+  assert.deepEqual(validateDocument(JSON.parse(JSON.stringify(s.store.doc))), s.store.doc);
+  s.store.undo();
+  restoreSelection();
+  getEntry('flip-vertical').run!();
+  assert.equal(s.store.doc.nodes[0].y, 20);
+  assert.equal(s.store.doc.nodes[1].y, 20);
+  assert.equal(s.store.doc.nodes[0].flipY, true);
+});
+test('flipped rotated geometry supports hit testing and inverse point mapping', () => {
+  const node = createNode('rectangle', {
+    x: 10,
+    y: 20,
+    width: 30,
+    height: 40,
+    rotation: 30,
+    flipX: true,
+  });
+  const local = { x: 18, y: 35 },
+    world = transformNodePoint(local, node),
+    restored = localPoint(world, node);
+  assert.ok(pointInNode(world, node));
+  assert.ok(Math.abs(restored.x - local.x) < 1e-8);
+  assert.ok(Math.abs(restored.y - local.y) < 1e-8);
 });
 test('empty-canvas menu excludes object mutations and exposes recovery commands', () => {
   const s = setup();

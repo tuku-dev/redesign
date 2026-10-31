@@ -186,6 +186,40 @@ export function buildContextMenu(s: MenuServices, point: Point): MenuSection[] {
         run: () => s.structure.unwrap(),
       },
     ]);
+    sections.push([
+      {
+        id: 'rotate-flip',
+        label: 'Rotate / flip',
+        disabled: !editable,
+        children: [
+          [
+            {
+              id: 'rotate-90-cw',
+              label: 'Rotate 90° clockwise',
+              run: () => s.commands.rotate(90),
+            },
+            { id: 'rotate-180', label: 'Rotate 180°', run: () => s.commands.rotate(180) },
+            {
+              id: 'rotate-90-ccw',
+              label: 'Rotate 90° counterclockwise',
+              run: () => s.commands.rotate(-90),
+            },
+          ],
+          [
+            {
+              id: 'flip-horizontal',
+              label: 'Flip horizontal',
+              run: () => s.commands.flip('horizontal'),
+            },
+            {
+              id: 'flip-vertical',
+              label: 'Flip vertical',
+              run: () => s.commands.flip('vertical'),
+            },
+          ],
+        ],
+      },
+    ]);
     const alignments: readonly (readonly [Alignment, string])[] = [
       ['left', 'Align left'],
       ['center', 'Align horizontal centers'],

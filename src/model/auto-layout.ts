@@ -1,6 +1,6 @@
 import type { DesignDocument, DesignNode } from './types.ts';
 import { descendants } from './hierarchy.ts';
-import { center, rotatePoint } from './rotation.ts';
+import { transformNodePoint } from './rotation.ts';
 /** Translate whole subtrees, including nested frames, without changing local geometry. */
 export function moveSubtree(doc: DesignDocument, node: DesignNode, x: number, y: number): void {
   const dx = x - node.x,
@@ -57,7 +57,6 @@ export function applyAutoLayout(doc: DesignDocument): void {
           : l.gap;
       let cursor =
         (h ? p.left : p.top) + (l.justify === 'center' ? free / 2 : l.justify === 'end' ? free : 0);
-      const pivot = center(n);
       for (const c of list) {
         if (c.sizing?.[cross] === 'fill') c[cross] = crossSize;
         const offset =
@@ -71,7 +70,7 @@ export function applyAutoLayout(doc: DesignDocument): void {
           x: n.x + (h ? cursor : offset) + c.width / 2,
           y: n.y + (h ? offset : cursor) + c.height / 2,
         };
-        const world = rotatePoint(local, pivot, n.rotation);
+        const world = transformNodePoint(local, n);
         moveSubtree(doc, c, world.x - c.width / 2, world.y - c.height / 2);
         cursor += c[axis] + gap;
       }

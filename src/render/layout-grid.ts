@@ -1,15 +1,15 @@
 import type { SnapBox } from '../model/snapping.ts';
 import { svg } from './svg.ts';
 import type { DesignDocument, DesignNode } from '../model/types.ts';
-import { center } from '../model/rotation.ts';
+import { nodeTransform } from '../model/rotation.ts';
 /** Editor-only grids; they never appear in artwork exports. */
 export function layoutGrid(n: DesignNode): SVGElement | null {
   const g = n.layoutGrid;
   if (n.type !== 'frame' || !g?.visible || n.hidden) return null;
-  const c = center(n),
+  const transform = nodeTransform(n),
     group = svg('g', {
       'pointer-events': 'none',
-      transform: `rotate(${n.rotation} ${c.x} ${c.y})`,
+      ...(transform ? { transform } : {}),
     });
   if (g.type === 'grid') {
     // Bound line counts for imported documents and very large frames.

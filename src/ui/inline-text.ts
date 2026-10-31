@@ -66,7 +66,7 @@ export function bindInlineText(
       textAlign: n.textAlign,
       color: n.fill,
       opacity: String(n.opacity),
-      transform: `rotate(${n.rotation}deg)`,
+      transform: `rotate(${n.rotation}deg) scale(${n.flipX ? -1 : 1}, ${n.flipY ? -1 : 1})`,
       transformOrigin: `${(n.width * z) / 2}px ${(n.height * z) / 2}px`,
     });
     input.wrap = n.textWrap === 'word' ? 'soft' : 'off';

@@ -10,10 +10,12 @@ import { createNode, validateDocument } from '../model/document.ts';
 import { clone } from '../model/types.ts';
 import type { Alignment, Axis, EditableProperty } from '../model/types.ts';
 import { selectedNodes } from '../model/selection.ts';
-import { cornerRadii } from '../model/geometry.ts';
+import { bounds, cornerRadii } from '../model/geometry.ts';
+import { center, visualBox } from '../model/rotation.ts';
 import type { EditorStore } from '../editor/store.ts';
 import { cloneNodes, translateNodes } from './transforms.ts';
-import { alignNodes, distributeNodes } from './alignment.ts';
+import { flipNodes, rotateNodes } from './rotation.ts';
+import { alignNodes, distributeAlignedNodes, distributeNodes } from './alignment.ts';
 export class EditingCommands {
   constructor(private readonly store: EditorStore) {}
   addRectangle(): void {
@@ -146,5 +148,27 @@ export class EditingCommands {
   distribute(axis: Axis): void {
     const s = this.store;
     s.change(() => distributeNodes(s.doc, s.selected, axis));
+  }
+  rotate(degrees: number): void {
+    const s = this.store;
+    if (!s.selected.size || s.chosen().some((n) => isLocked(s.doc, n))) return;
+    const roots = selectionRoots(s.doc, s.selected),
+      originals = clone(descendants(s.doc, new Set(roots.map((n) => n.id)))),
+      box = bounds(roots.map(visualBox));
+    if (!box) return;
+    s.change(() => rotateNodes(s.doc, originals, center(box), degrees));
+  }
+  flip(axis: 'horizontal' | 'vertical'): void {
+    const s = this.store;
+    if (!s.selected.size || s.chosen().some((n) => isLocked(s.doc, n))) return;
+    const roots = selectionRoots(s.doc, s.selected),
+      originals = clone(descendants(s.doc, new Set(roots.map((n) => n.id)))),
+      box = bounds(roots.map(visualBox));
+    if (!box) return;
+    s.change(() => flipNodes(s.doc, originals, center(box), axis));
+  }
+  distributeAligned(mode: Alignment): void {
+    const s = this.store;
+    s.change(() => distributeAlignedNodes(s.doc, s.selected, mode));
   }
 }

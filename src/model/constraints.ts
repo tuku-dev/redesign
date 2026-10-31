@@ -1,5 +1,5 @@
 ﻿import type { Box, ConstraintMode, DesignDocument, DesignNode } from './types.ts';
-import { center, rotatePoint } from './rotation.ts';
+import { center, localPoint, transformNodePoint } from './rotation.ts';
 export function constrainAxis(
   position: number,
   size: number,
@@ -40,7 +40,7 @@ export function resizeFrame(
     if (!old || !node) return;
     Object.assign(node, next);
     for (const child of children.get(id) ?? []) {
-      const c = rotatePoint(center(child), center(old), -old.rotation),
+      const c = localPoint(center(child), old),
         px = c.x - old.x - child.width / 2,
         py = c.y - old.y - child.height / 2;
       const horizontal =
@@ -51,13 +51,12 @@ export function resizeFrame(
         node.type === 'group'
           ? constrainAxis(py, child.height, old.height, node.height, 'scale')
           : constrainAxis(py, child.height, old.height, node.height, child.constraintY);
-      const world = rotatePoint(
+      const world = transformNodePoint(
         {
           x: node.x + horizontal.position + horizontal.size / 2,
           y: node.y + vertical.position + vertical.size / 2,
         },
-        center(node),
-        node.rotation,
+        node,
       );
       visit(child.id, {
         x: world.x - horizontal.size / 2,

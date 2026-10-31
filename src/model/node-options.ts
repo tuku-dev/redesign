@@ -1,6 +1,8 @@
 import type { NodeOptions } from './types.ts';
 export const DEFAULT_OPTIONS = {
   rotation: 0,
+  flipX: false,
+  flipY: false,
   clipContent: false,
   constraintX: 'start',
   constraintY: 'start',
@@ -15,6 +17,8 @@ export const DEFAULT_OPTIONS = {
 export function nodeOptions(value: Partial<NodeOptions> = {}): NodeOptions {
   return {
     rotation: value.rotation ?? 0,
+    flipX: value.flipX ?? false,
+    flipY: value.flipY ?? false,
     clipContent: value.clipContent ?? false,
     constraintX: value.constraintX ?? 'start',
     constraintY: value.constraintY ?? 'start',
@@ -39,6 +43,11 @@ export function validNodeOptions(value: Record<string, unknown>): boolean {
     if (n !== undefined && (typeof n !== 'number' || !Number.isFinite(n) || n < min || n > max))
       return false;
   }
+  if (
+    (value.flipX !== undefined && typeof value.flipX !== 'boolean') ||
+    (value.flipY !== undefined && typeof value.flipY !== 'boolean')
+  )
+    return false;
   if (value.clipContent !== undefined && typeof value.clipContent !== 'boolean') return false;
   if (
     value.fontFamily !== undefined &&

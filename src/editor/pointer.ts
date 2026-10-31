@@ -7,7 +7,7 @@ import type { Notify } from '../ui/notifications.ts';
 import { isResizeHandle } from '../render/selection-overlay.ts';
 import { pointerCursor, rotateCursor, toolCursor } from '../render/cursors.ts';
 import { cornerRadii } from '../model/geometry.ts';
-import { center, rotatePoint } from '../model/rotation.ts';
+import { localPoint } from '../model/rotation.ts';
 import { isLocked } from '../model/layer-state.ts';
 import { defaultAppearance } from '../model/features.ts';
 import type { CornerName, DesignDocument, Point } from '../model/types.ts';
@@ -167,7 +167,7 @@ export function bindPointer(
             max: found.maxRadius,
           },
           individual,
-          start: rotatePoint(local(e), center(node), -node.rotation),
+          start: localPoint(local(e), node),
           direction: found.direction,
           startRadius: found.radius,
           changed: false,
@@ -193,7 +193,7 @@ export function bindPointer(
           isDoubleClick =
             lastCornerClick?.key === cornerName && Date.now() - lastCornerClick.time < 500,
           individual = isDoubleClick || store.cornerRadiusCorner === cornerName,
-          p = rotatePoint(local(e), center(node), -node.rotation),
+          p = localPoint(local(e), node),
           direction = {
             x: cornerName === 'topLeft' || cornerName === 'bottomLeft' ? 1 : -1,
             y: cornerName === 'topLeft' || cornerName === 'topRight' ? 1 : -1,
@@ -247,7 +247,7 @@ export function bindPointer(
     if (cornerDrag?.pointerId === e.pointerId) {
       const node = store.doc.nodes.find((item) => item.id === cornerDrag!.nodeId);
       if (!node) return finishCornerDrag(true);
-      const p = rotatePoint(local(e), center(node), -node.rotation);
+      const p = localPoint(local(e), node);
       if (cornerDrag.vertex) {
         const { ring, index, direction, sinHalf, max } = cornerDrag.vertex,
           radius = Math.max(

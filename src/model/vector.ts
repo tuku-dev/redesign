@@ -3,7 +3,7 @@ import type { VectorPoint } from './features.ts';
 import clipping from 'polygon-clipping';
 import type { MultiPolygon, Ring } from 'polygon-clipping';
 import type { DesignNode, Point } from './types.ts';
-import { center, rotatePoint } from './rotation.ts';
+import { center, rotatePoint, transformNodePoint } from './rotation.ts';
 import { cornerInfo, roundRing } from './corners.ts';
 export { roundRing };
 function baseRings(n: DesignNode): VectorPoint[][] {
@@ -126,7 +126,7 @@ export function shapeRings(n: DesignNode): Point[][] {
         }),
       ];
   } else throw new Error('Boolean operations require closed paths, rectangles or ellipses.');
-  return rings.map((r) => r.map((p) => rotatePoint(p, center(n), n.rotation)));
+  return rings.map((r) => r.map((p) => transformNodePoint(p, n)));
 }
 function polygons(rings: Point[][]): MultiPolygon {
   const depth = rings.map(

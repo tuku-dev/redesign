@@ -2,7 +2,7 @@ import type { DesignDocument, DesignNode } from './types.ts';
 import { clone } from './types.ts';
 import { descendants } from './hierarchy.ts';
 import { allNodes } from './workspace.ts';
-import { center, rotatePoint } from './rotation.ts';
+import { center, localPoint, transformNodePoint } from './rotation.ts';
 const inherited = [
   'name',
   'fill',
@@ -31,6 +31,8 @@ const inherited = [
   'width',
   'height',
   'rotation',
+  'flipX',
+  'flipY',
   'hidden',
 ] as const;
 function records(doc: DesignDocument): { nodes: DesignNode[] }[] {
@@ -69,8 +71,9 @@ export function syncComponents(doc: DesignDocument, before?: DesignDocument): vo
         if (!prev) continue;
         const overrides = new Set(n.overrides ?? []);
         for (const key of inherited) {
-          if (n === root && key === 'rotation') continue;
-          if (key === 'rotation' && oldRoot && oldRoot.rotation !== root.rotation) continue;
+          if (n === root && ['rotation', 'flipX', 'flipY'].includes(key)) continue;
+          if (['rotation', 'flipX', 'flipY'].includes(key) && oldRoot && oldRoot[key] !== root[key])
+            continue;
           if (JSON.stringify(n[key]) !== JSON.stringify(prev[key])) overrides.add(key);
         }
         if (
@@ -78,7 +81,9 @@ export function syncComponents(doc: DesignDocument, before?: DesignDocument): vo
           oldRoot &&
           oldRoot.x === root.x &&
           oldRoot.y === root.y &&
-          oldRoot.rotation === root.rotation
+          oldRoot.rotation === root.rotation &&
+          oldRoot.flipX === root.flipX &&
+          oldRoot.flipY === root.flipY
         ) {
           if (n.x !== prev.x) overrides.add('x');
           if (n.y !== prev.y) overrides.add('y');
@@ -99,7 +104,7 @@ export function syncComponents(doc: DesignDocument, before?: DesignDocument): vo
         const overrides = new Set(target.overrides ?? []);
         const record = target as unknown as Record<string, unknown>;
         for (const key of inherited) {
-          if (target === root && key === 'rotation') continue;
+          if (target === root && ['rotation', 'flipX', 'flipY'].includes(key)) continue;
           if (!overrides.has(key)) {
             if (template[key] === undefined) delete record[key];
             else record[key] = clone(template[key]);
@@ -107,14 +112,13 @@ export function syncComponents(doc: DesignDocument, before?: DesignDocument): vo
         }
         if (target !== root) {
           target.parentId = mapping.get(template.parentId!) ?? root.id;
-          const srcCenter = rotatePoint(center(template), center(source), -source.rotation);
-          const p = rotatePoint(
+          const srcCenter = localPoint(center(template), source);
+          const p = transformNodePoint(
             {
               x: root.x + (srcCenter.x - source.x) * scaleX,
               y: root.y + (srcCenter.y - source.y) * scaleY,
             },
-            center(root),
-            root.rotation,
+            root,
           );
           if (!overrides.has('x')) target.x = p.x - (template.width * scaleX) / 2;
           if (!overrides.has('y')) target.y = p.y - (template.height * scaleY) / 2;

@@ -3,7 +3,7 @@ import { paintShape } from './paint.ts';
 import type { DesignNode } from '../model/types.ts';
 import { svg } from './svg.ts';
 import { renderText } from './text.ts';
-import { center } from '../model/rotation.ts';
+import { nodeTransform } from '../model/rotation.ts';
 import { roundedRectPath } from '../model/geometry.ts';
 export function renderShape(n: DesignNode): SVGElement {
   const attrs = { fill: n.fill, opacity: n.opacity, 'data-id': n.id };
@@ -48,7 +48,7 @@ export function renderShape(n: DesignNode): SVGElement {
       rx: n.radius,
     });
   shape = paintShape(shape, n);
-  const c = center(n);
-  if (n.rotation) shape.setAttribute('transform', `rotate(${n.rotation} ${c.x} ${c.y})`);
+  const transform = nodeTransform(n);
+  if (transform) shape.setAttribute('transform', transform);
   return shape;
 }

@@ -1,6 +1,6 @@
 ﻿import { selectionRoots } from '../model/hierarchy.ts';
 import { bounds } from '../model/geometry.ts';
-import { visualBox, center } from '../model/rotation.ts';
+import { visualBox, center, nodeTransform } from '../model/rotation.ts';
 import { isLocked } from '../model/layer-state.ts';
 import type { Box, ResizeHandle } from '../model/types.ts';
 import type { EditorStore } from '../editor/store.ts';
@@ -48,18 +48,18 @@ export function renderSelection(
   if (box && !store.editingVectorId) {
     if (roots.length > 1)
       roots.forEach((n) => {
-        const c = center(n);
+        const transform = nodeTransform(n);
         overlay.append(
           outline(
             { x: n.x, y: n.y, width: n.width, height: n.height },
-            { 'stroke-opacity': '.45', transform: `rotate(${n.rotation} ${c.x} ${c.y})` },
+            { 'stroke-opacity': '.45', ...(transform ? { transform } : {}) },
           ),
         );
       });
     const controls = svg('g'),
       c = center(box);
-    if (single?.rotation)
-      controls.setAttribute('transform', `rotate(${single.rotation} ${c.x} ${c.y})`);
+    const transform = single ? nodeTransform(single) : null;
+    if (transform) controls.setAttribute('transform', transform);
     controls.append(outline(box));
     if (!roots.some((n) => isLocked(store.doc, n)) && !store.editingTextId) {
       for (const [handle, [x, y]] of Object.entries(handles))

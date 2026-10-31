@@ -1,7 +1,7 @@
 import { pathData } from '../model/vector.ts';
 import { isLocked } from '../model/layer-state.ts';
 import type { DesignDocument, DesignNode } from '../model/types.ts';
-import { center } from '../model/rotation.ts';
+import { nodeTransform } from '../model/rotation.ts';
 import { svg } from './svg.ts';
 import { renderShape } from './shapes.ts';
 import { roundedRectPath } from '../model/geometry.ts';
@@ -23,11 +23,11 @@ export function renderDocument(
     const wrapper = svg('g');
     if (options.interactive && n.locked) wrapper.setAttribute('pointer-events', 'none');
     const container = n.type === 'group' || n.type === 'frame';
+    const transform = nodeTransform(n);
     if (container) wrapper.setAttribute('opacity', String(n.opacity));
     const shape = renderShape(container ? { ...n, opacity: 1 } : n);
     if (n.id === options.editingTextId) shape.setAttribute('visibility', 'hidden');
     if (options.interactive && options.vectorHitWidth && n.vector && !isLocked(doc, n)) {
-      const c = center(n);
       wrapper.append(
         svg('path', {
           d: pathData(n),
@@ -37,7 +37,7 @@ export function renderDocument(
           'pointer-events': n.vector.closed ? 'all' : 'stroke',
           'data-id': n.id,
           'data-vector-hit': 'true',
-          transform: 'rotate(' + n.rotation + ' ' + c.x + ' ' + c.y + ')',
+          ...(transform ? { transform } : {}),
         }),
       );
     }
@@ -46,13 +46,12 @@ export function renderDocument(
     if (n.type === 'frame' && n.clipContent) {
       const id = `${prefix}-clip-${clipCount++}`,
         defs = svg('defs'),
-        clip = svg('clipPath', { id, clipPathUnits: 'userSpaceOnUse' }),
-        c = center(n);
+        clip = svg('clipPath', { id, clipPathUnits: 'userSpaceOnUse' });
       clip.append(
         n.cornerRadii
           ? svg('path', {
               d: roundedRectPath(n),
-              transform: `rotate(${n.rotation} ${c.x} ${c.y})`,
+              ...(transform ? { transform } : {}),
             })
           : svg('rect', {
               x: n.x,
@@ -60,7 +59,7 @@ export function renderDocument(
               width: n.width,
               height: n.height,
               rx: n.radius,
-              transform: `rotate(${n.rotation} ${c.x} ${c.y})`,
+              ...(transform ? { transform } : {}),
             }),
       );
       defs.append(clip);

@@ -7,7 +7,7 @@ import type { Point, DesignDocument } from '../model/types.ts';
 import type { VectorPoint } from '../model/features.ts';
 import { clone } from '../model/types.ts';
 import { toolCursor } from '../render/cursors.ts';
-import { rotatePoint, center } from '../model/rotation.ts';
+import { transformNodePoint, localPoint } from '../model/rotation.ts';
 import { isLocked, isHidden } from '../model/layer-state.ts';
 import { bezierPathData, mapVectorPoint, moveAnchor, moveHandle } from '../model/bezier.ts';
 import { FeatureCommands } from '../commands/features.ts';
@@ -147,7 +147,7 @@ export function bindVectorEditor(
       const selected = n.vector.rings.map((r) =>
         r.map((p) =>
           mapVectorPoint(p, (q) =>
-            rotatePoint({ x: n.x + q.x * n.width, y: n.y + q.y * n.height }, center(n), n.rotation),
+            transformNodePoint({ x: n.x + q.x * n.width, y: n.y + q.y * n.height }, n),
           ),
         ),
       );
@@ -165,7 +165,7 @@ export function bindVectorEditor(
       const world = n.vector.rings.map((r) =>
         r.map((p) =>
           mapVectorPoint(p, (q) =>
-            rotatePoint({ x: n.x + q.x * n.width, y: n.y + q.y * n.height }, center(n), n.rotation),
+            transformNodePoint({ x: n.x + q.x * n.width, y: n.y + q.y * n.height }, n),
           ),
         ),
       );
@@ -338,7 +338,7 @@ export function bindVectorEditor(
     if (drag && drag.pointerId === e.pointerId) {
       const n = store.doc.nodes.find((n) => n.id === drag!.id);
       if (!n?.vector) return;
-      let p = rotatePoint(local(e), center(n), -n.rotation);
+      let p = localPoint(local(e), n);
       const vertex = n.vector.rings[drag.ring]?.[drag.index];
       if (!vertex) return;
       if (drag.side && e.shiftKey)
