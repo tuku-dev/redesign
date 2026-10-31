@@ -13,8 +13,8 @@ Status updated on 2026-10-31. **Basic** means an implementation exists but brows
 | FILE-01 | Rename document | Basic; editable header, saved/opened filename synchronization, browser tab title and autosaved name |
 | FILE-02 | Local autosave | Basic; browser storage, with save failure notice |
 | FILE-03 | Save/open local document | Basic; versioned `.redesign` JSON, native open/save with retained handles where supported, browser-storage Save fallback, explicit Save As/download app dialog, focused-field Ctrl+S capture, cancel/failure handling, validation and 100 MB import limit |
-| FILE-04 | New, duplicate, close document | Partial; New and open replacement warn before replacing the current browser-saved draft; duplicate and close flows pending |
-| FILE-05 | Multiple documents/tabs | Pending; independent state and history |
+| FILE-04 | New, duplicate, close document | Basic; New, Duplicate and Open add documents without overwriting; Close confirms before discarding work |
+| FILE-05 | Multiple documents/tabs | Basic; up to 12 documents in the Documents panel with independent state, undo history and file handle; restored from browser storage after reload (undo history is session-only) |
 | FILE-06 | Pages | Basic; create, rename, duplicate, reorder, delete and switch pages; undo and multi-page save/open tested in Chrome |
 | FILE-07 | File browser | Pending; recent files, drafts, search, thumbnails, trash and restore |
 | FILE-08 | Teams and projects | Pending; organize documents, ownership and project access |

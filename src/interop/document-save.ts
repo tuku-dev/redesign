@@ -37,6 +37,9 @@ export class DocumentFileSaver {
   get hasFile(): boolean {
     return this.handle !== null;
   }
+  get currentHandle(): DocumentFileHandle | null {
+    return this.handle;
+  }
   reset(handle: DocumentFileHandle | null = null): void {
     this.handle = handle;
     this.generation++;

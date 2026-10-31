@@ -26,6 +26,7 @@ export function getElements() {
     fitAll: required('fit-all', HTMLButtonElement),
     fitSelection: required('fit-selection', HTMLButtonElement),
     newDocument: required('new-document', HTMLButtonElement),
+    documents: required('documents', HTMLElement),
     save: required('save', HTMLButtonElement),
     saveAs: required('save-as', HTMLButtonElement),
     open: required('open', HTMLButtonElement),

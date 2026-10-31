@@ -1,4 +1,4 @@
-﻿import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { createDocument } from '../../src/model/document.ts';
@@ -178,49 +178,60 @@ test('canceling the native picker preserves the displayed title', async ({ page 
   expect((await state(page)).closed).toBe(false);
   expect(errors).toEqual([]);
 });
-test('New warns before replacing the browser-saved draft and clears its history when confirmed', async ({
+test('New opens a separate document, keeps the previous one and restores it with its own history', async ({
   page,
 }) => {
   const errors = await start(page);
   await page.locator('#add').click();
   await expect(page.locator('#layers .layer')).toHaveCount(1);
-
-  const canceledDialog = page.waitForEvent('dialog').then(async (dialog) => {
-    expect(dialog.message()).toContain('Save a copy first');
-    await dialog.dismiss();
-  });
   await page.locator('#new-document').click();
-  await canceledDialog;
-  await expect(page.locator('#layers .layer')).toHaveCount(1);
-
-  const acceptedDialog = page.waitForEvent('dialog').then((dialog) => dialog.accept());
-  await page.locator('#new-document').click();
-  await acceptedDialog;
   await expect(page.locator('#layers .layer')).toHaveCount(0);
   await expect(page.locator('#undo')).toBeDisabled();
+  await expect(page.locator('.document-row')).toHaveCount(2);
+  await page.locator('.document-select').first().click();
+  await expect(page.locator('#layers .layer')).toHaveCount(1);
+  await expect(page.locator('#undo')).toBeEnabled();
+  await page.reload();
+  await expect(page.locator('.document-row')).toHaveCount(2);
+  expect(errors).toEqual([]);
+});
+test('Duplicate document copies content and Close asks before discarding work', async ({
+  page,
+}) => {
+  const errors = await start(page);
+  await page.locator('#add').click();
+  await page.getByRole('button', { name: 'Duplicate document' }).click();
+  await expect(page.locator('.document-row')).toHaveCount(2);
+  await expect(page.getByLabel('Document name', { exact: true })).toHaveValue('Untitled copy');
+  await expect(page.locator('#layers .layer')).toHaveCount(1);
+
+  const canceled = page.waitForEvent('dialog').then((d) => d.dismiss());
+  await page.getByRole('button', { name: 'Close Untitled copy' }).click();
+  await canceled;
+  await expect(page.locator('.document-row')).toHaveCount(2);
+
+  const accepted = page.waitForEvent('dialog').then((d) => d.accept());
+  await page.getByRole('button', { name: 'Close Untitled copy' }).click();
+  await accepted;
+  await expect(page.locator('.document-row')).toHaveCount(1);
   await expect(page.getByLabel('Document name', { exact: true })).toHaveValue('Untitled');
   expect(errors).toEqual([]);
 });
-test('opening a file warns before replacing the browser-saved draft', async ({ page }) => {
+test('opening a file adds a document and replaces only an untouched blank one', async ({
+  page,
+}) => {
   const errors = await start(page);
-  await page.locator('#add').click();
-  await expect(page.locator('#layers .layer')).toHaveCount(1);
-  const upload = {
-    name: 'Opened dashboard.redesign',
+  const upload = (name: string) => ({
+    name,
     mimeType: 'application/json',
     buffer: Buffer.from(JSON.stringify(createDocument())),
-  };
-
-  const canceledDialog = page.waitForEvent('dialog');
-  await page.locator('#file').setInputFiles(upload);
-  await (await canceledDialog).dismiss();
-  await expect(page.locator('#layers .layer')).toHaveCount(1);
-
-  const acceptedDialog = page.waitForEvent('dialog');
-  await page.locator('#file').setInputFiles(upload);
-  await (await acceptedDialog).accept();
-  await expect(page.locator('#layers .layer')).toHaveCount(0);
-  await expect(page.getByLabel('Document name', { exact: true })).toHaveValue('Opened dashboard');
+  });
+  await page.locator('#file').setInputFiles(upload('First.redesign'));
+  await expect(page.locator('.document-row')).toHaveCount(1);
+  await expect(page.getByLabel('Document name', { exact: true })).toHaveValue('First');
+  await page.locator('#file').setInputFiles(upload('Second.redesign'));
+  await expect(page.locator('.document-row')).toHaveCount(2);
+  await expect(page.getByLabel('Document name', { exact: true })).toHaveValue('Second');
   expect(errors).toEqual([]);
 });
 test('failed native writes report the error and keep the original title', async ({ page }) => {
