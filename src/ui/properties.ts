@@ -38,6 +38,11 @@ function propertyValue(node: DesignNode, key: EditableProperty): number | string
   if (key === 'bottomLeftRadius') return radii.bottomLeft;
   return node[key];
 }
+function displayNumber(value: number): string {
+  const scaled = value * 100,
+    adjustment = Math.sign(value) * Number.EPSILON * Math.abs(value) * 100;
+  return String(Math.trunc(scaled + adjustment) / 100);
+}
 export function renderProperties(
   area: HTMLElement,
   store: EditorStore,
@@ -126,7 +131,9 @@ export function renderProperties(
     if (mixed && type !== 'color') {
       input.value = '';
       input.placeholder = 'Mixed';
-    } else input.value = String(value);
+    } else
+      input.value =
+        type === 'number' && typeof value === 'number' ? displayNumber(value) : String(value);
     if (mixed && type === 'color') {
       caption.textContent = 'Mixed';
       input.title = 'Mixed fill';
@@ -289,37 +296,73 @@ export function renderProperties(
     const alignment = document.createElement('div');
     alignment.className = 'property-group';
     const heading = document.createElement('h3');
-    heading.textContent = 'Align selection';
+    heading.textContent = 'Align';
     alignment.append(heading);
-    const controls = document.createElement('div');
-    controls.className = 'alignment-controls';
-    const modes: readonly (readonly [Alignment, string])[] = [
-      ['left', 'Left'],
-      ['center', 'Center X'],
-      ['right', 'Right'],
-      ['top', 'Top'],
-      ['middle', 'Center Y'],
-      ['bottom', 'Bottom'],
+    const alignModes: readonly (readonly [Alignment, string, IconName])[] = [
+      ['left', 'Align left', 'alignLeft'],
+      ['center', 'Align horizontal centers', 'alignCenterX'],
+      ['right', 'Align right', 'alignRight'],
+      ['top', 'Align top', 'alignTop'],
+      ['middle', 'Align vertical centers', 'alignCenterY'],
+      ['bottom', 'Align bottom', 'alignBottom'],
     ];
-    for (const [mode, label] of modes) {
-      const b = document.createElement('button');
-      b.textContent = label;
-      b.title = 'Align ' + label.toLowerCase();
-      b.onclick = () => commands.align(mode);
-      controls.append(b);
-    }
-    const axes: readonly (readonly [Axis, string])[] = [
-      ['x', 'Distribute horizontally'],
-      ['y', 'Distribute vertically'],
+    const distributeModes: readonly (readonly [Alignment, string, IconName])[] = [
+      ['left', 'Distribute left edges', 'distributeLeft'],
+      ['center', 'Distribute horizontal centers', 'distributeCenterX'],
+      ['right', 'Distribute right edges', 'distributeRight'],
+      ['top', 'Distribute top edges', 'distributeTop'],
+      ['middle', 'Distribute vertical centers', 'distributeCenterY'],
+      ['bottom', 'Distribute bottom edges', 'distributeBottom'],
     ];
-    for (const [axis, label] of axes) {
-      const b = document.createElement('button');
-      b.textContent = label;
-      b.disabled = nodes.length < 3;
-      b.onclick = () => commands.distribute(axis);
-      controls.append(b);
-    }
-    alignment.append(controls);
+    const addControlGroup = (
+      title: string,
+      className: string,
+      controls: readonly (readonly [string, IconName, () => void])[],
+      disabled = false,
+    ) => {
+      const group = document.createElement('div');
+      group.className = 'alignment-control-group';
+      const label = document.createElement('h4');
+      label.textContent = title;
+      const buttons = document.createElement('div');
+      buttons.className = className;
+      for (const [accessibleName, icon, action] of controls) {
+        const b = document.createElement('button');
+        b.setAttribute('aria-label', accessibleName);
+        b.title = accessibleName;
+        b.disabled = disabled;
+        b.append(createIcon(icon));
+        b.onclick = action;
+        buttons.append(b);
+      }
+      group.append(label, buttons);
+      alignment.append(group);
+    };
+    addControlGroup(
+      'Align Objects',
+      'alignment-controls',
+      alignModes.map(([mode, label, icon]) => [label, icon, () => commands.align(mode)]),
+    );
+    addControlGroup(
+      'Distribute Objects',
+      'alignment-controls',
+      distributeModes.map(([mode, label, icon]) => [
+        label,
+        icon,
+        () => commands.distributeAligned(mode),
+      ]),
+      nodes.length < 3,
+    );
+    const spacingModes: readonly (readonly [Axis, string, IconName])[] = [
+      ['x', 'Distribute horizontal spacing', 'justifyHorizontal'],
+      ['y', 'Distribute vertical spacing', 'justifyVertical'],
+    ];
+    addControlGroup(
+      'Distribute Spacing',
+      'alignment-spacing-controls',
+      spacingModes.map(([axis, label, icon]) => [label, icon, () => commands.distribute(axis)]),
+      nodes.length < 3,
+    );
     area.append(alignment);
   }
   area.append(group, actions);

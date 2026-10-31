@@ -2,7 +2,7 @@ import type { AutoLayout } from '../model/features.ts';
 import type { EditorStore } from '../editor/store.ts';
 import type { Notify } from './notifications.ts';
 import { FeatureCommands } from '../commands/features.ts';
-import { defaultAppearance, defaultGrid } from '../model/features.ts';
+import { defaultAppearance, defaultGrid, defaultImageAdjustments } from '../model/features.ts';
 import { clone } from '../model/types.ts';
 import { isLocked } from '../model/layer-state.ts';
 import { allNodes } from '../model/workspace.ts';
@@ -228,6 +228,32 @@ export function renderFeatureProperties(
       'number',
       (v) => command.image({ ...n.image!, focalY: Number(v) }),
       notify,
+    );
+    const adjustments = { ...defaultImageAdjustments(), ...n.image.adjustments },
+      adjustmentLabels = {
+        brightness: 'Image brightness (%)',
+        contrast: 'Image contrast (%)',
+        saturation: 'Image saturation (%)',
+      } as const;
+    for (const key of ['brightness', 'contrast', 'saturation'] as const) {
+      const field = inputField(
+        image,
+        adjustmentLabels[key],
+        adjustments[key],
+        'number',
+        (v) => command.imageAdjustments({ ...adjustments, [key]: Number(v) }),
+        notify,
+      );
+      field.min = '0';
+      field.max = '200';
+      field.step = '1';
+    }
+    image.append(
+      button(
+        'Reset image adjustments',
+        () => command.imageAdjustments(defaultImageAdjustments()),
+        notify,
+      ),
     );
     image.append(
       button(

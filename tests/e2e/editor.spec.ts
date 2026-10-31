@@ -95,6 +95,73 @@ test('auto layout controls arrange children and undo restores original positions
   await expect(page.getByLabel('Direction', { exact: true })).toHaveValue('horizontal');
   expect(errors).toEqual([]);
 });
+test('multi-selection exposes icon alignment and justification controls', async ({ page }) => {
+  const doc = seed(),
+    circle = doc.nodes.find((node) => node.id === 'circle-b')!;
+  circle.y = 140;
+  doc.nodes.push(
+    createNode('rectangle', {
+      id: 'rect-c',
+      name: 'Card C',
+      x: 300,
+      y: 260,
+      width: 50,
+      height: 40,
+      parentId: 'screen-a',
+    }),
+  );
+  const errors = await open(page, doc);
+  await select(page, 'rect-a');
+  await page.locator('[data-layer-id="circle-b"] .layer-select').click({ modifiers: ['Shift'] });
+  await page.locator('[data-layer-id="rect-c"] .layer-select').click({ modifiers: ['Shift'] });
+  const controls = page.locator('.alignment-controls'),
+    alignGroup = controls.nth(0),
+    distributeGroup = controls.nth(1);
+  await expect(page.getByRole('heading', { name: 'Align', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Align Objects' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Distribute Objects' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Distribute Spacing' })).toBeVisible();
+  await expect(alignGroup.getByRole('button')).toHaveCount(6);
+  await expect(distributeGroup.getByRole('button')).toHaveCount(6);
+  for (const label of [
+    'Align left',
+    'Align horizontal centers',
+    'Align right',
+    'Align top',
+    'Align vertical centers',
+    'Align bottom',
+    'Distribute left edges',
+    'Distribute horizontal centers',
+    'Distribute right edges',
+    'Distribute top edges',
+    'Distribute vertical centers',
+    'Distribute bottom edges',
+    'Distribute horizontal spacing',
+    'Distribute vertical spacing',
+  ]) {
+    const button = page.getByRole('button', { name: label, exact: true });
+    await expect(button).toBeVisible();
+    await expect(button.locator('svg.icon')).toHaveCount(1);
+    await expect(button).toHaveText('');
+  }
+  await page.getByRole('button', { name: 'Distribute horizontal centers' }).click();
+  let savedDoc = await saved(page);
+  expect(savedDoc.nodes.find((node) => node.id === 'circle-b')?.x).toBe(182.5);
+  await page.getByRole('button', { name: 'Distribute horizontal spacing' }).click();
+  savedDoc = await saved(page);
+  expect(savedDoc.nodes.find((node) => node.id === 'circle-b')?.x).toBe(190);
+  await page.getByRole('button', { name: 'Align horizontal centers' }).click();
+  savedDoc = await saved(page);
+  const [a, b, c] = ['rect-a', 'circle-b', 'rect-c'].map((id) =>
+    savedDoc.nodes.find((node) => node.id === id)!,
+  );
+  expect(a.x + a.width / 2).toBe(b.x + b.width / 2);
+  expect(b.x + b.width / 2).toBe(c.x + c.width / 2);
+  await page.getByRole('button', { name: 'Distribute vertical spacing' }).click();
+  savedDoc = await saved(page);
+  expect(savedDoc.nodes.find((node) => node.id === 'circle-b')?.y).toBe(150);
+  expect(errors).toEqual([]);
+});
 test('numeric labels scrub dimensions and corner radius controls edit individual corners', async ({
   page,
 }) => {
@@ -130,6 +197,17 @@ test('numeric labels scrub dimensions and corner radius controls edit individual
   expect(shape.cornerRadii?.topLeft).toBe(24);
   expect(shape.cornerRadii?.topRight).toBe(0);
   expect(errors).toEqual([]);
+});
+test('numeric geometry fields display two truncated decimals without changing document precision', async ({
+  page,
+}) => {
+  const doc = seed(),
+    rectangle = doc.nodes.find((node) => node.id === 'rect-a')!;
+  rectangle.x = 265.1777777777777;
+  await open(page, doc);
+  await select(page, 'rect-a');
+  await expect(page.getByLabel('X', { exact: true })).toHaveValue('265.17');
+  expect((await saved(page)).nodes.find((node) => node.id === 'rect-a')?.x).toBe(265.1777777777777);
 });
 test('canvas corner handles drag uniformly or select and edit one corner', async ({ page }) => {
   const errors = await open(page);
@@ -356,11 +434,22 @@ test('image picker decodes a raster, exposes crop controls and exports embedded 
   await page.getByLabel('Image fit', { exact: true }).selectOption('contain');
   await page.getByLabel('Crop X (0–1)', { exact: true }).fill('.2');
   await page.getByLabel('Crop X (0–1)', { exact: true }).press('Tab');
+  await page.getByLabel('Image brightness (%)', { exact: true }).fill('125');
+  await page.getByLabel('Image brightness (%)', { exact: true }).press('Tab');
+  await page.getByLabel('Image saturation (%)', { exact: true }).fill('0');
+  await page.getByLabel('Image saturation (%)', { exact: true }).press('Tab');
   const download = page.waitForEvent('download');
   await page.locator('#export').click();
   const svg = await readFile((await (await download).path())!, 'utf8');
   expect(svg).toContain('data:image/png;base64,');
   expect(svg).toContain('<image');
+  expect(svg).toContain('feColorMatrix');
+  const savedDocument = await saved(page);
+  expect(savedDocument.nodes.find((node) => node.image)?.image?.adjustments).toEqual({
+    brightness: 125,
+    contrast: 100,
+    saturation: 0,
+  });
   expect(errors).toEqual([]);
 });
 test('rulers, editable guides and frame layout grids render without entering SVG exports', async ({
