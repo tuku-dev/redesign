@@ -5,6 +5,13 @@ import type { Notify } from './notifications.ts';
 import type { ImageFill } from '../model/features.ts';
 import { FeatureCommands } from '../commands/features.ts';
 import { errorMessage } from './elements.ts';
+import { importSvg } from '../interop/svg-import.ts';
+
+const isSvg = (file: File) => file.type === 'image/svg+xml' || /\.svg$/i.test(file.name);
+async function svgNodes(file: File) {
+  if (file.size > 20 * 1024 * 1024) throw new Error('SVG files must be 20 MB or smaller.');
+  return importSvg(await file.text(), file.name).nodes;
+}
 const supported = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
 export async function readImage(file: File): Promise<ImageFill> {
   if (!supported.has(file.type)) throw new Error('Choose a PNG, JPEG, WebP or GIF image.');
@@ -38,7 +45,7 @@ export function bindImages(
 ): { insert: () => void; fill: () => void } {
   const input = document.createElement('input');
   input.type = 'file';
-  input.accept = 'image/png,image/jpeg,image/webp,image/gif';
+  input.accept = 'image/png,image/jpeg,image/webp,image/gif,image/svg+xml,.svg';
   input.hidden = true;
   document.body.append(input);
   let asFill = false;
@@ -48,6 +55,18 @@ export function bindImages(
     input.value = '';
     if (!file) return;
     const page = store.doc.workspace?.activePageId;
+    if (isSvg(file) && !fill) {
+      const r = el.canvas.getBoundingClientRect();
+      const point = viewport.point({ x: r.width / 2, y: r.height / 2 }, { x: 0, y: 0 });
+      void svgNodes(file)
+        .then((nodes) => {
+          if (store.doc.workspace?.activePageId !== page)
+            throw new Error('Page changed. Please choose the file again.');
+          new FeatureCommands(store).insertNodes(nodes, point);
+        })
+        .catch((error) => notify(errorMessage(error)));
+      return;
+    }
     void readImage(file)
       .then((image) => {
         if (store.doc.workspace?.activePageId !== page)
@@ -85,6 +104,16 @@ export function bindImages(
     const files = [...e.dataTransfer.files];
     void (async () => {
       for (const [index, file] of files.entries()) {
+        if (isSvg(file)) {
+          const nodes = await svgNodes(file);
+          if (store.doc.workspace?.activePageId !== page)
+            throw new Error('Page changed. Drop the files again.');
+          new FeatureCommands(store).insertNodes(nodes, {
+            x: point.x + index * 24,
+            y: point.y + index * 24,
+          });
+          continue;
+        }
         const image = await readImage(file);
         if (store.doc.workspace?.activePageId !== page)
           throw new Error('Page changed. Drop the images again.');

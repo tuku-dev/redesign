@@ -116,6 +116,22 @@ export class FeatureCommands {
       this.store.selected = new Set([n.id]);
     });
   }
+  /** Inserts imported layers centered on a point and selects them together. */
+  insertNodes(nodes: DesignNode[], point: Point): void {
+    const box = bounds(nodes.map(visualBox));
+    if (!box || !nodes.length) return;
+    const dx = point.x - box.x - box.width / 2,
+      dy = point.y - box.y - box.height / 2;
+    this.store.change(() => {
+      for (const n of nodes) {
+        n.x += dx;
+        n.y += dy;
+        n.parentId = containingFrame(this.store.doc, n)?.id ?? null;
+        this.store.doc.nodes.push(n);
+      }
+      this.store.selected = new Set(nodes.map((n) => n.id));
+    });
+  }
   createComponent(): void {
     const roots = selectionRoots(this.store.doc, this.store.selected);
     if (!roots.length || roots.some((n) => isLocked(this.store.doc, n))) return;

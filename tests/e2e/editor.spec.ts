@@ -1322,3 +1322,24 @@ test('opening a broken or empty SVG shows an error and keeps the document', asyn
   }
   await expect(page.locator('#documents .document-row')).toHaveCount(before);
 });
+
+test('dropping an SVG on the canvas inserts its shapes into the current document', async ({
+  page,
+}) => {
+  await open(page, createDocument());
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="#ee2233"/></svg>';
+  await page.evaluate((source) => {
+    const data = new DataTransfer();
+    data.items.add(new File([source], 'icon.svg', { type: 'image/svg+xml' }));
+    const canvas = document.querySelector('#canvas')!;
+    canvas.dispatchEvent(
+      new DragEvent('drop', { dataTransfer: data, bubbles: true, cancelable: true }),
+    );
+  }, svg);
+  await expect.poll(async () => (await saved(page)).nodes.length).toBe(1);
+  const node = (await saved(page)).nodes[0]!;
+  expect(node.type).toBe('ellipse');
+  expect(node.fill).toBe('#ee2233');
+  await expect(page.locator('#toast')).toBeHidden();
+});
