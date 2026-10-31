@@ -7,6 +7,7 @@ import { GuideCommands } from '../commands/guides.ts';
 import { FeatureCommands } from '../commands/features.ts';
 import { bindRulers } from './rulers.ts';
 import { bindImages } from './images.ts';
+import { INSERT_IMAGE_EVENT } from './shape-menu.ts';
 import { bindVectorEditor } from './vector-editor.ts';
 import { presentPrototype } from './prototype.ts';
 import { renderPages } from './pages.ts';
@@ -29,6 +30,7 @@ export function bindWorkspace(
   const penButton = document.querySelector<HTMLButtonElement>('#pen-tool');
   if (!penButton) throw new Error('Missing pen tool button');
   penButton.onclick = vector.start;
+  document.addEventListener(INSERT_IMAGE_EVENT, images.insert);
   bindRulers(el, store, notify);
   let shapeCount = 5;
   let shapesInserted = 0;

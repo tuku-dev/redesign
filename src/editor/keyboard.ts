@@ -1,4 +1,5 @@
 import { SelectionCommands } from '../commands/selection.ts';
+import { INSERT_IMAGE_EVENT } from '../ui/shape-menu.ts';
 import type { Tool } from '../model/types.ts';
 import type { EditorStore } from './store.ts';
 import type { GestureController } from './gestures.ts';
@@ -85,11 +86,21 @@ export function bindKeyboard(
       commands.nudge(x * step, y * step);
       return;
     }
+    if (mod && e.shiftKey && key === 'k') {
+      e.preventDefault();
+      document.dispatchEvent(new Event(INSERT_IMAGE_EVENT));
+      return;
+    }
+    if (!mod && (key === 'l' || key === 'r')) {
+      store.drawShape = key === 'r' ? 'rectangle' : e.shiftKey ? 'arrow' : 'line';
+      store.tool = 'rectangle';
+      store.refresh();
+      return;
+    }
     const tools: Record<string, Tool> = {
       v: 'select',
       h: 'hand',
       f: 'frame',
-      r: 'rectangle',
       o: 'ellipse',
       t: 'text',
     };

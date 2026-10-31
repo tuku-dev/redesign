@@ -1246,7 +1246,7 @@ test('the rectangle drop-up draws stars that use Up and Down for points, and lin
   const menu = page.locator('#shape-menu');
   await expect(menu).toBeHidden();
   await page.getByLabel('Shape options').click();
-  await expect(menu.getByRole('menuitemradio')).toHaveCount(3);
+  await expect(menu.getByRole('menuitemradio')).toHaveCount(6);
   await page.keyboard.press('Escape');
   await expect(menu).toBeHidden();
   await page.getByLabel('Shape options').click();
@@ -1342,4 +1342,63 @@ test('dropping an SVG on the canvas inserts its shapes into the current document
   expect(node.type).toBe('ellipse');
   expect(node.fill).toBe('#ee2233');
   await expect(page.locator('#toast')).toBeHidden();
+});
+
+test('the shape menu draws arrows, polygons and ellipses and has keyboard shortcuts', async ({
+  page,
+}) => {
+  await open(page, createDocument());
+  const box = (await page.locator('[aria-label="Design canvas"]').boundingBox())!;
+  const x = box.x + 300,
+    y = box.y + 300;
+  const menu = page.locator('#shape-menu');
+  const drag = async (dx: number, dy: number, keys: string[] = []) => {
+    const top = y;
+    await page.mouse.move(x, top);
+    await page.mouse.down();
+    await page.mouse.move(x + dx, top + dy, { steps: 4 });
+    for (const key of keys) await page.keyboard.press(key);
+    await page.mouse.up();
+    const node = (await saved(page)).nodes.at(-1)!;
+    await page.keyboard.press('Escape');
+    return node;
+  };
+  await page.getByLabel('Shape options').click();
+  await menu.locator('[data-shape=arrow]').click();
+  await expect(menu.locator('[data-shape=arrow]')).toHaveAttribute('aria-checked', 'true');
+  const arrow = await drag(160, 0);
+  expect(arrow.name).toBe('Arrow');
+  expect(arrow.vector?.closed).toBe(false);
+  expect(arrow.vector?.rings).toHaveLength(2);
+  expect(arrow.height).toBeGreaterThan(5);
+  await page.getByLabel('Shape options').click();
+  await menu.locator('[data-shape=polygon]').click();
+  const triangle = await drag(150, 150);
+  expect([triangle.name, triangle.vector?.rings[0]?.length]).toEqual(['Polygon', 3]);
+  await page.getByLabel('Shape options').click();
+  await menu.locator('[data-shape=polygon]').click();
+  const hexagon = await drag(150, 150, ['ArrowUp', 'ArrowUp', 'ArrowUp']);
+  expect(hexagon.vector?.rings[0]).toHaveLength(6);
+  await page.getByLabel('Shape options').click();
+  await menu.locator('[data-shape=ellipse]').click();
+  await expect(menu.locator('[data-shape=ellipse]')).toHaveAttribute('aria-checked', 'true');
+  expect((await drag(120, 80)).type).toBe('ellipse');
+  await page.keyboard.press('l');
+  expect((await drag(100, 40)).name).toBe('Line');
+  await page.keyboard.press('Shift+L');
+  expect((await drag(100, 40)).name).toBe('Arrow');
+  await page.keyboard.press('r');
+  expect((await drag(100, 40)).type).toBe('rectangle');
+});
+
+test('the Image item and Ctrl+Shift+K open the image picker', async ({ page }) => {
+  await open(page, createDocument());
+  await page.getByLabel('Shape options').click();
+  const first = page.waitForEvent('filechooser');
+  await page.locator('#shape-menu [data-action=image]').click();
+  await first;
+  await expect(page.locator('#shape-menu')).toBeHidden();
+  const second = page.waitForEvent('filechooser');
+  await page.keyboard.press('Control+Shift+K');
+  await second;
 });

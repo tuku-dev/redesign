@@ -114,7 +114,7 @@
               id="shape-menu-toggle"
               type="button"
               class="tool-more"
-              title="Rectangle, line or star"
+              title="Shapes and image"
               aria-label="Shape options"
               aria-haspopup="menu"
               aria-expanded="false"
@@ -124,13 +124,32 @@
             </button>
             <div id="shape-menu" class="shape-menu" role="menu" aria-label="Shape" hidden>
               <button type="button" role="menuitemradio" data-shape="rectangle">
-                <span data-icon="rectangle"></span>Rectangle
+                <span class="check" data-icon="check"></span><span data-icon="rectangle"></span
+                ><span class="label">Rectangle</span><kbd>R</kbd>
               </button>
               <button type="button" role="menuitemradio" data-shape="line">
-                <span data-icon="line"></span>Line
+                <span class="check" data-icon="check"></span><span data-icon="line"></span
+                ><span class="label">Line</span><kbd>L</kbd>
+              </button>
+              <button type="button" role="menuitemradio" data-shape="arrow">
+                <span class="check" data-icon="check"></span><span data-icon="arrow"></span
+                ><span class="label">Arrow</span><kbd>Shift+L</kbd>
+              </button>
+              <button type="button" role="menuitemradio" data-shape="ellipse">
+                <span class="check" data-icon="check"></span><span data-icon="ellipse"></span
+                ><span class="label">Ellipse</span><kbd>O</kbd>
+              </button>
+              <button type="button" role="menuitemradio" data-shape="polygon">
+                <span class="check" data-icon="check"></span><span data-icon="polygon"></span
+                ><span class="label">Polygon</span>
               </button>
               <button type="button" role="menuitemradio" data-shape="star">
-                <span data-icon="star"></span>Star
+                <span class="check" data-icon="check"></span><span data-icon="star"></span
+                ><span class="label">Star</span>
+              </button>
+              <button type="button" role="menuitem" data-action="image">
+                <span class="check"></span><span data-icon="image"></span
+                ><span class="label">Image…</span><kbd>Ctrl+Shift+K</kbd>
               </button>
             </div></span
           ><button
@@ -187,12 +206,15 @@
         <div id="properties"></div>
         <div class="shortcuts">
           <strong>Keyboard shortcuts</strong>
-          <p>V Move · F Frame · R Rectangle<br />O Ellipse · T Text · H Hand</p>
+          <p>
+            V Move · F Frame · R Rectangle<br />L Line · Shift+L Arrow · O Ellipse<br />T Text · H
+            Hand · Ctrl+Shift+K Image
+          </p>
           <p>
             Shift-click Multi-select · Drag Marquee<br />Ctrl+A Select all · Ctrl+D Duplicate<br />Ctrl+C
             / X / V Copy / Cut / Paste<br />Ctrl+Shift+V Paste in place<br />Shift+1 Fit all ·
-            Shift+2 Fit selection<br />Ctrl + drag Perfect square/circle<br />Rectangle drag +
-            Up/Down Polygon sides<br />Shift Resize proportionally · Alt From center<br />Escape
+            Shift+2 Fit selection<br />Ctrl + drag Perfect square/circle<br />Rectangle/Polygon/Star
+            drag + Up/Down Sides or points<br />Shift Resize proportionally · Alt From center<br />Escape
             Cancel · Arrows Nudge
           </p>
         </div>

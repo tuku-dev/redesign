@@ -8,12 +8,13 @@ export const MIN_SIDES = 3;
 export const MAX_SIDES = 60;
 export const RECTANGLE_SIDES = 4;
 export const DEFAULT_STAR_POINTS = 5;
+export const DEFAULT_POLYGON_SIDES = 3;
 /** Mid gray so a new line stays visible on both the light and dark canvas. */
 export const LINE_STROKE = '#8c8c8c';
 
 /** What the rectangle tool draws; chosen from the toolbar drop-up. */
-export type DrawShape = 'rectangle' | 'line' | 'star';
-export const DRAW_SHAPES: readonly DrawShape[] = ['rectangle', 'line', 'star'];
+export type DrawShape = 'rectangle' | 'line' | 'arrow' | 'polygon' | 'star';
+export const DRAW_SHAPES: readonly DrawShape[] = ['rectangle', 'line', 'arrow', 'polygon', 'star'];
 
 function clampCount(value: number, min = MIN_SIDES): number {
   if (!Number.isFinite(value)) return min;
@@ -57,8 +58,8 @@ export function linePoints(center: Point, length: number): Point[] {
  * Turns a node being drawn into a regular polygon that fills its box, or back into a
  * rectangle when the side count is 4. Vector points are box-relative, so later resizing keeps working.
  */
-export function applyPolygonSides(node: DesignNode, sides: number): void {
-  if (sides === RECTANGLE_SIDES) {
+export function applyPolygonSides(node: DesignNode, sides: number, keepPath = false): void {
+  if (sides === RECTANGLE_SIDES && !keepPath) {
     node.type = 'rectangle';
     node.name = 'Rectangle';
     delete node.vector;
@@ -89,5 +90,30 @@ export function applyLine(node: DesignNode, start: Point, end: Point): void {
   Object.assign(node, vectorFromPoints([[start, to]], false));
   node.type = 'path';
   node.name = 'Line';
+  node.appearance ??= { ...defaultAppearance(), stroke: LINE_STROKE, strokeWidth: 2 };
+}
+
+/** Makes the node a line with an open chevron arrowhead at end; the head shrinks on short lines. */
+export function applyArrow(node: DesignNode, start: Point, end: Point): void {
+  const to = start.x === end.x && start.y === end.y ? { x: end.x + 1, y: end.y } : end;
+  const length = Math.hypot(to.x - start.x, to.y - start.y),
+    angle = Math.atan2(to.y - start.y, to.x - start.x),
+    head = Math.min(16, length * 0.4),
+    wing = (offset: number): Point => ({
+      x: to.x - head * Math.cos(angle + offset),
+      y: to.y - head * Math.sin(angle + offset),
+    });
+  Object.assign(
+    node,
+    vectorFromPoints(
+      [
+        [start, to],
+        [wing(-Math.PI / 6), to, wing(Math.PI / 6)],
+      ],
+      false,
+    ),
+  );
+  node.type = 'path';
+  node.name = 'Arrow';
   node.appearance ??= { ...defaultAppearance(), stroke: LINE_STROKE, strokeWidth: 2 };
 }

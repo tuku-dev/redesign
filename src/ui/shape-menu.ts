@@ -7,8 +7,17 @@ import { createIcon } from './icons.ts';
 const LABELS: Record<DrawShape, string> = {
   rectangle: 'Rectangle',
   line: 'Line',
+  arrow: 'Arrow',
+  polygon: 'Polygon',
   star: 'Star',
 };
+const SHORTCUTS: Partial<Record<DrawShape, string>> = {
+  rectangle: ' (R)',
+  line: ' (L)',
+  arrow: ' (Shift+L)',
+};
+/** Opens the image picker; the workspace panel owns the file input. */
+export const INSERT_IMAGE_EVENT = 'redesign:insert-image';
 
 function isDrawShape(value: string | undefined): value is DrawShape {
   return DRAW_SHAPES.some((shape) => shape === value);
@@ -28,14 +37,21 @@ export function bindShapeMenu(
   el.shapeMenu.querySelectorAll<HTMLButtonElement>('[data-shape]').forEach((item) => {
     item.onclick = () => {
       const shape = item.dataset.shape;
-      if (!isDrawShape(shape)) return;
       cancelGesture();
-      store.drawShape = shape;
-      store.tool = 'rectangle';
+      if (shape === 'ellipse') store.tool = 'ellipse';
+      else if (isDrawShape(shape)) {
+        store.drawShape = shape;
+        store.tool = 'rectangle';
+      } else return;
       setOpen(false);
       store.refresh();
     };
   });
+  el.shapeMenu.querySelector<HTMLButtonElement>('[data-action=image]')!.onclick = () => {
+    cancelGesture();
+    setOpen(false);
+    document.dispatchEvent(new Event(INSERT_IMAGE_EVENT));
+  };
   document.addEventListener('pointerdown', (e) => {
     if (
       !el.shapeMenu.hidden &&
@@ -60,11 +76,15 @@ export function renderShapeMenu(el: EditorElements, store: EditorStore): void {
   const button = el.toolButtons.find((b) => b.dataset.tool === 'rectangle');
   const label = LABELS[store.drawShape];
   if (button) {
-    button.title = `${label} (R)`;
+    button.title = `${label}${SHORTCUTS[store.drawShape] ?? ''}`;
     button.setAttribute('aria-label', `${label} tool`);
     button.querySelector('[data-icon]')?.replaceChildren(createIcon(store.drawShape));
   }
   el.shapeMenu.querySelectorAll<HTMLButtonElement>('[data-shape]').forEach((item) => {
-    item.setAttribute('aria-checked', String(item.dataset.shape === store.drawShape));
+    const checked =
+      item.dataset.shape === 'ellipse'
+        ? store.tool === 'ellipse'
+        : store.tool !== 'ellipse' && item.dataset.shape === store.drawShape;
+    item.setAttribute('aria-checked', String(checked));
   });
 }
