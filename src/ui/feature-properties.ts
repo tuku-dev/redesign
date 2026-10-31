@@ -1,8 +1,14 @@
-import type { AutoLayout } from '../model/features.ts';
+import type { AutoLayout, BlendMode, StrokeStyle } from '../model/features.ts';
 import type { EditorStore } from '../editor/store.ts';
 import type { Notify } from './notifications.ts';
 import { FeatureCommands } from '../commands/features.ts';
-import { defaultAppearance, defaultGrid, defaultImageAdjustments } from '../model/features.ts';
+import {
+  BLEND_MODES,
+  STROKE_STYLES,
+  defaultAppearance,
+  defaultGrid,
+  defaultImageAdjustments,
+} from '../model/features.ts';
 import { clone } from '../model/types.ts';
 import { isLocked } from '../model/layer-state.ts';
 import { allNodes } from '../model/workspace.ts';
@@ -195,6 +201,22 @@ export function renderFeatureProperties(
       a.blur,
       'number',
       (v) => paint((a) => (a.blur = Number(v))),
+      notify,
+    );
+    selectField(
+      appearance,
+      'Blend mode',
+      a.blendMode ?? 'normal',
+      BLEND_MODES.map((mode) => [mode, mode.replace('-', ' ')]),
+      (v) => paint((a) => (a.blendMode = v as BlendMode)),
+      notify,
+    );
+    selectField(
+      appearance,
+      'Stroke style',
+      a.strokeStyle ?? 'solid',
+      STROKE_STYLES.map((style) => [style, style]),
+      (v) => paint((a) => (a.strokeStyle = v as StrokeStyle)),
       notify,
     );
     container.append(appearance);

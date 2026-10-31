@@ -30,6 +30,7 @@ export function bindWorkspace(
   if (!penButton) throw new Error('Missing pen tool button');
   penButton.onclick = vector.start;
   bindRulers(el, store, notify);
+  let shapeCount = 5;
   const render = () => {
     renderPages(pages, store, notify);
     tools.replaceChildren();
@@ -66,6 +67,33 @@ export function bindWorkspace(
       );
     }
     tools.append(insert);
+    const shapes = section('Shapes');
+    const center = () => ({
+      x: (el.canvas.clientWidth / 2 - store.pan.x) / store.zoom,
+      y: (el.canvas.clientHeight / 2 - store.pan.y) / store.zoom,
+    });
+    inputField(
+      shapes,
+      'Polygon sides / star points',
+      shapeCount,
+      'number',
+      (v) => (shapeCount = Math.min(60, Math.max(3, Math.round(Number(v)) || 5))),
+      notify,
+    );
+    shapes.append(
+      button('Insert line', () => new FeatureCommands(store).shape('line', center()), notify),
+      button(
+        'Insert polygon',
+        () => new FeatureCommands(store).shape('polygon', center(), shapeCount),
+        notify,
+      ),
+      button(
+        'Insert star',
+        () => new FeatureCommands(store).shape('star', center(), shapeCount),
+        notify,
+      ),
+    );
+    tools.append(shapes);
     const view = section('Rulers & guides');
     view.append(
       button(

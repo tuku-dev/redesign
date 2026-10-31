@@ -15,6 +15,13 @@ export function paintShape(shape: SVGElement, n: DesignNode): SVGElement {
     shape.setAttribute('stroke-width', String(a.strokeWidth));
     shape.setAttribute('stroke-linejoin', 'round');
     shape.setAttribute('stroke-linecap', 'round');
+    if (a.strokeStyle === 'dashed')
+      shape.setAttribute('stroke-dasharray', `${a.strokeWidth * 3} ${a.strokeWidth * 2}`);
+    else if (a.strokeStyle === 'dotted') {
+      shape.setAttribute('stroke-dasharray', `0 ${a.strokeWidth * 2}`);
+    }
+    if (a.blendMode && a.blendMode !== 'normal')
+      group.setAttribute('style', `mix-blend-mode:${a.blendMode}`);
     if (a.gradient.enabled && (n.type !== 'path' || n.vector?.closed)) {
       const radians = (a.gradient.angle * Math.PI) / 180,
         dx = Math.cos(radians) / 2,

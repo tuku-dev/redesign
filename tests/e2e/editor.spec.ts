@@ -1195,3 +1195,16 @@ test('double-clicking an anchor converts it once between corner and smooth', asy
   expect((await saved(page)).nodes[0].vector?.rings[0][1].smooth).toBe(false);
   expect(errors).toEqual([]);
 });
+
+test('shape buttons insert editable vectors and paint controls style them', async ({ page }) => {
+  await open(page);
+  await tools(page);
+  await page.getByRole('button', { name: 'Insert star' }).click();
+  await page.getByRole('button', { name: 'Insert line' }).click();
+  await expect(page.locator('#layers .layer')).toHaveCount(seed().nodes.length + 2);
+  expect((await saved(page)).nodes.at(-1)?.name).toBe('Line');
+  await page.getByLabel('Blend mode').selectOption('multiply');
+  await page.getByLabel('Stroke style').selectOption('dashed');
+  await expect(page.locator('#canvas [style*="mix-blend-mode:multiply"]')).toHaveCount(1);
+  await expect(page.locator('#canvas [stroke-dasharray]')).toHaveCount(1);
+});

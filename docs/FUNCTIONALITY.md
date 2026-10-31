@@ -70,7 +70,7 @@ Status updated on 2026-10-31. **Basic** means an implementation exists but brows
 | NODE-06 | Layer naming | Basic through property field, context menu and F2; inline and batch rename pending |
 | NODE-07 | Visibility and locking | Basic; persisted/inherited visibility and locking, layer-panel toggles, mutation protection and export filtering |
 | NODE-08 | Clipping and masks | Partial; nested frame clipping in canvas/export and clipped hit filtering; masks pending |
-| NODE-09 | Lines, arrows, polygons and stars | Pending; editable geometry-specific parameters |
+| NODE-09 | Lines, arrows, polygons and stars | Partial; Insert line, polygon (3-60 sides) and star create editable vector paths; live geometry parameters (side count, inner radius) and arrowheads pending |
 | NODE-10 | Pen and vector editing | Partial; straight and cubic Bezier pen paths, click-drag mirrored handles, anchor/handle editing, independent handles, smooth/corner conversion, open/closed compound paths and exact cubic bounds; vector networks and segment insertion pending |
 | NODE-11 | Pencil/freehand | Pending; smoothing and editable paths |
 | NODE-12 | Boolean operations | Partial; union, subtract, intersect and exclude create editable compound paths with holes; operands recover through undo, live boolean containers pending; curves polygonized |
@@ -85,8 +85,8 @@ Status updated on 2026-10-31. **Basic** means an implementation exists but brows
 | PAINT-01 | Solid fill | Basic; one opaque RGB color plus layer opacity |
 | PAINT-02 | Multiple fills | Pending; ordered paints, per-paint visibility and opacity |
 | PAINT-03 | Gradients | Partial; two-stop linear gradients with start/end colors and angle; radial/angular/diamond gradients, arbitrary stops and canvas handles pending |
-| PAINT-04 | Strokes | Partial; one centered stroke with width/color and round joins/caps; alignment, dashes, multiple strokes and stroke outlining pending |
-| PAINT-05 | Opacity and blend modes | Basic layer opacity; blend modes pending |
+| PAINT-04 | Strokes | Partial; one centered stroke with width/color and round joins/caps; dashed and dotted styles; alignment, custom dash patterns, multiple strokes and stroke outlining pending |
+| PAINT-05 | Opacity and blend modes | Basic layer opacity and a blend mode selector (multiply, screen, overlay and others); per-fill blending pending |
 | PAINT-06 | Shadows and blur | Partial; one drop shadow and layer blur via shared SVG filters; conservative export bounds; inner/background blur and effect stacks pending |
 | PAINT-07 | Color picker | Basic browser picker; hex/RGB/HSL/alpha, eyedropper and shared swatches pending |
 | PAINT-08 | Image adjustments | Partial; non-destructive brightness, contrast and saturation controls (0–200%) for image fills |

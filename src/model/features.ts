@@ -10,9 +10,29 @@ export interface Sizing {
   width: 'fixed' | 'hug' | 'fill';
   height: 'fixed' | 'hug' | 'fill';
 }
+export const BLEND_MODES = [
+  'normal',
+  'multiply',
+  'screen',
+  'overlay',
+  'darken',
+  'lighten',
+  'color-dodge',
+  'color-burn',
+  'hard-light',
+  'soft-light',
+  'difference',
+  'exclusion',
+] as const;
+export type BlendMode = (typeof BLEND_MODES)[number];
+export const STROKE_STYLES = ['solid', 'dashed', 'dotted'] as const;
+export type StrokeStyle = (typeof STROKE_STYLES)[number];
 export interface Appearance {
   stroke: string;
   strokeWidth: number;
+  /** Omitted means solid / normal so older documents load unchanged. */
+  strokeStyle?: StrokeStyle;
+  blendMode?: BlendMode;
   gradient: { enabled: boolean; end: string; angle: number };
   shadow: { enabled: boolean; x: number; y: number; blur: number; color: string; opacity: number };
   blur: number;
@@ -142,6 +162,8 @@ export function validFeatures(n: Record<string, unknown>): boolean {
       !color(a.stroke) ||
       !num(a.strokeWidth, 0, 1000) ||
       !num(a.blur, 0, 1000) ||
+      (a.strokeStyle !== undefined && !member(a.strokeStyle, [...STROKE_STYLES])) ||
+      (a.blendMode !== undefined && !member(a.blendMode, [...BLEND_MODES])) ||
       !object(a.gradient) ||
       typeof a.gradient.enabled !== 'boolean' ||
       !color(a.gradient.end) ||

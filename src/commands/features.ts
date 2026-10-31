@@ -21,6 +21,8 @@ import { visualBox } from '../model/rotation.ts';
 import { bounds } from '../model/geometry.ts';
 import { detachInstance } from '../model/components.ts';
 import { booleanRings, vectorFromPoints } from '../model/vector.ts';
+import { linePoints, polygonPoints, starPoints } from '../model/shapes.ts';
+import type { ShapeKind } from '../model/shapes.ts';
 import type { BooleanOperation } from '../model/vector.ts';
 export class FeatureCommands {
   constructor(private readonly store: EditorStore) {}
@@ -187,12 +189,22 @@ export class FeatureCommands {
       }),
     );
   }
-  path(points: VectorPoint[], closed: boolean): void {
+  /** Inserts a line, regular polygon or star as an editable vector path centered on a point. */
+  shape(kind: ShapeKind, center: Point, count = 5): void {
+    const points =
+      kind === 'line'
+        ? linePoints(center, 200)
+        : kind === 'polygon'
+          ? polygonPoints(center, 80, count)
+          : starPoints(center, 80, count);
+    this.path(points, kind !== 'line', kind[0]!.toUpperCase() + kind.slice(1));
+  }
+  path(points: VectorPoint[], closed: boolean, name = 'Vector'): void {
     const s = this.store;
     s.change(() => {
       const n = createNode('path', {
         ...vectorFromPoints([points], closed),
-        name: 'Vector',
+        name,
         appearance: {
           stroke: '#1e1e1e',
           strokeWidth: closed ? 0 : 2,

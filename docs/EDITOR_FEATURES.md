@@ -65,3 +65,8 @@ Run `npm test` for geometry, document, command and undo regressions. Run `npm ru
 ## Save and Save As
 
 Use Ctrl+S to save. Supporting browsers connect a disk file on the first save and reuse that destination; opening through the native file picker also retains the handle. Ctrl+Shift+S chooses a new destination. Other browsers save in browser storage with Ctrl+S; use Download copy for an explicit disk download through the app dialog. Downloaded copies cannot be updated automatically. Header tooltips, button names and save status identify the active workflow. No browser prompt is used. File handles currently last for the tab session; native OS dialogs and permission prompts are controlled by the browser.
+
+
+## Shapes, blend modes and stroke styles
+
+Under **Tools & resources > Shapes**, choose **Insert line**, **Insert polygon** or **Insert star**; the shape is placed at the viewport center as an editable vector (polygon and star use the side/point count field, 3-60). In the inspector, **Blend mode** and **Stroke style** (solid, dashed, dotted) apply to the selected layer and are included in SVG rendering. Live parameters, arrowheads and per-fill blending remain pending.

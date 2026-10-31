@@ -9,6 +9,7 @@ import { EditingCommands } from '../src/commands/editing.ts';
 import { defaultLayout, defaultAppearance, defaultGrid } from '../src/model/features.ts';
 import { allNodes } from '../src/model/workspace.ts';
 import { booleanRings, insideRing, shapeRings } from '../src/model/vector.ts';
+import { linePoints, polygonPoints, starPoints } from '../src/model/shapes.ts';
 import { PrototypeSession } from '../src/model/prototype.ts';
 import { guideCandidates } from '../src/render/layout-grid.ts';
 import { cornerRadii, roundedRectPath } from '../src/model/geometry.ts';
@@ -607,4 +608,63 @@ test('individual corner radii propagate from component frames to instances', () 
   s.selected = new Set([frame.id]);
   edit.setProperty('topLeftRadius', 16);
   assert.equal(node(s, instanceId).cornerRadii?.topLeft, 16);
+});
+test('blend mode and stroke style persist, validate and undo; older appearances stay valid', () => {
+  const n = createNode('rectangle'),
+    { s, c } = editor([n]);
+  s.selected = new Set([n.id]);
+  const a = defaultAppearance();
+  a.blendMode = 'multiply';
+  a.strokeStyle = 'dashed';
+  a.strokeWidth = 2;
+  c.appearance(a);
+  assert.equal(s.current()?.appearance?.blendMode, 'multiply');
+  assert.deepEqual(validateDocument(JSON.parse(JSON.stringify(s.doc))), s.doc);
+  s.undo();
+  assert.equal(node(s, n.id).appearance, undefined);
+  const legacy = { ...createNode('rectangle'), appearance: defaultAppearance() };
+  assert.doesNotThrow(() => validateDocument({ ...createDocument(), nodes: [legacy] }));
+  for (const bad of [{ blendMode: 'invert' }, { strokeStyle: 'wavy' }])
+    assert.throws(() =>
+      validateDocument({
+        ...createDocument(),
+        nodes: [{ ...legacy, appearance: { ...defaultAppearance(), ...bad } }],
+      }),
+    );
+});
+test('polygon and star generators produce bounded, clamped vertex sets', () => {
+  const center = { x: 100, y: 100 };
+  const polygon = polygonPoints(center, 50, 6);
+  assert.equal(polygon.length, 6);
+  near(polygon[0]!.x, 100);
+  near(polygon[0]!.y, 50);
+  for (const p of polygon) near(Math.hypot(p.x - 100, p.y - 100), 50);
+  assert.equal(polygonPoints(center, 50, 1).length, 3);
+  assert.equal(polygonPoints(center, 50, Number.NaN).length, 3);
+  assert.equal(polygonPoints(center, 50, 500).length, 60);
+  const star = starPoints(center, 50, 5, 0.4);
+  assert.equal(star.length, 10);
+  near(Math.hypot(star[1]!.x - 100, star[1]!.y - 100), 20);
+  assert.deepEqual(linePoints(center, 200), [
+    { x: 0, y: 100 },
+    { x: 200, y: 100 },
+  ]);
+});
+test('inserting lines, polygons and stars creates one undoable editable vector each', () => {
+  const { s, c } = editor([]);
+  c.shape('polygon', { x: 0, y: 0 }, 6);
+  assert.equal(s.current()?.name, 'Polygon');
+  assert.equal(s.current()?.vector?.closed, true);
+  assert.equal(s.current()?.vector?.rings[0]?.length, 6);
+  c.shape('star', { x: 0, y: 0 });
+  assert.equal(s.current()?.vector?.rings[0]?.length, 10);
+  c.shape('line', { x: 0, y: 0 });
+  const line = s.current()!;
+  assert.equal(line.vector?.closed, false);
+  assert.ok(line.width >= 199 && line.height >= 1);
+  for (const p of line.vector!.rings[0]!) assert.ok(Number.isFinite(p.x) && Number.isFinite(p.y));
+  assert.equal(s.doc.nodes.length, 3);
+  s.undo();
+  assert.equal(s.doc.nodes.length, 2);
+  assert.doesNotThrow(() => validateDocument(JSON.parse(JSON.stringify(s.doc))));
 });
