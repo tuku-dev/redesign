@@ -3,11 +3,26 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <script>
+      try {
+        const saved = localStorage.getItem('redesign.theme');
+        document.documentElement.dataset.theme =
+          saved === 'light' || saved === 'dark'
+            ? saved
+            : matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
+      } catch {
+        document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: dark)').matches
+          ? 'dark'
+          : 'light';
+      }
+    </script>
     <title>reDesign — Design editor</title>
   </head>
   <body>
     <header>
-      <strong class="brand">D<span>r</span></strong
+      <strong class="brand" aria-label="reDesign"><span>r</span>D</strong
       ><span class="breadcrumb">Drafts /</span
       ><input id="document-name" aria-label="Document name" value="Untitled" /><span
         id="save-status"
@@ -15,8 +30,17 @@
         >Local document</span
       >
       <div class="header-actions">
+        <label class="theme-control" for="theme-select"
+          >Theme
+          <select id="theme-select">
+            <option value="system">System default</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
         <button id="open"><span data-icon="open"></span><span>Open</span></button
-        ><button id="save"><span data-icon="save"></span><span>Save file</span></button
+        ><button id="save"><span data-icon="save"></span><span>Save</span></button
+        ><button id="save-as" type="button" title="Save as (Ctrl+Shift+S)">Save as</button
         ><button id="export" class="primary">
           <span data-icon="export"></span><span>Export SVG</span>
         </button>
@@ -25,7 +49,14 @@
     <main>
       <aside class="left">
         <div class="panel-heading">File <span class="badge">LOCAL</span></div>
-        <div class="page-row"><span data-icon="page"></span><span>Page 1</span></div>
+        <details class="workspace-details" open>
+          <summary>Pages</summary>
+          <div id="pages"></div>
+        </details>
+        <details class="workspace-details">
+          <summary>Tools &amp; resources</summary>
+          <div id="workspace-tools"></div>
+        </details>
         <div class="panel-heading">
           Layers <button id="add" aria-label="Add rectangle"><span data-icon="plus"></span></button>
         </div>
@@ -68,6 +99,14 @@
             <span data-icon="rectangle"></span></button
           ><button data-tool="ellipse" title="Ellipse (O)" aria-label="Ellipse tool">
             <span data-icon="ellipse"></span></button
+          ><button
+            id="pen-tool"
+            type="button"
+            title="Pen (P)"
+            aria-label="Pen tool"
+            aria-pressed="false"
+          >
+            <span data-icon="pen"></span></button
           ><button data-tool="text" title="Text (T)" aria-label="Text tool">
             <span data-icon="text"></span></button
           ><span class="separator"></span

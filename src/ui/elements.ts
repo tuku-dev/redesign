@@ -25,6 +25,7 @@ export function getElements() {
     fitAll: required('fit-all', HTMLButtonElement),
     fitSelection: required('fit-selection', HTMLButtonElement),
     save: required('save', HTMLButtonElement),
+    saveAs: required('save-as', HTMLButtonElement),
     open: required('open', HTMLButtonElement),
     exportSvg: required('export', HTMLButtonElement),
     file: required('file', HTMLInputElement),
@@ -33,7 +34,9 @@ export function getElements() {
 }
 export type EditorElements = ReturnType<typeof getElements>;
 export function editableTarget(target: EventTarget | null): boolean {
-  return target instanceof Element && !!target.closest('input,textarea,[contenteditable]');
+  return (
+    target instanceof Element && !!target.closest('input,textarea,select,dialog,[contenteditable]')
+  );
 }
 export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'An unexpected error occurred.';

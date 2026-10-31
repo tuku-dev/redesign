@@ -1,4 +1,6 @@
-﻿import type { DesignNode } from '../model/types.ts';
+import { pathData } from '../model/vector.ts';
+import { paintShape } from './paint.ts';
+import type { DesignNode } from '../model/types.ts';
 import { svg } from './svg.ts';
 import { renderText } from './text.ts';
 import { center } from '../model/rotation.ts';
@@ -22,6 +24,13 @@ export function renderShape(n: DesignNode): SVGElement {
       rx: n.width / 2,
       ry: n.height / 2,
     });
+  else if (n.type === 'path')
+    shape = svg('path', {
+      ...attrs,
+      fill: n.vector?.closed ? n.fill : 'none',
+      d: pathData(n),
+      'fill-rule': 'evenodd',
+    });
   else if (n.type === 'text') shape = renderText(n, attrs);
   else
     shape = svg('rect', {
@@ -32,6 +41,7 @@ export function renderShape(n: DesignNode): SVGElement {
       height: n.height,
       rx: n.radius,
     });
+  shape = paintShape(shape, n);
   const c = center(n);
   if (n.rotation) shape.setAttribute('transform', `rotate(${n.rotation} ${c.x} ${c.y})`);
   return shape;

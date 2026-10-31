@@ -1,11 +1,13 @@
-﻿import type { DesignDocument, DesignNode } from '../model/types.ts';
+import { pathData } from '../model/vector.ts';
+import { isLocked } from '../model/layer-state.ts';
+import type { DesignDocument, DesignNode } from '../model/types.ts';
 import { center } from '../model/rotation.ts';
 import { svg } from './svg.ts';
 import { renderShape } from './shapes.ts';
 let sequence = 0;
 export function renderDocument(
   doc: DesignDocument,
-  options: { interactive?: boolean; editingTextId?: string | null } = {},
+  options: { interactive?: boolean; editingTextId?: string | null; vectorHitWidth?: number } = {},
 ): SVGElement[] {
   const prefix = `redesign-${sequence++}`,
     children = new Map<string | null, DesignNode[]>();
@@ -23,6 +25,21 @@ export function renderDocument(
     if (container) wrapper.setAttribute('opacity', String(n.opacity));
     const shape = renderShape(container ? { ...n, opacity: 1 } : n);
     if (n.id === options.editingTextId) shape.setAttribute('visibility', 'hidden');
+    if (options.interactive && options.vectorHitWidth && n.vector && !isLocked(doc, n)) {
+      const c = center(n);
+      wrapper.append(
+        svg('path', {
+          d: pathData(n),
+          fill: n.vector.closed ? 'transparent' : 'none',
+          stroke: 'transparent',
+          'stroke-width': Math.max(options.vectorHitWidth, n.appearance?.strokeWidth ?? 0),
+          'pointer-events': n.vector.closed ? 'all' : 'stroke',
+          'data-id': n.id,
+          'data-vector-hit': 'true',
+          transform: 'rotate(' + n.rotation + ' ' + c.x + ' ' + c.y + ')',
+        }),
+      );
+    }
     wrapper.append(shape);
     const content = svg('g');
     if (n.type === 'frame' && n.clipContent) {

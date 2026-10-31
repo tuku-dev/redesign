@@ -17,6 +17,7 @@ Open http://127.0.0.1:5173. On Windows PowerShell, use `npm.cmd` instead of `npm
 | --- | --- |
 | `npm run dev` | Start the Vite development server with hot updates |
 | `npm run check` | Check application, configuration and test types without emitting files |
+| `npm run test:e2e` | Run Playwright browser interaction tests (starts Vite automatically) |
 | `npm test` | Compile TypeScript tests and run Node's built-in test runner |
 | `npm run build` | Type-check, then produce the production app in `dist/` |
 | `npm run preview` | Serve an existing production build at http://127.0.0.1:4173 |
@@ -34,7 +35,7 @@ Open http://127.0.0.1:5173. On Windows PowerShell, use `npm.cmd` instead of `npm
 - `src/ui/`: typed DOM access, panels, toolbar, icons and notifications.
 - `src/interop/`: clipboard codec/controller, local file actions, downloads and SVG export.
 - `src/storage/`: local document persistence.
-- `tests/`: TypeScript `*.test.ts` model and controller regressions.
+- `tests/`: TypeScript `*.test.ts` model/controller regressions; `tests/e2e/*.spec.ts` Playwright browser tests.
 
 See [architecture](docs/ARCHITECTURE.md), [functionality inventory](docs/FUNCTIONALITY.md), [compatibility status](docs/compatibility.md), [completed work](donefun.md), and [reverse-engineering rules](REVERSE_ENGINEERING.md).
 
@@ -46,4 +47,20 @@ Draw shapes, frames and text; select single/multiple layers; move, nudge, resize
 
 Documents autosave under the existing `redesign.document` browser-storage key. Download/reopen version 1 `.redesign` files and export SVG. Existing local file format is unchanged by the TypeScript migration. Browser storage can be cleared, so download important documents.
 
-Frames contain child layers and nested frames. Moving, nudging, duplicating or deleting a frame includes its descendants. Draw or drop layers into frames, or use the Parent control; the Layers panel shows nesting. Legacy flat files infer fully enclosed children on load. Frames support Clip content and per-child horizontal/vertical constraints. Drag snapping aligns edges/centers and equal gaps; magenta guides show spacing. Use the Snap toggle or hold Ctrl during a move/resize to bypass snapping. Rotate using the top circular handle or the Angle field; hold Shift during rotation for 15-degree increments. Double-click text to edit inline; Escape cancels, Ctrl/Cmd+Enter or blur commits. Typography controls include installed font family, weight/style, line height, letter spacing, alignment and word wrap. Advanced typography, auto text sizing, components, auto layout, collaboration, and native `.fig` import/export remain pending. SVG is not a native Figma document.
+Frames contain child layers and nested frames. Moving, nudging, duplicating or deleting a frame includes its descendants. Draw or drop layers into frames, or use the Parent control; the Layers panel shows nesting. Legacy flat files infer fully enclosed children on load. Frames support Clip content and per-child horizontal/vertical constraints. Drag snapping aligns edges/centers and equal gaps; magenta guides show spacing. Use the Snap toggle or hold Ctrl during a move/resize to bypass snapping. Rotate using the top circular handle or the Angle field; hold Shift during rotation for 15-degree increments. Double-click text to edit inline; Escape cancels, Ctrl/Cmd+Enter or blur commits. Typography controls include installed font family, weight/style, line height, letter spacing, alignment and word wrap. Advanced typography, auto text sizing, collaboration, and native `.fig` import/export remain pending. SVG is not a native Figma document.
+
+
+## Layout, assets and prototypes
+
+Use **Pages** in the left panel to organize screens. Expand **Tools & resources** for image insertion, the pen tool, component insertion, rulers/guides and prototype presentation. The right inspector exposes auto layout, sizing, component actions, gradients, strokes, effects, grids, vector vertices and click interactions. See [feature guide](docs/EDITOR_FEATURES.md) for instructions and remaining limits.
+
+Run `npm run test:e2e` for real browser checks. Windows defaults to installed Google Chrome; set `PLAYWRIGHT_CHANNEL=msedge` to use Edge. Other platforms use Playwright Chromium (`npx playwright install chromium`). Tests start a loopback Vite server and use isolated browser data. Failed tests retain traces/screenshots in ignored `test-results/`.
+
+
+## Saving and document names
+
+Editable documents use `.redesign` (for example, `Dashboard.redesign`). **Save / Ctrl+S** updates the connected disk file where native file access is available. The first save chooses a destination; later saves reuse it, including after header edits. **Save as / Ctrl+Shift+S** deliberately chooses a new destination. Native Open retains the selected file handle, so subsequent saves update that same file. Handles are session-only, and browser permission prompts remain browser-controlled.
+
+Without direct file access, **Save / Ctrl+S** stores the project in this browser without dialogs or downloads. **Download copy / Ctrl+Shift+S** opens an app dialog to name and download a disk copy. That copy does not update automatically: ordinary downloads cannot overwrite an existing disk file. The UI distinguishes browser saves from connected-file saves. Browser storage has a quota and can be cleared, so download important projects.
+
+Ctrl+S is handled even when an input or textarea has focus; current edits are committed before saving. Cancel/failure does not rename the project. Open uses the selected filename without its extension for the header/tab title. SVG export remains `.svg`; native `.fig` support remains pending.

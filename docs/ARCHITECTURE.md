@@ -1,4 +1,4 @@
-﻿# Architecture
+# Architecture
 
 ## Application entry point
 
@@ -45,13 +45,13 @@ Keep future features in the module that owns their behavior, with dedicated modu
 
 Vite transforms TypeScript and builds the browser bundle. `tsc --noEmit` checks types separately and runs before production builds, because [Vite does not perform type checking](https://vite.dev/guide/features). Prettier uses two spaces and single quotes; ESLint checks TypeScript imports and common errors. Installed versions are pinned by `package-lock.json`.
 
-Tests are written in TypeScript, compiled into ignored `.test-build/` output, then executed by Node's test runner. Tests cover document/clipboard validation, selection geometry, transforms, alignment, history, store transactions, gesture commit/cancel, viewport math and the storage adapter. Browser DOM/event wiring, visual fidelity and system clipboard interaction still require browser verification.
+Tests are written in TypeScript, compiled into ignored `.test-build/` output, then executed by Node's test runner. Tests cover document/clipboard validation, selection geometry, transforms, alignment, history, store transactions, gesture commit/cancel, viewport math and the storage adapter. Playwright tests in `tests/e2e/` verify Chrome DOM/pointer/file workflows. Font fidelity, other engines and external clipboard interaction still need separate verification.
 
 ## Frame hierarchy
 
 `src/model/hierarchy.ts` owns parent references, subtree traversal, root-selection normalization, containment, adoption, detached clipboard copies and graph validation. `src/ui/parent-control.ts` owns explicit parent selection. Layers and SVG paint order follow the hierarchy, with parent backgrounds painted before descendants.
 
-Node `x`/`y` values currently remain in document coordinates. Parent relationships do not imply SVG translate transforms; commands move subtree coordinates together. A selected frame and its selected children must be normalized to root selections before structural operations to prevent double movement. Ordinary frame resize changes the container size without scaling child sizes. Clipping, layout constraints and inherited container appearance remain separate pending features.
+Node `x`/`y` values currently remain in document coordinates. Parent relationships do not imply SVG translate transforms; commands move subtree coordinates together. A selected frame and its selected children must be normalized to root selections before structural operations to prevent double movement. Ordinary frame resize changes the container size without scaling child sizes. Frame constraints, clipping and auto layout are implemented in dedicated modules; arbitrary affine transforms remain pending.
 
 Version-1 `.redesign` documents remain supported. Missing legacy parent fields are inferred from full geometric enclosure on import; explicit `null` means intentional root placement. Runtime validation checks parent existence/type, cycles and depth. Do not infer parents again on every render or edit.
 
@@ -69,3 +69,26 @@ Version-1 `.redesign` documents remain supported. Missing legacy parent fields a
 - `src/render/document.ts` is the shared hierarchical canvas/export renderer, including frame clipping, container opacity, visibility and pointer locking. `src/model/clipping.ts` handles clip-aware point selection; `render-bounds.ts` computes conservative clipped visual bounds.
 - `src/model/text-layout.ts` owns pure grapheme-aware wrapping. `src/render/text.ts` uses browser text measurement for SVG output. `src/editor/text-edit.ts` owns transactional inline editing; `src/ui/inline-text.ts` owns the positioned input and keyboard/IME interaction.
 - Node option defaults and import validation live in `src/model/node-options.ts`; version-1 documents remain supported. Browser-level validation and remaining geometry/typography limits are recorded in `donefun.md`.
+
+
+## Layout, assets and page state
+
+`model/features.ts` defines optional version-1 extensions and validates paints, raster data, layouts, grids, vectors and links. `workspace-validation.ts` validates page metadata, guides and globally unique node IDs. Documents without extensions remain readable. The active page uses `doc.nodes`; inactive pages archive their nodes in `workspace.pages`, and the active page entry has an empty `nodes` array. Page commands swap arrays in one undoable transaction. `allNodes` resolves cross-page references.
+
+`auto-layout.ts` measures nested hug frames and arranges fill/fixed children in parent axes. Commit normalizes edited vector bounds, lays out the active page, synchronizes component templates and overrides, then resolves layout and group bounds before validation/history/autosave. `components.ts` reconciles added/deleted source children and retains stable instance IDs. Main-component deletion detaches instances safely. Nested component composition and variants are not supported yet.
+
+`vector.ts` owns normalized compound rings and actual polygon booleans through `polygon-clipping`. Ellipses and rounded rectangles are approximated for boolean operations. `render/paint.ts` owns self-contained image clipping, gradients, strokes and effect definitions shared by canvas and SVG export. UI grids/rulers/guides are separate overlays, excluded from exports.
+
+`ui/workspace.ts` composes page, image, ruler, vector and prototype controls; `feature-properties.ts` supplies inspector fields. `model/prototype.ts` owns navigation without mutating editor data. The modal preview renders frame subtrees with click/keyboard navigation, back/restart and optional dissolve animation.
+
+
+`model/bezier.ts` owns cubic evaluation, exact extrema/bounds, SVG path commands, adaptive flattening for booleans, and anchor/handle editing. Vector points optionally store normalized incoming/outgoing handles and a smooth flag. `mapVectorPoint` carries controls through normalization and coordinate transforms; normalizing a rotated path preserves its world geometry. `render/vector-editor.ts` draws editor-only anchor/tangent overlays; `ui/vector-editor.ts` separates draft point dragging from committed anchor/handle transactions. Legacy straight paths need no additional fields.
+
+
+`interop/document-save.ts` owns save naming, session-only file handles, concurrency, write/close completion, cancellation and failure handling. `document-name.ts` owns filename-to-title conversion and portable download names. `file-actions.ts` chooses native-picker or download behavior, resets handles after opening a new document, and applies opened filenames. The saved payload gets the chosen title before serialization; the live title changes only after success. `renderToolbar` synchronizes the header and browser tab title. File handles are never serialized. Native picker/writer adapters are simulated in browser tests; actual OS dialogs are outside automated coverage.
+
+
+Vector editing uses editor-only `editingVectorId` state. Selection changes, deletion and undo clear invalid edit sessions; the selection renderer hides object resize controls during point editing. Canvas pointer handling prevents compatibility mouse events and redraws SVG nodes, so vector double-clicks are detected from two stationary pointer tap pairs on stable node/anchor IDs. Native double-click handling remains as a fallback, with duplicate activation suppression. Editor-only wide path hit strokes make thin curves easier to target; these are omitted from prototypes and SVG exports.
+
+
+Save semantics are explicit: `DocumentFileSaver.save()` writes a retained handle, or persists to browser storage when native saving is unavailable. `save(true)` performs Save As/native picking or requests a name for an explicit download. Ordinary Save never infers a new destination from a changed document title. `reset(handle)` connects native-opened files. File-action capture handles Ctrl/Cmd+S and Shift+S before editor handlers or browser Save Page, commits focused fields/text/gestures, and dispatches a before-save event for pen drafts. The custom `ui/save-dialog.ts` is used only for explicit fallback downloads. Native adapters remain simulated in browser tests; actual OS dialogs are outside automated coverage.

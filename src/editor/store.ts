@@ -1,3 +1,6 @@
+import { normalizeVector } from '../model/vector.ts';
+import { applyAutoLayout } from '../model/auto-layout.ts';
+import { syncComponents } from '../model/components.ts';
 import { updateGroupBounds } from '../model/groups.ts';
 import { createDocument, validateDocument } from '../model/document.ts';
 import { selectedNodes } from '../model/selection.ts';
@@ -17,6 +20,7 @@ export class EditorStore {
   space = false;
   snappingEnabled = true;
   editingTextId: string | null = null;
+  editingVectorId: string | null = null;
   readonly history = new History();
   private readonly listeners = new Set<(update: EditorUpdate) => void>();
   constructor(doc: DesignDocument = createDocument()) {
@@ -35,9 +39,18 @@ export class EditorStore {
   refresh(view: EditorUpdate['view'] = 'all', persist = false): void {
     updateGroupBounds(this.doc);
     this.selected = new Set(this.chosen().map((n) => n.id));
+    if (
+      this.editingVectorId &&
+      (!this.selected.has(this.editingVectorId) || this.selected.size !== 1)
+    )
+      this.editingVectorId = null;
     this.listeners.forEach((listener) => listener({ view, persist }));
   }
   commit(before: DesignDocument): void {
+    this.doc.nodes.forEach(normalizeVector);
+    applyAutoLayout(this.doc);
+    syncComponents(this.doc, before);
+    applyAutoLayout(this.doc);
     updateGroupBounds(this.doc);
     if (JSON.stringify(before) !== JSON.stringify(this.doc)) {
       this.doc = validateDocument(this.doc);

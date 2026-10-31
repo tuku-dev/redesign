@@ -27,7 +27,8 @@ export function bindActionShortcuts(s: MenuServices, gestures: GestureController
     if (
       gestures.active ||
       e.defaultPrevented ||
-      (e.target instanceof Element && e.target.closest('input,textarea,[contenteditable]'))
+      (e.target instanceof Element &&
+        e.target.closest('input,textarea,select,dialog,[contenteditable]'))
     )
       return;
     const mod = e.ctrlKey || e.metaKey,

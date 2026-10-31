@@ -1,0 +1,44 @@
+﻿# Editor Feature Guide
+
+## Auto layout
+
+Select layers and use **Add auto layout** (Shift+A). A new frame wraps loose layers. Choose horizontal or vertical flow, independent padding, gap, cross alignment and distribution. Frames can hug contents or use fixed dimensions; children can fill available width/height. Changes to child geometry, visibility and sibling order recalculate layout. Nested frames are supported. Wrapping, grid auto layout, min/max sizing and intrinsic text sizing remain pending.
+
+## Components and instances
+
+Select a frame or loose layers and choose **Create component** (Ctrl/Cmd+Alt+K). Use **Create instance**, or the main-component selector under **Tools & resources**, to insert a linked copy. Main edits propagate across pages; instance edits override inherited fields. **Reset overrides** restores the main's values; **Detach instance** (Ctrl/Cmd+Alt+B) removes links. Source deletion detaches surviving instances. Nested component swaps, variants and external libraries remain pending.
+
+## Images
+
+Use **Insert image**, drop raster files onto the canvas, or select a shape and choose **Set image fill**. PNG, JPEG, WebP and GIF files up to 8 MB are embedded in the document. Choose crop/cover, fit or stretch; crop X/Y values move the focal point from 0 to 1. Images survive save/open and SVG export. Document imports allow up to 100 MB; browser autosave remains subject to storage quota, so download image-heavy documents. Animated GIF playback follows browser behavior. Clipboard raster import, tiling and color adjustments remain pending.
+
+## Rulers, guides and grids
+
+Expand **Tools & resources** and choose **Show rulers** (Shift+R). Drag from a ruler to create a guide, drag guides to move them, double-click to remove, or use numeric guide controls. Escape cancels a drag. Visible guides participate in geometry snapping; Ctrl bypasses snapping. Frame inspectors support square, column or row grids. These overlays are excluded from exports. Guides are currently document-wide.
+
+## Styling
+
+The inspector provides two-color linear gradients with angle, one centered stroke, a drop shadow and layer blur. Shadows expose offset, blur, color and opacity. Canvas and SVG export share paint definitions; conservative effect bounds protect export edges. These are shape paints: radial/complex gradients, effect stacks, inner shadows, background blur and arbitrary group effects remain pending.
+
+## Vector editing
+
+Choose the **Pen tool** icon in the bottom canvas toolbar (P), then click for corner points or click-drag for smooth Bezier points with mirrored tangent handles. Shift constrains a segment to 45-degree increments. Click the first vertex or use Shift+Enter/**Close path** to close; Enter/**Finish path** creates an open path. Escape cancels; Backspace removes the last draft point. Double-click the shape or its stroke to enter point editing. You can also select it and press **Enter**, click the visible **Edit vector** action on the canvas, or use **Tools & resources > Edit points**. The **Editing vector** bar confirms the mode, and resize handles are replaced by anchors and tangent handles. Click **Done** or press **Escape** to leave point editing. Moving an anchor carries its handles. Smooth handles stay aligned; Alt-drag adjusts one independently, and Alt-click an anchor removes its handles. Double-click an anchor or use its inspector Smooth/Corner button to convert it. Numeric controls edit normalized anchors and handles. Curve bounds include exact cubic extrema so exports are not clipped.
+
+Select closed rectangles, ellipses or paths and choose **Union**, **Intersect**, **Subtract** or **Exclude**. Subtract uses document stacking order: the lowest selected shape is the subject. Operations produce editable compound paths and holes; undo restores operands. Ellipses and rounded corners use polygon approximations. SVG export preserves cubic Bezier commands. Boolean operations adaptively flatten curves; vector networks and live boolean operands remain pending.
+
+## Pages
+
+Use the left **Pages** section to create, rename, duplicate, reorder, switch or delete pages. One page must remain. Page duplication gives layers fresh IDs and remaps internal parent, component and prototype links. Page changes are undoable and included in local autosave/downloaded `.redesign` documents. The viewport is currently shared across pages.
+
+## Prototypes
+
+Select a hotspot layer, choose an **On click** destination frame, then select instant or dissolve and a duration. Top-level frames on any page can be destinations. Select a starting screen and choose **Present prototype**. Click or keyboard-activate hotspots; use **Back**, **Restart**, **Close preview**, or Escape. Presentation does not change editor history, page selection or saved data. Reduced-motion preferences suppress dissolve animation. Advanced triggers, overlays, scrolling, smart animation and sharing remain pending.
+
+## Verification and compatibility
+
+Run `npm test` for geometry, document, command and undo regressions. Run `npm run test:e2e` for real Chrome interactions, image/file workflows, exports and prototype navigation. Type checks, lint, formatting and production builds are separate commands listed in the README. Chrome tests do not establish Firefox/Safari support or Figma parity. Native `.fig` import/export remains a separate, unimplemented milestone.
+
+
+## Save and Save As
+
+Use Ctrl+S to save. Supporting browsers connect a disk file on the first save and reuse that destination; opening through the native file picker also retains the handle. Ctrl+Shift+S chooses a new destination. Other browsers save in browser storage with Ctrl+S; use Download copy for an explicit disk download through the app dialog. Downloaded copies cannot be updated automatically. Header tooltips, button names and save status identify the active workflow. No browser prompt is used. File handles currently last for the tab session; native OS dialogs and permission prompts are controlled by the browser.

@@ -4,18 +4,18 @@
 
 Build a web-based design application targeting Figma Design functionality, interaction behavior, rendering fidelity, and editable native `.fig` interchange in both directions. This is the working feature backlog, not a claim of complete Figma coverage. Expand it as reference behavior is investigated. Other Figma products require separate specifications.
 
-Status is based on repository inspection on 2026-10-28. **Basic** means an implementation exists but browser verification and parity testing remain pending. **Pending** means not implemented. **Research** means feasibility or reference behavior must be established. No feature is currently certified as matching Figma exactly.
+Status updated on 2026-10-31. **Basic** means an implementation exists but browser verification and parity testing remain pending. **Pending** means not implemented. **Research** means feasibility or reference behavior must be established. No feature is currently certified as matching Figma exactly.
 
 ## 1. Files and workspace
 
 | ID | Functionality | Status / required behavior |
 | --- | --- | --- |
-| FILE-01 | Rename document | Basic; editable header name |
+| FILE-01 | Rename document | Basic; editable header, saved/opened filename synchronization, browser tab title and autosaved name |
 | FILE-02 | Local autosave | Basic; browser storage, with save failure notice |
-| FILE-03 | Save/open local document | Basic; versioned `.redesign` JSON, validation, 20 MB import limit |
+| FILE-03 | Save/open local document | Basic; versioned `.redesign` JSON, native open/save with retained handles where supported, browser-storage Save fallback, explicit Save As/download app dialog, focused-field Ctrl+S capture, cancel/failure handling, validation and 100 MB import limit |
 | FILE-04 | New, duplicate, close document | Pending; protect unsaved work |
 | FILE-05 | Multiple documents/tabs | Pending; independent state and history |
-| FILE-06 | Pages | Pending; create, rename, duplicate, reorder, delete; current Page 1 is a static label |
+| FILE-06 | Pages | Basic; create, rename, duplicate, reorder, delete and switch pages; undo and multi-page save/open tested in Chrome |
 | FILE-07 | File browser | Pending; recent files, drafts, search, thumbnails, trash and restore |
 | FILE-08 | Teams and projects | Pending; organize documents, ownership and project access |
 | FILE-09 | Version history | Pending; named versions, previews and restore |
@@ -29,8 +29,8 @@ Status is based on repository inspection on 2026-10-28. **Basic** means an imple
 | VIEW-01 | Pan canvas | Basic; hand tool, Space-drag, middle-button drag |
 | VIEW-02 | Zoom | Basic; wheel, buttons, reset; zoom around pointer |
 | VIEW-03 | Fit document/selection | Basic; Fit / Shift+1 for all layers, Selection / Shift+2 for selection |
-| VIEW-04 | Rulers and guides | Pending; add, move, remove, show/hide |
-| VIEW-05 | Layout grids | Pending; columns, rows, spacing and overlays |
+| VIEW-04 | Rulers and guides | Basic; zoom-aware rulers, drag/numeric guide creation and movement, visibility and removal; snapping and cancel tested |
+| VIEW-05 | Layout grids | Basic; frame square/column/row grids with size/count, gutter and margin; editor-only overlays |
 | VIEW-06 | Pixel grid and pixel preview | Pending; zoom-dependent precision |
 | VIEW-07 | Outline mode and UI visibility | Pending; inspect geometry and hide panels |
 | VIEW-08 | Canvas settings | Pending; editable background and view preferences |
@@ -64,19 +64,19 @@ Status is based on repository inspection on 2026-10-28. **Basic** means an imple
 | --- | --- | --- |
 | NODE-01 | Rectangles and ellipses | Basic; draw and edit numeric bounds |
 | NODE-02 | Text layers | Basic; explicit newlines and basic size/color |
-| NODE-03 | Frames | Basic; persistent child references, nested frames, subtree operations, draw/drop parenting and Parent control; clipping and child constraints implemented; layout systems pending |
+| NODE-03 | Frames | Basic; persistent nested hierarchy, subtree operations, parenting, clipping, constraints and horizontal/vertical auto layout |
 | NODE-04 | Groups and nested hierarchy | Basic; nested frames/groups, reparenting and ungrouping; local transforms pending |
 | NODE-05 | Sections | Pending; named organizational regions |
 | NODE-06 | Layer naming | Basic through property field, context menu and F2; inline and batch rename pending |
 | NODE-07 | Visibility and locking | Basic; persisted/inherited visibility and locking, layer-panel toggles, mutation protection and export filtering |
 | NODE-08 | Clipping and masks | Partial; nested frame clipping in canvas/export and clipped hit filtering; masks pending |
 | NODE-09 | Lines, arrows, polygons and stars | Pending; editable geometry-specific parameters |
-| NODE-10 | Pen and vector editing | Pending; points, segments, handles, open/closed paths and networks |
+| NODE-10 | Pen and vector editing | Partial; straight and cubic Bezier pen paths, click-drag mirrored handles, anchor/handle editing, independent handles, smooth/corner conversion, open/closed compound paths and exact cubic bounds; vector networks and segment insertion pending |
 | NODE-11 | Pencil/freehand | Pending; smoothing and editable paths |
-| NODE-12 | Boolean operations | Pending; union, subtract, intersect, exclude; preserve editable operands |
+| NODE-12 | Boolean operations | Partial; union, subtract, intersect and exclude create editable compound paths with holes; operands recover through undo, live boolean containers pending; curves polygonized |
 | NODE-13 | Flatten and outline strokes | Pending; predictable conversion to vector geometry |
 | NODE-14 | Corner controls | Basic uniform radius; independent corners and smoothing pending |
-| NODE-15 | Image layers | Pending; upload/paste, crop, fit, fill, tiling and replacement |
+| NODE-15 | Image layers | Partial; PNG/JPEG/WebP/GIF picker and drop, embedded image fills, cover/contain/stretch and focal crop; clipboard images, tiling and adjustments pending |
 
 ## 5. Appearance and rendering
 
@@ -84,10 +84,10 @@ Status is based on repository inspection on 2026-10-28. **Basic** means an imple
 | --- | --- | --- |
 | PAINT-01 | Solid fill | Basic; one opaque RGB color plus layer opacity |
 | PAINT-02 | Multiple fills | Pending; ordered paints, per-paint visibility and opacity |
-| PAINT-03 | Gradients | Pending; stop editing, transforms and gradient types |
-| PAINT-04 | Strokes | Pending; width, alignment, joins, caps, dashes, multiple strokes |
+| PAINT-03 | Gradients | Partial; two-stop linear gradients with start/end colors and angle; radial/angular/diamond gradients, arbitrary stops and canvas handles pending |
+| PAINT-04 | Strokes | Partial; one centered stroke with width/color and round joins/caps; alignment, dashes, multiple strokes and stroke outlining pending |
 | PAINT-05 | Opacity and blend modes | Basic layer opacity; blend modes pending |
-| PAINT-06 | Shadows and blur | Pending; effect stacks and matching bounds |
+| PAINT-06 | Shadows and blur | Partial; one drop shadow and layer blur via shared SVG filters; conservative export bounds; inner/background blur and effect stacks pending |
 | PAINT-07 | Color picker | Basic browser picker; hex/RGB/HSL/alpha, eyedropper and shared swatches pending |
 | PAINT-08 | Image adjustments | Pending; non-destructive adjustments |
 | PAINT-09 | Rendering fidelity | Research; antialiasing, compositing, clipping and export consistency |
@@ -110,36 +110,36 @@ Status is based on repository inspection on 2026-10-28. **Basic** means an imple
 | ID | Functionality | Status / required behavior |
 | --- | --- | --- |
 | LAYOUT-01 | Constraints | Basic; start/end/center/stretch/scale on both axes during numeric/drag frame resizing, including nested frames |
-| LAYOUT-02 | Auto layout | Pending; horizontal, vertical and grid flows |
-| LAYOUT-03 | Sizing | Pending; fixed, hug contents, fill container, min/max bounds |
-| LAYOUT-04 | Spacing and alignment | Pending; padding, gaps, wrapping and packed/distributed content |
+| LAYOUT-02 | Auto layout | Partial; horizontal/vertical frames with reactive child placement; grid flow and wrapping pending |
+| LAYOUT-03 | Sizing | Partial; fixed/hug frame dimensions and fill children; min/max, intrinsic text sizing and advanced affine layouts pending |
+| LAYOUT-04 | Spacing and alignment | Partial; independent padding, gap, cross alignment and start/center/end/space-between distribution; wrapping pending |
 | LAYOUT-05 | Absolute positioning | Pending; out-of-flow children with constraints |
-| LAYOUT-06 | Nested layout | Pending; deterministic resolution, cycle handling and text measurement |
-| LAYOUT-07 | Layout controls | Pending; interactive handles, reordering and responsive previews |
+| LAYOUT-06 | Nested layout | Partial; nested frame measurement and arrangement with subtree translation; advanced text measurement and cyclic sizing parity pending |
+| LAYOUT-07 | Layout controls | Partial; inspector controls and sibling-order-driven layout; canvas gap handles, drag reordering and responsive preview presets pending |
 
 ## 8. Components and design systems
 
 | ID | Functionality | Status / required behavior |
 | --- | --- | --- |
-| SYSTEM-01 | Main components and instances | Pending; stable references and propagation |
-| SYSTEM-02 | Overrides | Pending; text, appearance, nested swaps, reset and detach |
+| SYSTEM-01 | Main components and instances | Basic; main frames, stable source links, automatic source updates, instance insertion across pages, child reconciliation and safe detachment on source removal |
+| SYSTEM-02 | Overrides | Partial; per-layer text/appearance/geometry overrides, reset and detach; nested component swaps and property sets pending |
 | SYSTEM-03 | Variants and properties | Pending; sets, variant selection, boolean/text/instance properties |
 | SYSTEM-04 | Shared styles | Pending; paint, text, effect and grid styles |
 | SYSTEM-05 | Variables | Pending; collections, modes, types, aliases, bindings and scope |
 | SYSTEM-06 | Libraries | Pending; publish, consume, update and resolve missing dependencies |
-| SYSTEM-07 | Assets browser | Pending; find components, previews and drag-to-insert |
+| SYSTEM-07 | Assets browser | Partial; main-component selector and insert-instance action in Tools & resources; previews and drag insertion pending |
 
 ## 9. Prototyping and presentation
 
 | ID | Functionality | Status / required behavior |
 | --- | --- | --- |
-| PROTO-01 | Flows and starting points | Pending; connect screens and launch flows |
-| PROTO-02 | Triggers and actions | Pending; click, hover, press, drag, keys, delays, navigation and links |
+| PROTO-01 | Flows and starting points | Partial; start from selected/top-level frame, connect screens across pages and launch preview; named multiple flows pending |
+| PROTO-02 | Triggers and actions | Partial; click/keyboard-accessible navigation hotspots with ancestor action lookup; hover, press, drag, delays, links and conditional actions pending |
 | PROTO-03 | Overlays and scrolling | Pending; positions, dismissal, overflow and fixed/sticky elements |
-| PROTO-04 | Transitions | Pending; easing, timing, smart animation and matching layers |
+| PROTO-04 | Transitions | Partial; instant and timed dissolve transitions with reduced-motion support; easing controls and smart animation pending |
 | PROTO-05 | Interactive components | Pending; variant transitions and state |
 | PROTO-06 | Variables and conditional logic | Pending; assignment, expressions and branching |
-| PROTO-07 | Presentation player | Pending; device previews, scaling, navigation and sharing |
+| PROTO-07 | Presentation player | Partial; modal player with fitted screens, navigation, back, restart and close; device presets and shared previews pending |
 
 ## 10. Import, export and interoperability
 
@@ -151,7 +151,7 @@ Status is based on repository inspection on 2026-10-28. **Basic** means an imple
 | IO-04 | Bidirectional round trips | Pending; edits preserved through both application journeys |
 | IO-05 | SVG export | Basic; whole document; Figma import and visual checks pending |
 | IO-06 | SVG import | Pending; safe parsing and editable path/paint conversion |
-| IO-07 | Raster/PDF interchange | Pending; PNG/JPEG image import; PNG/JPEG/PDF export |
+| IO-07 | Raster/PDF interchange | Partial; embedded PNG/JPEG/WebP/GIF import and SVG embedding; PNG/JPEG/PDF export pending |
 | IO-08 | Export presets | Partial; whole-document and selected-subtree SVG export; presets, scales, batch formats and slices pending |
 | IO-09 | Figma API/plugin bridge | Research; explicit interim integration, separate from native file support |
 | IO-10 | Unsupported features | Pending; preflight report, safe preservation and explicit loss warnings |
@@ -185,9 +185,9 @@ All items below are **Pending**, with API parity requiring research.
 
 ## 13. Reliability and application quality
 
-- QUALITY-01: **Pending** browser interaction tests in Chromium, Firefox and Safari.
+- QUALITY-01: **Partial** Playwright regression suite runs in real Chrome on Windows; Firefox and Safari verification remain pending.
 - QUALITY-02: **Basic** document serialization, validation and history tests; broaden to geometry, gestures and layout.
-- QUALITY-03: **Pending** visual regression fixtures with explicit rendering tolerances.
+- QUALITY-03: **Partial** captured dark editor screenshot reviewed; automated visual-diff baselines and explicit tolerances remain pending.
 - QUALITY-04: **Pending** large-document benchmarks, culling, incremental rendering and memory budgets.
 - QUALITY-05: **Pending** screen-reader labels audit, keyboard operation, contrast checks and reduced motion.
 - QUALITY-06: **Pending** server access controls, auditability and private asset storage when backend features arrive.

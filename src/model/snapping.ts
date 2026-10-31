@@ -1,4 +1,5 @@
-﻿import type { Box, Point } from './types.ts';
+import type { Box, Point } from './types.ts';
+export type SnapBox = Box & { snapAxis?: 'x' | 'y' };
 export interface Guide {
   axis: 'x' | 'y';
   position: number;
@@ -16,11 +17,13 @@ export interface SnapResult {
   guides: Guide[];
   measurements: Measurement[];
 }
-const anchors = (box: Box, axis: 'x' | 'y') =>
-  axis === 'x'
-    ? [box.x, box.x + box.width / 2, box.x + box.width]
-    : [box.y, box.y + box.height / 2, box.y + box.height];
-export function measureSpacing(box: Box, candidates: readonly Box[]): Measurement[] {
+const anchors = (box: SnapBox, axis: 'x' | 'y') =>
+  box.snapAxis && box.snapAxis !== axis
+    ? []
+    : axis === 'x'
+      ? [box.x, box.x + box.width / 2, box.x + box.width]
+      : [box.y, box.y + box.height / 2, box.y + box.height];
+export function measureSpacing(box: Box, candidates: readonly SnapBox[]): Measurement[] {
   const results: Measurement[] = [];
   for (const axis of ['x', 'y'] as const) {
     const position = axis === 'x' ? 'x' : 'y',
@@ -28,7 +31,10 @@ export function measureSpacing(box: Box, candidates: readonly Box[]): Measuremen
       cross = axis === 'x' ? 'y' : 'x',
       crossSize = axis === 'x' ? 'height' : 'width';
     const aligned = candidates.filter(
-      (c) => c[cross] < box[cross] + box[crossSize] && c[cross] + c[crossSize] > box[cross],
+      (c) =>
+        !c.snapAxis &&
+        c[cross] < box[cross] + box[crossSize] &&
+        c[cross] + c[crossSize] > box[cross],
     );
     const before = aligned
       .filter((c) => c[position] + c[size] <= box[position])
@@ -58,7 +64,7 @@ export function measureSpacing(box: Box, candidates: readonly Box[]): Measuremen
 }
 export function snapTranslation(
   box: Box,
-  candidates: readonly Box[],
+  candidates: readonly SnapBox[],
   dx: number,
   dy: number,
   zoom: number,
@@ -86,7 +92,9 @@ export function snapTranslation(
         crossSize = axis === 'x' ? 'height' : 'width';
       const peers = candidates.filter(
         (c) =>
-          c[cross] < moving[cross] + moving[crossSize] && c[cross] + c[crossSize] > moving[cross],
+          !c.snapAxis &&
+          c[cross] < moving[cross] + moving[crossSize] &&
+          c[cross] + c[crossSize] > moving[cross],
       );
       const left = peers
         .filter((c) => c[axis] + c[size] <= moving[axis])
@@ -127,7 +135,7 @@ export function snapTranslation(
 }
 export function snapPoint(
   point: Point,
-  candidates: readonly Box[],
+  candidates: readonly SnapBox[],
   zoom: number,
 ): { point: Point; guides: Guide[] } {
   const result = { ...point },

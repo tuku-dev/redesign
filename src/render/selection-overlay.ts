@@ -42,7 +42,7 @@ export function renderSelection(
       'pointer-events': 'none',
       ...extra,
     });
-  if (box) {
+  if (box && !store.editingVectorId) {
     if (roots.length > 1)
       roots.forEach((n) => {
         const c = center(n);

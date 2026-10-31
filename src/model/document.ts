@@ -1,3 +1,5 @@
+import { validFeatures } from './features.ts';
+import { validateWorkspace } from './workspace-validation.ts';
 import { nodeOptions, validNodeOptions } from './node-options.ts';
 import type { NodeOptions } from './types.ts';
 import { assertHierarchy, containsBox } from './hierarchy.ts';
@@ -40,8 +42,9 @@ function isNode(value: unknown): value is ImportedNode {
   if (
     !record(value) ||
     !validNodeOptions(value) ||
+    !validFeatures(value) ||
     typeof value.type !== 'string' ||
-    !['frame', 'rectangle', 'ellipse', 'text', 'group'].includes(value.type) ||
+    !['frame', 'rectangle', 'ellipse', 'text', 'group', 'path'].includes(value.type) ||
     typeof value.id !== 'string' ||
     value.id.length === 0 ||
     (value.parentId !== undefined &&
@@ -108,5 +111,7 @@ export function validateDocument(value: unknown): DesignDocument {
       n.parentId = candidates[0]?.id ?? null;
     }
   assertHierarchy(nodes);
-  return { format: 'redesign', version: 1, name: value.name, nodes };
+  const doc: DesignDocument = { format: 'redesign', version: 1, name: value.name, nodes };
+  if (value.workspace !== undefined) doc.workspace = validateWorkspace(value.workspace, nodes);
+  return doc;
 }

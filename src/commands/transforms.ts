@@ -80,6 +80,23 @@ export function cloneNodes(nodes: readonly DesignNode[], dx = 20, dy = 20): Desi
     ...clone(n),
     id: ids.get(n.id)!,
     parentId: n.parentId ? (ids.get(n.parentId) ?? n.parentId) : null,
+    ...(n.component?.sourceId
+      ? {
+          component: {
+            ...n.component,
+            sourceId: ids.get(n.component.sourceId) ?? n.component.sourceId,
+          },
+        }
+      : {}),
+    ...(n.instanceSource ? { instanceSource: ids.get(n.instanceSource) ?? n.instanceSource } : {}),
+    ...(n.prototype
+      ? {
+          prototype: {
+            ...n.prototype,
+            targetId: ids.get(n.prototype.targetId) ?? n.prototype.targetId,
+          },
+        }
+      : {}),
     x: n.x + dx,
     y: n.y + dy,
   }));

@@ -10,7 +10,6 @@ export function bindKeyboard(
   gestures: GestureController,
   commands: EditingCommands,
   clipboard: ClipboardController,
-  save: () => void,
   fit: (selectionOnly: boolean) => void,
 ): void {
   document.addEventListener('keydown', (e) => {
@@ -44,11 +43,6 @@ export function bindKeyboard(
       e.preventDefault();
       if (e.shiftKey) store.redo();
       else store.undo();
-      return;
-    }
-    if (mod && key === 's') {
-      e.preventDefault();
-      save();
       return;
     }
     if (mod && key === 'd') {

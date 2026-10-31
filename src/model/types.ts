@@ -1,5 +1,6 @@
-export type NodeType = 'frame' | 'rectangle' | 'ellipse' | 'text' | 'group';
-export type Tool = 'select' | 'hand' | Exclude<NodeType, 'group'>;
+import type { NodeFeatures, Workspace } from './features.ts';
+export type NodeType = 'frame' | 'rectangle' | 'ellipse' | 'text' | 'group' | 'path';
+export type Tool = 'select' | 'hand' | Exclude<NodeType, 'group' | 'path'>;
 export interface Point {
   x: number;
   y: number;
@@ -22,7 +23,7 @@ export interface NodeOptions {
   textAlign: 'left' | 'center' | 'right';
   textWrap: 'none' | 'word';
 }
-export interface DesignNode extends Box, NodeOptions {
+export interface DesignNode extends Box, NodeOptions, NodeFeatures {
   id: string;
   parentId: string | null;
   locked: boolean;
@@ -40,6 +41,7 @@ export interface DesignDocument {
   version: 1;
   name: string;
   nodes: DesignNode[];
+  workspace?: Workspace;
 }
 export type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
 export type Alignment = 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom';

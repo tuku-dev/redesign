@@ -1,3 +1,5 @@
+import { bindWorkspace } from './ui/workspace.ts';
+import { bindThemeSelector } from './ui/theme.ts';
 import { TextEditSession } from './editor/text-edit.ts';
 import { bindInlineText } from './ui/inline-text.ts';
 import { StructureCommands } from './commands/structure.ts';
@@ -25,6 +27,7 @@ import { renderProperties } from './ui/properties.ts';
 import { renderScene } from './render/scene.ts';
 import { browserDocumentStorage } from './storage/local-document.ts';
 
+bindThemeSelector();
 const elements = getElements();
 const notify = createNotifications(elements.toast);
 const store = new EditorStore();
@@ -60,9 +63,12 @@ store.subscribe((update) => {
   }
 });
 const fit = bindToolbar(elements, store, gestures, viewport, commands, notify);
-bindFileActions(elements, store, notify);
+bindFileActions(elements, store, notify, () => {
+  gestures.finish();
+  textSession.commit();
+});
 bindPointer(elements, store, gestures, viewport, notify, inlineText.begin);
-bindKeyboard(store, gestures, commands, clipboard, () => elements.save.click(), fit);
+bindKeyboard(store, gestures, commands, clipboard, fit);
 clipboard.bind(document, gestures, commands);
 const services: MenuServices = {
   store,
@@ -78,5 +84,6 @@ const services: MenuServices = {
 };
 bindContextMenu(elements, services, gestures, viewport, notify);
 bindActionShortcuts(services, gestures);
+bindWorkspace(elements, store, gestures, viewport, notify);
 mountIcons();
 store.refresh();

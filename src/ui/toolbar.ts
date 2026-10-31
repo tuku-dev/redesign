@@ -59,6 +59,7 @@ export function bindToolbar(
 }
 export function renderToolbar(el: EditorElements, store: EditorStore): void {
   el.documentName.value = store.doc.name;
+  document.title = store.doc.name + ' - reDesign';
   el.toolButtons.forEach((b) => {
     b.classList.toggle('active', b.dataset.tool === store.tool);
     b.setAttribute('aria-pressed', String(b.dataset.tool === store.tool));

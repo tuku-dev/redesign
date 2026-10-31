@@ -1,3 +1,5 @@
+import { guideCandidates } from '../render/layout-grid.ts';
+import type { SnapBox } from '../model/snapping.ts';
 import { clippedVisualBox } from '../model/render-bounds.ts';
 import { editableNodes, isLocked, isHidden, groupedTarget } from '../model/layer-state.ts';
 import { drawingBox } from '../model/drawing.ts';
@@ -67,14 +69,17 @@ export class GestureController {
     const s = this.store;
     return clone(selectionRoots(s.doc, new Set(editableNodes(s.doc, s.selected).map((n) => n.id))));
   }
-  private candidates(g: Gesture): Box[] {
+  private candidates(g: Gesture): SnapBox[] {
     const moving = new Set('nodes' in g ? g.nodes.map((n) => n.id) : this.store.selected);
-    return g.before.nodes
-      .filter((n) => !moving.has(n.id) && n.type !== 'group' && !isHidden(g.before, n))
-      .flatMap((n) => {
-        const box = clippedVisualBox(g.before, n);
-        return box ? [box] : [];
-      });
+    return [
+      ...guideCandidates(g.before),
+      ...g.before.nodes
+        .filter((n) => !moving.has(n.id) && n.type !== 'group' && !isHidden(g.before, n))
+        .flatMap((n) => {
+          const box = clippedVisualBox(g.before, n);
+          return box ? [box] : [];
+        }),
+    ];
   }
   startPan(client: Point): void {
     this.active = { ...this.base(client), kind: 'pan', pan: { ...this.store.pan } };

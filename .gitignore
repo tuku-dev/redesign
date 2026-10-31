@@ -8,3 +8,5 @@ dist/
 .test-build/
 donefun.md
 package-lock.json
+playwright-report/
+test-results/
