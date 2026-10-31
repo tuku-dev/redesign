@@ -18,6 +18,6 @@ export async function rejectBinaryDocument(file: File): Promise<void> {
   const isFigName = /\.fig$/i.test(file.name);
   if (kind === 'unknown' && !isFigName) return;
   throw new Error(
-    'Figma .fig files are not supported yet. Export the design as SVG from Figma, or open a .redesign file.',
+    'Figma .fig files are not supported yet. Open a .redesign file instead.',
   );
 }
