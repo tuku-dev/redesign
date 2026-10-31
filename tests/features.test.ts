@@ -43,6 +43,24 @@ function area(rings: Point[][]): number {
     ),
   );
 }
+test('toVector converts rectangles and ellipses to editable paths and undoes cleanly', () => {
+  const r = createNode('rectangle', { width: 100, height: 50 }),
+    e = createNode('ellipse', { width: 80, height: 80 }),
+    f = createNode('frame', { width: 200, height: 200 }),
+    l = createNode('rectangle', { width: 10, height: 10, locked: true }),
+    { s, c } = editor([r, e, f, l]);
+  assert.equal(c.toVector(r.id), true);
+  assert.equal(node(s, r.id).type, 'path');
+  assert.equal(node(s, r.id).vector?.rings[0].length, 4);
+  assert.equal(c.toVector(e.id), true);
+  assert.equal(node(s, e.id).vector?.rings[0].length, 4);
+  assert.equal(c.toVector(r.id), false);
+  assert.equal(c.toVector(f.id), false);
+  assert.equal(c.toVector(l.id), false);
+  s.undo();
+  assert.equal(node(s, e.id).type, 'ellipse');
+  assert.equal(node(s, e.id).vector, undefined);
+});
 test('horizontal hug auto layout applies independent padding, gap and one undo transaction', () => {
   const { s, c, f, a, b } = layoutEditor(),
     before = structuredClone(s.doc);

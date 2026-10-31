@@ -254,7 +254,9 @@ export function bindVectorEditor(
         !e.ctrlKey &&
         !e.metaKey &&
         hitId &&
-        store.doc.nodes.some((n) => n.id === hitId && n.vector)
+        store.doc.nodes.some(
+          (n) => n.id === hitId && (n.vector || n.type === 'rectangle' || n.type === 'ellipse'),
+        )
           ? { id: hitId, ring: r, index: i, side, time: e.timeStamp, x: e.clientX, y: e.clientY }
           : null;
       if (
@@ -388,7 +390,10 @@ export function bindVectorEditor(
             Number(hit.index),
             !p.in && !p.out,
           );
-      } else enterEdit(hit.id);
+      } else {
+        new FeatureCommands(store).toVector(hit.id);
+        enterEdit(hit.id);
+      }
     } else lastTap = { ...hit, time: e.timeStamp };
   });
   el.canvas.addEventListener('pointercancel', () => stop(true));

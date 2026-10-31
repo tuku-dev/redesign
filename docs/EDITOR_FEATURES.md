@@ -20,6 +20,8 @@ Expand **Tools & resources** and choose **Show rulers** (Shift+R). Drag from a r
 
 Clicking a layer on the canvas selects that layer directly (grouped layers select as one unit). Clicking or dragging on the blank area of a frame does not select or move the frame; dragging there draws a marquee that selects the objects inside it. Right-click the blank area of a frame, or pick it in the Layers panel, to select the frame; once selected, drag it to move. Shift-click toggles individual layers, and Shift-drag moves in a straight line. Locking a frame also locks its descendants, matching Figma behavior.
 
+Double-clicking a rectangle or ellipse converts it to an editable vector (corner radii become per-point radii, ellipses become four smooth anchors) and enters point editing; undo restores the original shape. Double-clicking a vector enters point editing, and double-clicking a frame's blank area does nothing.
+
 ## Numeric controls and corner radii
 
 Drag horizontally on a numeric field's label to scrub its value. Hold Shift for larger steps or Alt for finer steps; click the field to type a value. Only rectangles and frames expose corner-radius fields and canvas handles. The hollow canvas handles use the blue `#10a1cf` accent. Drag diagonally to change all corners together; double-click a handle to select that corner, then drag diagonally to adjust it alone. Setting the uniform radius links all corners again.

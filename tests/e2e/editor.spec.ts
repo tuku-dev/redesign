@@ -1137,6 +1137,23 @@ test('double-clicking a reopened curved stroke exposes anchors and tangent handl
   await expect(page.locator('[data-vector-handle]')).toHaveCount(2);
   expect(errors).toEqual([]);
 });
+test('double-clicking a rectangle or ellipse converts it to an editable vector', async ({
+  page,
+}) => {
+  const rect = createNode('rectangle', { id: 'dbl-rect', x: 100, y: 100, width: 160, height: 100 });
+  const ell = createNode('ellipse', { id: 'dbl-ell', x: 400, y: 100, width: 140, height: 120 });
+  const errors = await open(page, { ...createDocument(), nodes: [rect, ell] });
+  let box = (await page.locator('[data-id="dbl-rect"]').boundingBox())!;
+  await page.mouse.dblclick(box.x + box.width / 2, box.y + box.height / 2, { delay: 90 });
+  await expect(page.locator('[data-vector-anchor]')).toHaveCount(4);
+  expect((await saved(page)).nodes.find((n) => n.id === 'dbl-rect')?.type).toBe('path');
+  await page.keyboard.press('Escape');
+  box = (await page.locator('[data-id="dbl-ell"]').boundingBox())!;
+  await page.mouse.dblclick(box.x + box.width / 2, box.y + box.height / 2, { delay: 90 });
+  await expect(page.locator('[data-vector-anchor]')).toHaveCount(4);
+  expect((await saved(page)).nodes.find((n) => n.id === 'dbl-ell')?.type).toBe('path');
+  expect(errors).toEqual([]);
+});
 test('double-clicking an anchor converts it once between corner and smooth', async ({ page }) => {
   const vector = createNode('path', {
     id: 'anchor-convert',

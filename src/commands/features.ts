@@ -206,6 +206,43 @@ export class FeatureCommands {
       s.selected = new Set([n.id]);
     });
   }
+  /** Converts a rectangle or ellipse into an editable closed path in place; returns false if not applicable. */
+  toVector(id: string): boolean {
+    const n = this.store.doc.nodes.find((node) => node.id === id);
+    if (
+      !n ||
+      n.vector ||
+      (n.type !== 'rectangle' && n.type !== 'ellipse') ||
+      isLocked(this.store.doc, n)
+    )
+      return false;
+    const k = 0.5522847498 / 2;
+    const rings: VectorPoint[][] =
+      n.type === 'ellipse'
+        ? [
+            [
+              { x: 0.5, y: 0, smooth: true, in: { x: 0.5 - k, y: 0 }, out: { x: 0.5 + k, y: 0 } },
+              { x: 1, y: 0.5, smooth: true, in: { x: 1, y: 0.5 - k }, out: { x: 1, y: 0.5 + k } },
+              { x: 0.5, y: 1, smooth: true, in: { x: 0.5 + k, y: 1 }, out: { x: 0.5 - k, y: 1 } },
+              { x: 0, y: 0.5, smooth: true, in: { x: 0, y: 0.5 + k }, out: { x: 0, y: 0.5 - k } },
+            ],
+          ]
+        : [
+            [
+              { x: 0, y: 0, radius: n.cornerRadii?.topLeft },
+              { x: 1, y: 0, radius: n.cornerRadii?.topRight },
+              { x: 1, y: 1, radius: n.cornerRadii?.bottomRight },
+              { x: 0, y: 1, radius: n.cornerRadii?.bottomLeft },
+            ].map((p) => (p.radius === undefined ? { x: p.x, y: p.y } : p)),
+          ];
+    this.store.change(() => {
+      n.type = 'path';
+      n.vector = { closed: true, rings };
+      delete n.cornerRadii;
+      if (n.name === 'Rectangle' || n.name === 'Ellipse') n.name = 'Vector';
+    });
+    return true;
+  }
   vertex(ring: number, index: number, point: Point): void {
     const n = this.store.current();
     if (n?.type !== 'path' || !n.vector || isLocked(this.store.doc, n)) return;
