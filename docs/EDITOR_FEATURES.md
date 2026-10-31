@@ -30,6 +30,10 @@ Use the **Snap to grid** icon above the canvas to snap drawing and layer movemen
 
 Select two or more layers to show alignment controls in the Properties panel. **Align Objects** aligns layers to the selection's left, horizontal center, right, top, vertical center or bottom. With three or more layers, **Distribute Objects** spaces the selected edges or centers evenly while keeping the outer layers in place; **Distribute Spacing** instead equalizes the gaps between layers. Hover over an icon for its tooltip; each icon also has an accessible name.
 
+## Layer ordering
+
+Drag a layer in the Layers panel and drop it above or below a sibling to change its stacking order. Dragging a selected group of sibling layers moves them together; hierarchy and selection are preserved, and the change can be undone. Reordering across different parents is not supported.
+
 ## Styling
 
 Fill and Stroke controls sit together in the inspector; Stroke's enable toggle, visible color picker and width share one row. The inspector also provides two-color linear gradients with angle, a drop shadow and layer blur. Color edits preview live while the picker is open. Shadows expose offset, blur, color and opacity. Canvas and SVG export share paint definitions; conservative effect bounds protect export edges. These are shape paints: radial/complex gradients, effect stacks, inner shadows, background blur and arbitrary group effects remain pending.

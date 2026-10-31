@@ -57,6 +57,33 @@ const select = (page: Page, id: string) =>
 const tools = (page: Page) => page.getByText('Tools & resources', { exact: true }).click();
 const saved = (page: Page) =>
   page.evaluate(() => JSON.parse(localStorage.getItem('redesign.document')!) as DesignDocument);
+test('layers can be reordered by dragging within a parent and undone', async ({ page }) => {
+  const errors = await open(page);
+  await page
+    .locator('[data-layer-id="rect-a"]')
+    .dragTo(page.locator('[data-layer-id="circle-b"]'), { targetPosition: { x: 30, y: 2 } });
+  await expect
+    .poll(async () =>
+      (await saved(page)).nodes
+        .filter((node) => node.parentId === 'screen-a')
+        .map((node) => node.id),
+    )
+    .toEqual(['circle-b', 'rect-a']);
+  await expect(
+    page
+      .locator('#layers .layer')
+      .evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset.layerId)),
+  ).resolves.toEqual(['screen-a', 'rect-a', 'circle-b']);
+  await page.locator('#undo').click();
+  await expect
+    .poll(async () =>
+      (await saved(page)).nodes
+        .filter((node) => node.parentId === 'screen-a')
+        .map((node) => node.id),
+    )
+    .toEqual(['rect-a', 'circle-b']);
+  expect(errors).toEqual([]);
+});
 test('theme selector applies all three choices, survives reload, and follows system changes', async ({
   page,
 }) => {

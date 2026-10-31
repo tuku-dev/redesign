@@ -173,6 +173,36 @@ test('multiselection order commands preserve relative order and do not move chil
   s.order.order('front');
   assert.equal(s.store.current()?.parentId, frame.id);
 });
+test('drag reorder moves selected siblings as a stable block and rejects cross-parent drops', () => {
+  const s = setup(),
+    [a, b, c] = s.store.doc.nodes;
+  assert.ok(a && b && c);
+  s.store.selected = new Set([a.id, b.id]);
+  assert.equal(s.order.canReorderRelative(s.store.selected, c.id), true);
+  s.order.reorderRelative(s.store.selected, c.id, false);
+  assert.deepEqual(
+    s.store.doc.nodes.map((node) => node.id),
+    [c.id, a.id, b.id],
+  );
+  s.store.undo();
+  assert.deepEqual(
+    s.store.doc.nodes.map((node) => node.id),
+    [a.id, b.id, c.id],
+  );
+
+  s.store.selected = new Set([a.id]);
+  s.order.reorderRelative(s.store.selected, c.id, true);
+  assert.deepEqual(
+    s.store.doc.nodes.map((node) => node.id),
+    [b.id, a.id, c.id],
+  );
+  s.store.undo();
+  s.store.selected = new Set([a.id]);
+  s.structure.wrap('frame');
+  const frame = s.store.current()!,
+    child = s.store.doc.nodes.find((node) => node.parentId === frame.id)!;
+  assert.equal(s.order.canReorderRelative(new Set([child.id]), a.id), false);
+});
 test('clipboard paste-here anchors the copied subtree bounds at the requested point', () => {
   const s = setup();
   s.structure.wrap('group');

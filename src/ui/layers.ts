@@ -1,12 +1,19 @@
 ﻿import type { EditorStore } from '../editor/store.ts';
 import { toggleId } from '../model/selection.ts';
-import { hierarchyRows } from '../model/hierarchy.ts';
+import { hierarchyRows, selectionRoots } from '../model/hierarchy.ts';
 import { isHidden, isLocked } from '../model/layer-state.ts';
 import { LayerStateCommands } from '../commands/layer-state.ts';
+import { LayerOrderCommands } from '../commands/layer-order.ts';
 import { createIcon } from './icons.ts';
 export function renderLayers(area: HTMLElement, store: EditorStore): void {
   area.replaceChildren();
-  const states = new LayerStateCommands(store);
+  const states = new LayerStateCommands(store),
+    order = new LayerOrderCommands(store);
+  let draggedIds: Set<string> | undefined;
+  const clearDropTargets = () =>
+    area.querySelectorAll('.layer').forEach((item) => {
+      item.classList.remove('drop-before', 'drop-after');
+    });
   for (const { node: n, depth } of hierarchyRows({
     ...store.doc,
     nodes: [...store.doc.nodes].reverse(),
@@ -14,8 +21,53 @@ export function renderLayers(area: HTMLElement, store: EditorStore): void {
     const row = document.createElement('div');
     row.className = 'layer' + (store.selected.has(n.id) ? ' active' : '');
     row.dataset.layerId = n.id;
+    row.dataset.parentId = n.parentId ?? '';
     row.style.paddingLeft = `${8 + depth * 16}px`;
     row.classList.toggle('layer-hidden', isHidden(store.doc, n));
+    row.draggable = !isLocked(store.doc, n);
+    row.ondragstart = (event) => {
+      if (!event.dataTransfer || isLocked(store.doc, n)) {
+        event.preventDefault();
+        return;
+      }
+      const roots = selectionRoots(
+        store.doc,
+        store.selected.has(n.id) ? store.selected : new Set([n.id]),
+      );
+      draggedIds = new Set(roots.map((root) => root.id));
+      if (!draggedIds.size || roots.some((root) => isLocked(store.doc, root))) {
+        event.preventDefault();
+        draggedIds = undefined;
+        return;
+      }
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', [...draggedIds].join(','));
+      row.classList.add('dragging');
+    };
+    row.ondragover = (event) => {
+      if (!draggedIds || !order.canReorderRelative(draggedIds, n.id)) return;
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+      clearDropTargets();
+      const rect = row.getBoundingClientRect();
+      row.classList.add(event.clientY < rect.top + rect.height / 2 ? 'drop-before' : 'drop-after');
+    };
+    row.ondrop = (event) => {
+      if (!draggedIds || !order.canReorderRelative(draggedIds, n.id)) return;
+      event.preventDefault();
+      const rect = row.getBoundingClientRect(),
+        after = event.clientY >= rect.top + rect.height / 2,
+        ids = draggedIds;
+      draggedIds = undefined;
+      store.selected = new Set(ids);
+      order.reorderRelative(ids, n.id, after);
+      clearDropTargets();
+    };
+    row.ondragend = () => {
+      draggedIds = undefined;
+      row.classList.remove('dragging');
+      clearDropTargets();
+    };
     const select = document.createElement('button');
     select.className = 'layer-select';
     select.setAttribute('aria-pressed', String(store.selected.has(n.id)));

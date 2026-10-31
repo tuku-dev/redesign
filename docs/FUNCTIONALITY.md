@@ -51,7 +51,7 @@ Status updated on 2026-10-31. **Basic** means an implementation exists but brows
 | EDIT-08 | Alignment and distribution | Basic; six edge/center alignments and equal-gap horizontal/vertical distribution |
 | EDIT-09 | Duplicate and delete | Basic; full selection duplicated/deleted in one transaction |
 | EDIT-10 | Clipboard | Partial; validated native clipboard payloads for reDesign tabs, in-tab fallback and paste in place; browser verification and Figma clipboard pending |
-| EDIT-11 | Layer ordering | Basic; multi-layer forward/backward/front/back in menu and shortcuts; drag reorder pending |
+| EDIT-11 | Layer ordering | Basic; multi-layer forward/backward/front/back in menu and shortcuts; drag reorder among siblings in the Layers panel |
 | EDIT-12 | Undo/redo | Basic; 100 snapshots, one entry per changed gesture, no entry for selection/no-op clicks |
 | EDIT-13 | Context menus and commands | Partial; functional canvas/layer context menus with nested actions and keyboard navigation; command search pending |
 | EDIT-14 | Cancel interactions | Basic; Escape, pointer cancellation, capture loss and blur restore pre-gesture state without history entries |
