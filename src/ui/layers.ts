@@ -5,6 +5,16 @@ import { isHidden, isLocked } from '../model/layer-state.ts';
 import { LayerStateCommands } from '../commands/layer-state.ts';
 import { LayerOrderCommands } from '../commands/layer-order.ts';
 import { createIcon } from './icons.ts';
+import type { IconName } from './icons.ts';
+import type { DesignNode } from '../model/types.ts';
+/** Straight lines and images keep their own glyphs; other vectors share the dashed square. */
+function layerIcon(n: DesignNode): IconName {
+  if (n.image) return 'image';
+  const rings = n.vector?.rings;
+  if (n.type === 'path' && !n.vector?.closed && rings?.length === 1 && rings[0].length === 2)
+    return 'line';
+  return n.type;
+}
 export function renderLayers(area: HTMLElement, store: EditorStore): void {
   area.replaceChildren();
   const states = new LayerStateCommands(store),
@@ -73,7 +83,7 @@ export function renderLayers(area: HTMLElement, store: EditorStore): void {
     select.setAttribute('aria-pressed', String(store.selected.has(n.id)));
     const symbol = document.createElement('span');
     symbol.className = 'symbol';
-    symbol.append(createIcon(n.type));
+    symbol.append(createIcon(layerIcon(n)));
     const label = document.createElement('span');
     label.className = 'layer-name';
     label.textContent = n.name;
