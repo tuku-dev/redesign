@@ -25,6 +25,7 @@ export function getElements() {
     zoomReset: required('zoom-reset', HTMLButtonElement),
     fitAll: required('fit-all', HTMLButtonElement),
     fitSelection: required('fit-selection', HTMLButtonElement),
+    newDocument: required('new-document', HTMLButtonElement),
     save: required('save', HTMLButtonElement),
     saveAs: required('save-as', HTMLButtonElement),
     open: required('open', HTMLButtonElement),

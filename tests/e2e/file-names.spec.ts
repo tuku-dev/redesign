@@ -178,6 +178,51 @@ test('canceling the native picker preserves the displayed title', async ({ page 
   expect((await state(page)).closed).toBe(false);
   expect(errors).toEqual([]);
 });
+test('New warns before replacing the browser-saved draft and clears its history when confirmed', async ({
+  page,
+}) => {
+  const errors = await start(page);
+  await page.locator('#add').click();
+  await expect(page.locator('#layers .layer')).toHaveCount(1);
+
+  const canceledDialog = page.waitForEvent('dialog').then(async (dialog) => {
+    expect(dialog.message()).toContain('Save a copy first');
+    await dialog.dismiss();
+  });
+  await page.locator('#new-document').click();
+  await canceledDialog;
+  await expect(page.locator('#layers .layer')).toHaveCount(1);
+
+  const acceptedDialog = page.waitForEvent('dialog').then((dialog) => dialog.accept());
+  await page.locator('#new-document').click();
+  await acceptedDialog;
+  await expect(page.locator('#layers .layer')).toHaveCount(0);
+  await expect(page.locator('#undo')).toBeDisabled();
+  await expect(page.getByLabel('Document name', { exact: true })).toHaveValue('Untitled');
+  expect(errors).toEqual([]);
+});
+test('opening a file warns before replacing the browser-saved draft', async ({ page }) => {
+  const errors = await start(page);
+  await page.locator('#add').click();
+  await expect(page.locator('#layers .layer')).toHaveCount(1);
+  const upload = {
+    name: 'Opened dashboard.redesign',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(createDocument())),
+  };
+
+  const canceledDialog = page.waitForEvent('dialog');
+  await page.locator('#file').setInputFiles(upload);
+  await (await canceledDialog).dismiss();
+  await expect(page.locator('#layers .layer')).toHaveCount(1);
+
+  const acceptedDialog = page.waitForEvent('dialog');
+  await page.locator('#file').setInputFiles(upload);
+  await (await acceptedDialog).accept();
+  await expect(page.locator('#layers .layer')).toHaveCount(0);
+  await expect(page.getByLabel('Document name', { exact: true })).toHaveValue('Opened dashboard');
+  expect(errors).toEqual([]);
+});
 test('failed native writes report the error and keep the original title', async ({ page }) => {
   const errors = await start(page, 'fail');
   await page.locator('#save').click();

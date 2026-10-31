@@ -2,7 +2,7 @@
 import type { DocumentFileHandle, SavePickerOptions } from './document-save.ts';
 import { documentNameFromFile } from './document-name.ts';
 import type { EditorStore } from '../editor/store.ts';
-import { validateDocument } from '../model/document.ts';
+import { createDocument, validateDocument } from '../model/document.ts';
 import type { EditorElements } from '../ui/elements.ts';
 import { errorMessage } from '../ui/elements.ts';
 import type { Notify } from '../ui/notifications.ts';
@@ -81,6 +81,38 @@ export function bindFileActions(
   };
   el.save.onclick = () => save(false);
   el.saveAs.onclick = () => save(true);
+  const hasDocumentContent = () => {
+    if (store.doc.name !== 'Untitled') return true;
+    const current = { ...store.doc, name: 'Untitled' };
+    return JSON.stringify(current) !== JSON.stringify(createDocument());
+  };
+  const confirmReplacement = () =>
+    !hasDocumentContent() ||
+    window.confirm(
+      'Replace the current document? This will overwrite its browser-saved draft. Save a copy first to keep it.',
+    );
+  const canReplaceDocument = () => {
+    try {
+      prepareSave();
+    } catch (error) {
+      notify(errorMessage(error));
+      return false;
+    }
+    return confirmReplacement();
+  };
+  const replaceDocument = (next: ReturnType<typeof validateDocument>) => {
+    store.doc = next;
+    store.selected.clear();
+    store.history.past.length = 0;
+    store.history.future.length = 0;
+    store.refresh('all', true);
+  };
+  el.newDocument.onclick = () => {
+    if (!canReplaceDocument()) return;
+    replaceDocument(createDocument());
+    saver.reset();
+    el.saveStatus.textContent = 'New document';
+  };
   // Capture before editor tools and focused fields can consume the shortcut or open Save Page.
   document.addEventListener(
     'keydown',
@@ -99,11 +131,9 @@ export function bindFileActions(
   async function openFile(file: File, handle: DocumentFileHandle | null = null): Promise<void> {
     if (file.size > 100 * 1024 * 1024) throw new Error('File exceeds the 100 MB limit.');
     const next = validateDocument(JSON.parse(await file.text()));
+    if (!canReplaceDocument()) return;
     next.name = documentNameFromFile(file.name);
-    store.change(() => {
-      store.doc = next;
-      store.selected.clear();
-    });
+    replaceDocument(next);
     saver.reset(handle);
     el.saveStatus.textContent = handle ? 'Opened local file' : 'Saved in this browser';
   }

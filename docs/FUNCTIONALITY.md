@@ -13,7 +13,7 @@ Status updated on 2026-10-31. **Basic** means an implementation exists but brows
 | FILE-01 | Rename document | Basic; editable header, saved/opened filename synchronization, browser tab title and autosaved name |
 | FILE-02 | Local autosave | Basic; browser storage, with save failure notice |
 | FILE-03 | Save/open local document | Basic; versioned `.redesign` JSON, native open/save with retained handles where supported, browser-storage Save fallback, explicit Save As/download app dialog, focused-field Ctrl+S capture, cancel/failure handling, validation and 100 MB import limit |
-| FILE-04 | New, duplicate, close document | Pending; protect unsaved work |
+| FILE-04 | New, duplicate, close document | Partial; New and open replacement warn before replacing the current browser-saved draft; duplicate and close flows pending |
 | FILE-05 | Multiple documents/tabs | Pending; independent state and history |
 | FILE-06 | Pages | Basic; create, rename, duplicate, reorder, delete and switch pages; undo and multi-page save/open tested in Chrome |
 | FILE-07 | File browser | Pending; recent files, drafts, search, thumbnails, trash and restore |
@@ -202,14 +202,12 @@ Implementation details and limits are recorded in [`donefun.md`](../donefun.md).
 
 ## Next implementation order
 
-1. **Editing foundation:** multiselection, marquee, clipboard, full resize handles, gesture cancellation, fit-to-selection and selection history behavior. Acceptance: select three objects, move/resize/duplicate them together, undo once, and restore exact prior geometry.
-2. **Document hierarchy:** pages, groups, real frames, reparenting, locking, visibility and clipping. Acceptance: nested content survives save/open and parent transforms without coordinate drift.
-3. **Geometry and appearance:** pen paths, booleans, strokes, gradients, images and effects. Acceptance: structural and visual fixture checks at multiple zoom levels.
-4. **Typography and layout:** inline editing, font handling, wrapping, constraints and auto layout. Acceptance: deterministic layout and text metrics across reference fixtures.
-5. **Native file feasibility, in parallel with the early editor milestones:** collect authorized minimal `.fig` fixtures, document observed format behavior, and establish minimal editable import/export before scaling feature claims. No codec result has been demonstrated yet.
-6. **Reusable design systems:** components, overrides, styles, variables and libraries.
-7. **Prototyping:** flow graph, presentation runtime, interactions and animation.
-8. **Backend and extensibility:** accounts, collaboration, sharing, version history, developer tools and plugins.
+1. **Native file feasibility:** collect authorized minimal `.fig` fixtures, document observed format behavior, and establish whether a minimal editable import/export path is practical. No codec result or native round trip has been demonstrated.
+2. **Document lifecycle:** finish duplicate/close flows, multiple documents, file browser, offline recovery and version history; preserve each document's state and protect browser-saved drafts.
+3. **Editor completeness:** finish the remaining vector, paint, typography, layout, component and prototype capabilities listed above; verify each against fixtures rather than claiming parity from implementation alone.
+4. **Interoperability and reliability:** add unsupported-feature preflight, asset integrity, broader file-safety tests, SVG/raster/PDF workflows, cross-browser coverage, accessibility audits and large-document benchmarks.
+5. **Shared design systems:** variants, styles, variables, libraries and dependency resolution.
+6. **Backend and extensibility:** accounts, collaboration, comments, shared history, developer tools and plugins, after server-side security and consistency requirements are designed.
 
 ## Definition of done for each feature
 
