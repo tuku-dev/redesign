@@ -48,19 +48,26 @@ const paths = {
   justifyHorizontal: 'M5 4v16M19 4v16M9 7h6M8 12h8M9 17h6',
   justifyVertical: 'M4 5h16M4 19h16M7 9v6M12 8v8M17 9v6',
   paint: 'M12 3l8 8-8 8-8-8 8-8zM4 20h16M8 11h8',
-  eyedropper:
-    'M4 20l1-4.5 8-8 3.5 3.5-8 8zM12 5.5l6.5 6.5M14.5 8.5l4-4a2.1 2.1 0 013 3l-4 4M16.5 6.5l3 3M6 15l3 3',
   snapGrid: 'M5 3v18M10 3v18M2 7h11M2 12h11M2 17h11M14 6h3a6 6 0 010 12h-3zM14 10h3a2 2 0 010 4h-3',
   directSelect: 'M19 3l-14 10 7 1 3 7z',
 };
-export type IconName = keyof typeof paths;
+/** Filled 32px glyphs; they follow the control color through fill instead of stroke. */
+const solidPaths = {
+  eyedropper:
+    'M27.7,3.3c-1.5-1.5-3.9-1.5-5.4,0L17,8.6l-1.3-1.3c-0.4-0.4-1-0.4-1.4,0s-0.4,1,0,1.4l1.3,1.3L5,20.6c-0.6,0.6-1,1.4-1.1,2.3C3.3,23.4,3,24.2,3,25c0,1.7,1.3,3,3,3c0.8,0,1.6-0.3,2.2-0.9C9,27,9.8,26.6,10.4,26L21,15.4l1.3,1.3c0.2,0.2,0.5,0.3,0.7,0.3s0.5-0.1,0.7-0.3c0.4-0.4,0.4-1,0-1.4L22.4,14l5.3-5.3C29.2,7.2,29.2,4.8,27.7,3.3z M9,24.6c-0.4,0.4-0.8,0.6-1.3,0.5c-0.4,0-0.7,0.2-0.9,0.5C6.7,25.8,6.3,26,6,26c-0.6,0-1-0.4-1-1c0-0.3,0.2-0.7,0.5-0.8c0.3-0.2,0.5-0.5,0.5-0.9c0-0.5,0.2-1,0.5-1.3L17,11.4l2.6,2.6L9,24.6z',
+};
+export type IconName = keyof typeof paths | keyof typeof solidPaths;
 export function createIcon(name: IconName): SVGSVGElement {
-  if (!paths[name]) throw new Error(`Unknown icon: ${name}`);
+  const solid = name in solidPaths;
+  const data = solid
+    ? solidPaths[name as keyof typeof solidPaths]
+    : paths[name as keyof typeof paths];
+  if (!data) throw new Error(`Unknown icon: ${name}`);
   const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   for (const [key, value] of Object.entries({
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: 'currentColor',
+    viewBox: solid ? '0 0 32 32' : '0 0 24 24',
+    fill: solid ? 'currentColor' : 'none',
+    stroke: solid ? 'none' : 'currentColor',
     'stroke-width': '1.5',
     'stroke-linecap': 'round',
     'stroke-linejoin': 'round',
@@ -70,13 +77,14 @@ export function createIcon(name: IconName): SVGSVGElement {
   }))
     icon.setAttribute(key, value);
   const path = document.createElementNS(icon.namespaceURI, 'path');
-  path.setAttribute('d', paths[name]);
+  path.setAttribute('d', data);
   icon.append(path);
   return icon;
 }
 export function mountIcons(root: ParentNode = document): void {
   root.querySelectorAll<HTMLElement>('[data-icon]').forEach((el) => {
     const name = el.dataset.icon;
-    if (name && name in paths) el.replaceChildren(createIcon(name as IconName));
+    if (name && (name in paths || name in solidPaths))
+      el.replaceChildren(createIcon(name as IconName));
   });
 }
