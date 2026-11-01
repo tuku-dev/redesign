@@ -95,9 +95,12 @@ export class FeatureCommands {
           n.appearance = clone(value);
           const fill = n.appearance.fills?.[0],
             stroke = n.appearance.strokes?.[0];
-          if (fill) n.fill = fill.color;
+          if (fill) n.fill = fill.type === 'solid' ? fill.color : fill.stops[0]!.color;
           if (n.appearance.strokes) {
-            n.appearance.stroke = stroke?.color ?? n.appearance.stroke;
+            n.appearance.stroke =
+              stroke?.type === 'solid'
+                ? stroke.color
+                : (stroke?.stops[0]?.color ?? n.appearance.stroke);
             n.appearance.strokeWidth = stroke?.width ?? 0;
             n.appearance.strokeOpacity = stroke?.opacity ?? 1;
           }

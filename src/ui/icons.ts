@@ -27,6 +27,7 @@ const paths = {
   redo: 'M16 5l5 5-5 5M21 10H10a6 6 0 000 12',
   plus: 'M12 5v14M5 12h14',
   minus: 'M5 12h14',
+  close: 'M6 6l12 12M18 6 6 18',
   page: 'M14 3H5v18h14V8zM14 3v5h5M8 12h8M8 16h6',
   open: 'M3 19V6h7l2 3h9M3 19l3-8h16l-3 8z',
   save: 'M5 3h12l4 4v14H3V3zM7 3v6h10V3M7 21v-8h10v8',

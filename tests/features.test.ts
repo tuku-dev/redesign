@@ -71,6 +71,41 @@ test('toVector converts rectangles and ellipses to editable paths and undoes cle
   assert.equal(node(s, e.id).type, 'ellipse');
   assert.equal(node(s, e.id).vector, undefined);
 });
+test('gradient paint layers validate ordered stops and preserve editable geometry', () => {
+  const n = createNode('rectangle', {
+    appearance: {
+      ...defaultAppearance(),
+      fills: [
+        {
+          type: 'linear',
+          opacity: 0.8,
+          stops: [
+            { color: '#ff0000', opacity: 1, position: 0 },
+            { color: '#0000ff', opacity: 0.4, position: 1 },
+          ],
+          start: { x: 0, y: 0.5 },
+          end: { x: 1, y: 0.5 },
+        },
+      ],
+    },
+  });
+  const doc = { ...createDocument(), nodes: [n] };
+  assert.deepEqual(validateDocument(JSON.parse(JSON.stringify(doc))), doc);
+  const invalid = structuredClone(doc);
+  invalid.nodes[0].appearance!.fills = [
+    {
+      type: 'linear',
+      opacity: 1,
+      stops: [
+        { color: '#ff0000', opacity: 1, position: 1 },
+        { color: '#0000ff', opacity: 1, position: 0 },
+      ],
+      start: { x: 0, y: 0 },
+      end: { x: 1, y: 1 },
+    },
+  ];
+  assert.throws(() => validateDocument(invalid), /Invalid layer data/);
+});
 test('addTextOnPath creates a valid text layer that follows an ellipse and undoes cleanly', () => {
   const e = createNode('ellipse', { x: 10, y: 20, width: 80, height: 60 }),
     f = createNode('frame', { width: 200, height: 200 }),

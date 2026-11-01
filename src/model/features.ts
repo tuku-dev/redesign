@@ -33,9 +33,25 @@ export interface SolidPaint {
   color: string;
   opacity: number;
 }
-export interface SolidStrokePaint extends SolidPaint {
-  width: number;
+export interface GradientStop {
+  color: string;
+  opacity: number;
+  position: number;
 }
+/** Gradient geometry is normalized to the painted layer's bounding box. */
+export interface GradientPaint {
+  type: 'linear' | 'radial';
+  opacity: number;
+  stops: GradientStop[];
+  start: Point;
+  end: Point;
+  /** The radial gradient's second radius handle. */
+  radius?: Point;
+}
+export type Paint = SolidPaint | GradientPaint;
+export type StrokePaint = Paint & {
+  width: number;
+};
 export interface Appearance {
   stroke: string;
   strokeWidth: number;
@@ -43,8 +59,8 @@ export interface Appearance {
    * Optional richer paint stacks. When omitted, the legacy node fill and
    * appearance stroke fields remain the single visible paints.
    */
-  fills?: SolidPaint[];
-  strokes?: SolidStrokePaint[];
+  fills?: Paint[];
+  strokes?: StrokePaint[];
   /** Independent paint alpha; omitted means opaque. */
   fillOpacity?: number;
   strokeOpacity?: number;
@@ -152,8 +168,36 @@ const member = (v: unknown, values: string[]) => typeof v === 'string' && values
 function solidPaint(v: unknown): boolean {
   return object(v) && v.type === 'solid' && color(v.color) && num(v.opacity, 0, 1);
 }
-function solidStrokePaint(v: unknown): boolean {
-  return object(v) && solidPaint(v) && num(v.width, 0, 1000);
+function point(v: unknown): boolean {
+  return object(v) && num(v.x, -1000, 1000) && num(v.y, -1000, 1000);
+}
+function gradientPaint(v: unknown): boolean {
+  return (
+    object(v) &&
+    (v.type === 'linear' || v.type === 'radial') &&
+    num(v.opacity, 0, 1) &&
+    point(v.start) &&
+    point(v.end) &&
+    (v.radius === undefined || point(v.radius)) &&
+    Array.isArray(v.stops) &&
+    v.stops.length >= 2 &&
+    v.stops.length <= 100 &&
+    v.stops.every(
+      (stop, index, stops) =>
+        object(stop) &&
+        color(stop.color) &&
+        num(stop.opacity, 0, 1) &&
+        num(stop.position, 0, 1) &&
+        (index === 0 ||
+          Number(stop.position) >= Number((stops[index - 1] as Record<string, unknown>).position)),
+    )
+  );
+}
+function paint(v: unknown): boolean {
+  return solidPaint(v) || gradientPaint(v);
+}
+function strokePaint(v: unknown): boolean {
+  return object(v) && paint(v) && num(v.width, 0, 1000);
 }
 function validVectorPath(v: unknown): boolean {
   return (
@@ -222,11 +266,9 @@ export function validFeatures(n: Record<string, unknown>): boolean {
       !num(a.strokeWidth, 0, 1000) ||
       !num(a.blur, 0, 1000) ||
       (a.fills !== undefined &&
-        (!Array.isArray(a.fills) || a.fills.length > 100 || !a.fills.every(solidPaint))) ||
+        (!Array.isArray(a.fills) || a.fills.length > 100 || !a.fills.every(paint))) ||
       (a.strokes !== undefined &&
-        (!Array.isArray(a.strokes) ||
-          a.strokes.length > 100 ||
-          !a.strokes.every(solidStrokePaint))) ||
+        (!Array.isArray(a.strokes) || a.strokes.length > 100 || !a.strokes.every(strokePaint))) ||
       (a.fillOpacity !== undefined && !num(a.fillOpacity, 0, 1)) ||
       (a.strokeOpacity !== undefined && !num(a.strokeOpacity, 0, 1)) ||
       (a.strokeStyle !== undefined && !member(a.strokeStyle, [...STROKE_STYLES])) ||

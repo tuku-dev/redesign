@@ -11,6 +11,7 @@ import type { SvgAttributes } from './svg.ts';
 import { renderGuides } from './guides.ts';
 import { cornerRadii } from '../model/geometry.ts';
 import { vectorCorners } from '../model/vector.ts';
+import { fillLayers } from '../model/paint-layers.ts';
 export const handles: Record<ResizeHandle, readonly [number, number]> = {
   nw: [0, 0],
   n: [0.5, 0],
@@ -62,6 +63,40 @@ export function renderSelection(
     if (transform) controls.setAttribute('transform', transform);
     controls.append(outline(box));
     if (!roots.some((n) => isLocked(store.doc, n)) && !store.editingTextId) {
+      const gradient = single && fillLayers(single).find((paint) => paint.type !== 'solid');
+      if (single && gradient) {
+        const handle = (point: { x: number; y: number }, name: string) => {
+          const cx = single.x + point.x * single.width,
+            cy = single.y + point.y * single.height;
+          controls.append(
+            svg('circle', {
+              cx,
+              cy,
+              r: 5 / zoom,
+              fill: 'white',
+              stroke: 'var(--accent)',
+              'stroke-width': 1 / zoom,
+              'data-gradient-handle': name,
+              cursor: 'crosshair',
+            }),
+          );
+        };
+        controls.append(
+          svg('line', {
+            x1: single.x + gradient.start.x * single.width,
+            y1: single.y + gradient.start.y * single.height,
+            x2: single.x + gradient.end.x * single.width,
+            y2: single.y + gradient.end.y * single.height,
+            stroke: 'var(--accent)',
+            'stroke-width': 1 / zoom,
+            'stroke-dasharray': `${3 / zoom} ${3 / zoom}`,
+            'pointer-events': 'none',
+          }),
+        );
+        handle(gradient.start, 'start');
+        handle(gradient.end, 'end');
+        if (gradient.radius) handle(gradient.radius, 'radius');
+      }
       for (const [handle, [x, y]] of Object.entries(handles))
         controls.append(
           svg('rect', {

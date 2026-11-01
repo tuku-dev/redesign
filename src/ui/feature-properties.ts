@@ -146,32 +146,6 @@ export function renderFeatureProperties(
       });
     checkbox(
       appearance,
-      'Gradient fill',
-      a.gradient.enabled,
-      (v) => paint((a) => (a.gradient.enabled = v)),
-      notify,
-    );
-    if (a.gradient.enabled) {
-      inputField(
-        appearance,
-        'Gradient end',
-        a.gradient.end,
-        'color',
-        (v) => paint((a) => (a.gradient.end = v)),
-        notify,
-        { store, preview: (color) => previewPaint((value) => (value.gradient.end = color)) },
-      );
-      inputField(
-        appearance,
-        'Gradient angle',
-        a.gradient.angle,
-        'number',
-        (v) => paint((a) => (a.gradient.angle = Number(v))),
-        notify,
-      );
-    }
-    checkbox(
-      appearance,
       'Drop shadow',
       a.shadow.enabled,
       (v) => paint((a) => (a.shadow.enabled = v)),

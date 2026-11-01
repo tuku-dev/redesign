@@ -31,6 +31,7 @@ export class EditorStore {
   editingVectorId: string | null = null;
   cornerRadiusCorner: CornerName | null = null;
   cornerRadiusVertex: { ring: number; index: number } | null = null;
+  paintTarget: 'fill' | 'border' = 'fill';
   readonly history = new History();
   private readonly listeners = new Set<(update: EditorUpdate) => void>();
   private cornerSelection = '';
@@ -55,6 +56,7 @@ export class EditorStore {
     if (selection !== this.cornerSelection) {
       this.cornerRadiusCorner = null;
       this.cornerRadiusVertex = null;
+      this.paintTarget = 'fill';
     }
     this.cornerSelection = selection;
     if (

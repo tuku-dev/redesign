@@ -2,6 +2,46 @@ import type { DesignNode } from '../model/types.ts';
 import { fillLayers, strokeLayers } from '../model/paint-layers.ts';
 import { svg } from './svg.ts';
 let sequence = 0;
+function paintValue(
+  defs: SVGElement,
+  id: string,
+  paint: ReturnType<typeof fillLayers>[number],
+): { fill: string; opacity: string } {
+  if (paint.type === 'solid') return { fill: paint.color, opacity: String(paint.opacity) };
+  const gradient =
+    paint.type === 'linear'
+      ? svg('linearGradient', {
+          id,
+          x1: paint.start.x,
+          y1: paint.start.y,
+          x2: paint.end.x,
+          y2: paint.end.y,
+        })
+      : svg('radialGradient', {
+          id,
+          cx: paint.start.x,
+          cy: paint.start.y,
+          fx: paint.start.x,
+          fy: paint.start.y,
+          r: Math.hypot(paint.end.x - paint.start.x, paint.end.y - paint.start.y),
+          ...(paint.radius
+            ? {
+                gradientTransform: `translate(${paint.start.x} ${paint.start.y}) rotate(${(Math.atan2(paint.end.y - paint.start.y, paint.end.x - paint.start.x) * 180) / Math.PI}) scale(1 ${Math.hypot(paint.radius.x - paint.start.x, paint.radius.y - paint.start.y) / Math.max(Math.hypot(paint.end.x - paint.start.x, paint.end.y - paint.start.y), 1e-6)}) translate(${-paint.start.x} ${-paint.start.y})`,
+              }
+            : {}),
+        });
+  gradient.append(
+    ...paint.stops.map((stop) =>
+      svg('stop', {
+        offset: stop.position,
+        'stop-color': stop.color,
+        'stop-opacity': stop.opacity,
+      }),
+    ),
+  );
+  defs.append(gradient);
+  return { fill: `url(#${id})`, opacity: String(paint.opacity) };
+}
 /** Paint definitions are self-contained so they survive SVG export and clipboard rendering. */
 export function paintShape(shape: SVGElement, n: DesignNode): SVGElement {
   const a = n.appearance;
@@ -78,11 +118,12 @@ export function paintShape(shape: SVGElement, n: DesignNode): SVGElement {
     }
     group.append(shape);
   } else {
-    for (const layer of fillLayers(n)) {
+    for (const [index, layer] of fillLayers(n).entries()) {
       if (!canFill) break;
       const fill = shape.cloneNode(true) as SVGElement;
-      fill.setAttribute('fill', layer.color);
-      fill.setAttribute('fill-opacity', String(layer.opacity));
+      const value = paintValue(defs, `${id}-fill-${index}`, layer);
+      fill.setAttribute('fill', value.fill);
+      fill.setAttribute('fill-opacity', value.opacity);
       fill.setAttribute('stroke', 'none');
       group.append(fill);
     }
@@ -160,11 +201,12 @@ export function paintShape(shape: SVGElement, n: DesignNode): SVGElement {
     outline.setAttribute('fill', 'none');
     group.append(outline);
   } else if (usesLayeredPaints) {
-    for (const layer of strokeLayers(n)) {
+    for (const [index, layer] of strokeLayers(n).entries()) {
       const stroke = shape.cloneNode(true) as SVGElement;
+      const value = paintValue(defs, `${id}-stroke-${index}`, layer);
       stroke.setAttribute('fill', 'none');
-      stroke.setAttribute('stroke', layer.color);
-      stroke.setAttribute('stroke-opacity', String(layer.opacity));
+      stroke.setAttribute('stroke', value.fill);
+      stroke.setAttribute('stroke-opacity', value.opacity);
       stroke.setAttribute('stroke-width', String(layer.width));
       stroke.setAttribute('stroke-linejoin', 'round');
       stroke.setAttribute('stroke-linecap', 'round');

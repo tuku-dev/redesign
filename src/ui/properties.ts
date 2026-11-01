@@ -10,42 +10,63 @@ import { actionButton } from './action-button.ts';
 import { cornerRadii } from '../model/geometry.ts';
 import { bindNumberScrub } from './numeric-scrub.ts';
 import { createIcon } from './icons.ts';
-import { toolCursor } from '../render/cursors.ts';
 import type { IconName } from './icons.ts';
 import type { CornerName } from '../model/types.ts';
-import { bindColorPreview } from './color-preview.ts';
-import { selectedNodes } from '../model/selection.ts';
 import { selectionRoots } from '../model/hierarchy.ts';
 import { FeatureCommands } from '../commands/features.ts';
 import { defaultAppearance } from '../model/features.ts';
-import type { Appearance, SolidPaint, SolidStrokePaint } from '../model/features.ts';
-import { isLocked } from '../model/layer-state.ts';
-import { button, inputField } from './feature-controls.ts';
+import type { Appearance, Paint, StrokePaint } from '../model/features.ts';
+import { button } from './feature-controls.ts';
+import { openPaintEditor } from './paint-editor.ts';
 type Field = readonly [EditableProperty, string, 'number' | 'text' | 'color'];
+
+function firstFill(appearance: Appearance, fill: string): Paint {
+  return (
+    appearance.fills?.[0] ?? {
+      type: 'solid',
+      color: fill,
+      opacity: appearance.fillOpacity ?? 1,
+    }
+  );
+}
+
+function firstStroke(appearance: Appearance): StrokePaint {
+  return (
+    appearance.strokes?.[0] ?? {
+      type: 'solid',
+      color: appearance.stroke,
+      opacity: appearance.strokeOpacity ?? 1,
+      width: appearance.strokeWidth || 1,
+    }
+  );
+}
+
+function linearGradient(color: string, opacity: number): Paint {
+  return {
+    type: 'linear',
+    opacity,
+    stops: [
+      { color: color || '#000000', opacity: 1, position: 0 },
+      { color: '#ffffff', opacity: 1, position: 1 },
+    ],
+    start: { x: 0, y: 0.5 },
+    end: { x: 1, y: 0.5 },
+  };
+}
+
+function paintPreview(paint: Paint): string {
+  if (paint.type === 'solid') return paint.color;
+  return `linear-gradient(90deg, ${paint.stops
+    .map((stop) => `${stop.color} ${Math.max(0, Math.min(1, stop.position)) * 100}%`)
+    .join(', ')})`;
+}
+
 function cornerControl(key: EditableProperty): { corner: CornerName; icon: IconName } | undefined {
   if (key === 'topLeftRadius') return { corner: 'topLeft', icon: 'cornerTopLeft' };
   if (key === 'topRightRadius') return { corner: 'topRight', icon: 'cornerTopRight' };
   if (key === 'bottomRightRadius') return { corner: 'bottomRight', icon: 'cornerBottomRight' };
   if (key === 'bottomLeftRadius') return { corner: 'bottomLeft', icon: 'cornerBottomLeft' };
   return undefined;
-}
-function visibleFills(appearance: Appearance, fill: string): SolidPaint[] {
-  return appearance.fills ?? [{ type: 'solid', color: fill, opacity: appearance.fillOpacity ?? 1 }];
-}
-function visibleStrokes(appearance: Appearance): SolidStrokePaint[] {
-  return (
-    appearance.strokes ??
-    (appearance.strokeWidth
-      ? [
-          {
-            type: 'solid',
-            color: appearance.stroke,
-            opacity: appearance.strokeOpacity ?? 1,
-            width: appearance.strokeWidth,
-          },
-        ]
-      : [])
-  );
 }
 function propertyValue(node: DesignNode, key: EditableProperty): number | string | undefined {
   if (key === 'radius') {
@@ -57,7 +78,6 @@ function propertyValue(node: DesignNode, key: EditableProperty): number | string
   if (key === 'topRightRadius') return radii.topRight;
   if (key === 'bottomRightRadius') return radii.bottomRight;
   if (key === 'bottomLeftRadius') return radii.bottomLeft;
-  if (key === 'fill') return node.appearance?.fills?.[0]?.color ?? node.fill;
   return node[key];
 }
 function displayNumber(value: number): string {
@@ -112,7 +132,6 @@ export function renderProperties(
         ['height', 'H', 'number'],
         ...(canRoundCorners ? [['radius', 'Radius', 'number'] as const] : []),
         ['opacity', 'Opacity', 'number'],
-        ['fill', 'Fill', 'color'],
       ]
     : [
         ['name', 'Name', 'text'],
@@ -122,7 +141,6 @@ export function renderProperties(
         ['height', 'H', 'number'],
         ...(canRoundCorners ? [['radius', 'Radius', 'number'] as const] : []),
         ['opacity', 'Opacity', 'number'],
-        ['fill', 'Fill', 'color'],
       ];
   if (!multi && n.type === 'rectangle')
     fields.splice(
@@ -136,16 +154,11 @@ export function renderProperties(
   if (nodes.every((item) => item.type === 'text')) fields.push(['fontSize', 'Size', 'number']);
   const supportsStroke = nodes.every((item) => item.type !== 'group'),
     featureCommands = new FeatureCommands(store);
-  let fillControl: HTMLElement | undefined;
   for (const [key, label, type] of fields) {
     const corner = cornerControl(key),
-      canvasColor = key === 'fill',
-      wrap = document.createElement(corner || canvasColor ? 'div' : 'label');
+      wrap = document.createElement(corner ? 'div' : 'label');
     wrap.className =
-      'field' +
-      (key === 'name' ? ' full' : '') +
-      (corner ? ' corner-radius-field' : '') +
-      (canvasColor ? ' canvas-color-field' : '');
+      'field' + (key === 'name' ? ' full' : '') + (corner ? ' corner-radius-field' : '');
     const caption = document.createElement('span');
     caption.textContent = label;
     const input = document.createElement('input');
@@ -173,38 +186,6 @@ export function renderProperties(
       }
       if (key.toLowerCase().includes('radius')) input.min = '0';
       bindNumberScrub(caption, input);
-    }
-    if (type === 'color' && key === 'fill')
-      bindColorPreview(
-        input,
-        store,
-        (color) => {
-          store.canvasPaintColor = color;
-          selectedNodes(store.doc, store.selected).forEach((node) => {
-            node.fill = color;
-            if (node.appearance?.fills?.length) node.appearance.fills[0]!.color = color;
-          });
-        },
-        notify,
-      );
-    if (canvasColor) {
-      input.title = 'Fill color';
-      for (const [mode, iconName, label] of [['apply', 'paint', 'Apply fill']] as const) {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'canvas-color-mode';
-        button.title = label;
-        button.setAttribute('aria-label', label);
-        button.setAttribute('aria-pressed', String(store.canvasColorMode === mode));
-        button.append(createIcon(iconName));
-        button.onclick = () => {
-          store.canvasColorMode = store.canvasColorMode === mode ? null : mode;
-          store.canvasPaintColor = input.value;
-          store.refresh('all');
-          if (store.canvasColorMode) canvas.style.cursor = toolCursor(store);
-        };
-        wrap.append(button);
-      }
     }
     if (corner) {
       const icon = document.createElement('button');
@@ -234,212 +215,164 @@ export function renderProperties(
       }
     };
     if (!corner) wrap.prepend(caption, input);
-    if (canvasColor) fillControl = wrap;
-    else grid.append(wrap);
-  }
-  if (supportsStroke) {
-    const appearance = n.appearance ?? defaultAppearance(),
-      primaryStroke = visibleStrokes(appearance)[0],
-      stroke = document.createElement('div'),
-      caption = document.createElement('span'),
-      enabled = document.createElement('input'),
-      color = document.createElement('input'),
-      width = document.createElement('input'),
-      widthCaption = document.createElement('span'),
-      disabled = nodes.every((node) => isLocked(store.doc, node));
-    stroke.className = 'field stroke-field';
-    caption.textContent = 'Stroke';
-    enabled.type = 'checkbox';
-    enabled.checked = (primaryStroke?.width ?? appearance.strokeWidth) > 0;
-    enabled.setAttribute('aria-label', 'Enable stroke');
-    enabled.title = 'Enable stroke';
-    color.type = 'color';
-    color.value = primaryStroke?.color ?? appearance.stroke;
-    color.setAttribute('aria-label', 'Stroke color');
-    color.title = 'Stroke color';
-    width.type = 'number';
-    width.min = '0';
-    width.step = 'any';
-    width.value = String(primaryStroke?.width ?? appearance.strokeWidth);
-    width.setAttribute('aria-label', 'Stroke width');
-    width.title = 'Stroke width';
-    widthCaption.textContent = 'Width';
-    bindNumberScrub(widthCaption, width);
-    enabled.disabled = disabled;
-    color.disabled = disabled;
-    width.disabled = disabled;
-    const updateStroke = (action: (value: ReturnType<typeof defaultAppearance>) => void) => {
-      const next = structuredClone(appearance);
-      action(next);
-      featureCommands.appearance(next);
-    };
-    bindColorPreview(
-      color,
-      store,
-      (value) =>
-        selectedNodes(store.doc, store.selected)
-          .filter((node) => !isLocked(store.doc, node))
-          .forEach((node) => {
-            node.appearance = {
-              ...(node.appearance ?? defaultAppearance()),
-              stroke: value,
-            };
-            if (node.appearance.strokes?.length) node.appearance.strokes[0]!.color = value;
-          }),
-      notify,
-    );
-    enabled.onchange = () =>
-      updateStroke((value) => {
-        value.strokeWidth = enabled.checked ? Math.max(1, value.strokeWidth) : 0;
-        if (value.strokes?.length) value.strokes[0]!.width = value.strokeWidth;
-      });
-    width.onchange = () => {
-      if (width.value === '') return;
-      updateStroke((value) => {
-        value.strokeWidth = Number(width.value);
-        if (value.strokes?.length) value.strokes[0]!.width = value.strokeWidth;
-      });
-    };
-    stroke.append(caption, enabled, color, widthCaption, width);
-    if (fillControl) grid.append(fillControl);
-    grid.append(stroke);
-  } else if (fillControl) {
-    grid.append(fillControl);
+    grid.append(wrap);
   }
   if (!multi && supportsStroke) {
-    const layers = document.createElement('div');
-    layers.className = 'property-group';
+    const paints = document.createElement('div');
+    paints.className = 'property-group';
     const heading = document.createElement('h3');
-    heading.textContent = 'Paint layers';
-    layers.append(heading);
-    const update = (action: (value: Appearance) => void) => {
-      const next = structuredClone(n.appearance ?? defaultAppearance());
+    heading.textContent = 'Paint';
+    paints.append(heading);
+    const appearance = n.appearance ?? defaultAppearance();
+    const target = store.paintTarget;
+    const updateAppearance = (action: (value: Appearance) => void) => {
+      const current = store.doc.nodes.find((node) => node.id === n.id);
+      if (!current) return;
+      const next = structuredClone(current.appearance ?? defaultAppearance());
       action(next);
       featureCommands.appearance(next);
     };
-    const paints = n.appearance ?? defaultAppearance();
-    const fills = visibleFills(paints, n.fill);
-    fills.forEach((fill, index) => {
-      inputField(
-        layers,
-        `Fill ${index + 1} color`,
-        fill.color,
-        'color',
-        (color) =>
-          update((value) => {
-            value.fills = visibleFills(value, n.fill);
-            value.fills[index]!.color = color;
-          }),
-        notify,
-      );
-      inputField(
-        layers,
-        `Fill ${index + 1} opacity`,
-        fill.opacity,
-        'number',
-        (opacity) =>
-          update((value) => {
-            value.fills = visibleFills(value, n.fill);
-            value.fills[index]!.opacity = Number(opacity);
-          }),
-        notify,
-      );
-      layers.append(
-        button(
-          `Remove fill ${index + 1}`,
-          () =>
-            update((value) => {
-              value.fills = visibleFills(value, n.fill);
-              value.fills.splice(index, 1);
-            }),
-          notify,
-        ),
-      );
-    });
-    layers.append(
-      button(
-        'Add fill',
+    const replacePaint = (value: Appearance, paint: Paint | StrokePaint) => {
+      if (target === 'fill') {
+        value.fills = [paint, ...(value.fills?.slice(1) ?? [])];
+        return;
+      }
+      if (!('width' in paint)) throw new Error('Border paints require a width.');
+      value.strokes = [paint, ...(value.strokes?.slice(1) ?? [])];
+    };
+    const currentPaint =
+      target === 'fill' ? firstFill(appearance, n.fill) : firstStroke(appearance);
+    const paintModes = document.createElement('div');
+    paintModes.className = 'paint-mode-switch';
+    for (const [mode, label] of [
+      ['solid', 'Solid color'],
+      ['gradient', 'Gradient'],
+    ] as const) {
+      const selected =
+        mode === 'solid' ? currentPaint.type === 'solid' : currentPaint.type !== 'solid';
+      const control = button(
+        label,
         () =>
-          update((value) => {
-            value.fills = [
-              ...visibleFills(value, n.fill),
-              { type: 'solid', color: '#000000', opacity: 1 },
-            ];
+          updateAppearance((value) => {
+            const current = target === 'fill' ? firstFill(value, n.fill) : firstStroke(value);
+            if (mode === 'solid') {
+              const color = current.type === 'solid' ? current.color : current.stops[0]?.color;
+              const solid = {
+                type: 'solid' as const,
+                color: color || '#000000',
+                opacity: current.opacity,
+              };
+              replacePaint(
+                value,
+                target === 'fill' ? solid : { ...solid, width: firstStroke(value).width },
+              );
+            } else {
+              const color = current.type === 'solid' ? current.color : current.stops[0]?.color;
+              const gradient = linearGradient(color || '#000000', current.opacity);
+              replacePaint(
+                value,
+                target === 'fill' ? gradient : { ...gradient, width: firstStroke(value).width },
+              );
+            }
+          }),
+        notify,
+      );
+      control.className = 'paint-mode-option';
+      control.textContent = '';
+      control.setAttribute('aria-label', label);
+      control.title = label;
+      control.setAttribute('aria-pressed', String(selected));
+      control.style.background =
+        mode === 'solid'
+          ? currentPaint.type === 'solid'
+            ? currentPaint.color
+            : (currentPaint.stops[0]?.color ?? '#000000')
+          : currentPaint.type === 'solid'
+            ? paintPreview(linearGradient(currentPaint.color, currentPaint.opacity))
+            : paintPreview(currentPaint);
+      paintModes.append(control);
+    }
+    paints.append(paintModes);
+    const targets = document.createElement('div');
+    targets.className = 'paint-target-switch';
+    for (const [value, label] of [
+      ['fill', 'Fill'],
+      ['border', 'Border'],
+    ] as const) {
+      const control = button(
+        label,
+        () => {
+          store.paintTarget = value;
+          store.refresh();
+        },
+        notify,
+      );
+      control.className = 'paint-target-option';
+      control.textContent = '';
+      control.setAttribute('aria-label', label);
+      control.title = label;
+      control.setAttribute('aria-pressed', String(target === value));
+      control.style.background = paintPreview(
+        value === 'fill' ? firstFill(appearance, n.fill) : firstStroke(appearance),
+      );
+      targets.append(control);
+    }
+    paints.append(targets);
+    if (currentPaint.type === 'solid') {
+      const label = target === 'fill' ? 'Fill color' : 'Border color';
+      const color = document.createElement('label');
+      color.className = 'feature-field';
+      const caption = document.createElement('span');
+      caption.textContent = label;
+      const input = document.createElement('input');
+      input.type = 'color';
+      input.value = currentPaint.color;
+      input.setAttribute('aria-label', label);
+      input.onchange = () =>
+        updateAppearance((value) => {
+          const current = target === 'fill' ? firstFill(value, n.fill) : firstStroke(value);
+          if (current.type === 'solid') current.color = input.value;
+          replacePaint(value, current);
+        });
+      color.append(caption, input);
+      paints.append(color);
+    }
+    if (target === 'border') {
+      const width = document.createElement('label');
+      width.className = 'feature-field';
+      const caption = document.createElement('span');
+      caption.textContent = 'Border width';
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.min = '0';
+      input.step = 'any';
+      input.value = String(firstStroke(appearance).width);
+      input.setAttribute('aria-label', 'Border width');
+      bindNumberScrub(caption, input);
+      input.onchange = () =>
+        updateAppearance((value) => {
+          const current = firstStroke(value);
+          current.width = Number(input.value);
+          replacePaint(value, current);
+        });
+      width.append(caption, input);
+      paints.append(width);
+    }
+    paints.append(
+      button(
+        'Edit paints',
+        () =>
+          openPaintEditor({
+            fill: n.fill,
+            getAppearance: () =>
+              store.doc.nodes.find((node) => node.id === n.id)?.appearance ?? defaultAppearance(),
+            update: updateAppearance,
+            notify,
           }),
         notify,
       ),
     );
-    const strokes = visibleStrokes(paints);
-    strokes.forEach((stroke, index) => {
-      inputField(
-        layers,
-        `Stroke ${index + 1} color`,
-        stroke.color,
-        'color',
-        (color) =>
-          update((value) => {
-            value.strokes = visibleStrokes(value);
-            value.strokes[index]!.color = color;
-            if (index === 0) value.stroke = color;
-          }),
-        notify,
-      );
-      inputField(
-        layers,
-        `Stroke ${index + 1} width`,
-        stroke.width,
-        'number',
-        (width) =>
-          update((value) => {
-            value.strokes = visibleStrokes(value);
-            value.strokes[index]!.width = Number(width);
-            if (index === 0) value.strokeWidth = Number(width);
-          }),
-        notify,
-      );
-      inputField(
-        layers,
-        `Stroke ${index + 1} opacity`,
-        stroke.opacity,
-        'number',
-        (opacity) =>
-          update((value) => {
-            value.strokes = visibleStrokes(value);
-            value.strokes[index]!.opacity = Number(opacity);
-            if (index === 0) value.strokeOpacity = Number(opacity);
-          }),
-        notify,
-      );
-      layers.append(
-        button(
-          `Remove stroke ${index + 1}`,
-          () =>
-            update((value) => {
-              value.strokes = visibleStrokes(value);
-              value.strokes.splice(index, 1);
-              const first = value.strokes[0];
-              value.stroke = first?.color ?? value.stroke;
-              value.strokeWidth = first?.width ?? 0;
-              value.strokeOpacity = first?.opacity ?? 1;
-            }),
-          notify,
-        ),
-      );
-    });
-    layers.append(
-      button(
-        'Add stroke',
-        () =>
-          update((value) => {
-            value.strokes = [
-              ...visibleStrokes(value),
-              { type: 'solid', color: '#000000', opacity: 1, width: 1 },
-            ];
-          }),
-        notify,
-      ),
-    );
-    group.append(layers);
+    group.append(paints);
   }
   if (!multi && n.type === 'text') {
     const text = document.createElement('textarea');

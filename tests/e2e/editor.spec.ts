@@ -383,59 +383,30 @@ test('canvas corner handles drag uniformly or select and edit one corner', async
   expect(shape.cornerRadii?.bottomRight).toBeCloseTo(16.97);
   expect(errors).toEqual([]);
 });
-test('fill color previews immediately and stroke controls expose width and color', async ({
-  page,
-}) => {
+test('paint editor manages solid fill and stroke controls', async ({ page }) => {
   const errors = await open(page);
   await select(page, 'rect-a');
-  const fill = page.getByLabel('Fill', { exact: true });
-  await fill.evaluate((input: HTMLInputElement) => {
-    input.value = '#00ff00';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  });
-  await expect(page.locator('#scene [data-id="rect-a"]')).toHaveAttribute('fill', '#00ff00');
-  await expect(fill).toBeVisible();
-  await fill.evaluate((input: HTMLInputElement) =>
-    input.dispatchEvent(new Event('change', { bubbles: true })),
+  await expect(page.getByRole('button', { name: 'Fill', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
   );
-  const fillField = page.locator('.canvas-color-field'),
-    strokeField = page.locator('.stroke-field');
-  await expect(strokeField).toBeVisible();
-  await expect(fillField).toBeVisible();
-  await expect(fill).toHaveAttribute('title', 'Fill color');
-  await expect(page.getByLabel('Enable stroke', { exact: true })).toBeVisible();
-  await expect(page.getByLabel('Stroke color', { exact: true })).toBeVisible();
-  await expect(page.getByLabel('Stroke width', { exact: true })).toBeVisible();
-  const strokeWidthBox = await page.getByLabel('Stroke width', { exact: true }).boundingBox(),
-    strokeColorBox = await page.getByLabel('Stroke color', { exact: true }).boundingBox(),
-    strokeToggleBox = await page.getByLabel('Enable stroke', { exact: true }).boundingBox();
-  expect(strokeWidthBox).not.toBeNull();
-  expect(strokeColorBox).not.toBeNull();
-  expect(strokeToggleBox).not.toBeNull();
-  expect(Math.abs(strokeWidthBox!.y - strokeColorBox!.y)).toBeLessThan(5);
-  expect(Math.abs(strokeWidthBox!.y - strokeToggleBox!.y)).toBeLessThan(5);
-  expect(strokeColorBox!.width).toBeGreaterThan(24);
-  expect(
-    await fillField.evaluate(
-      (element) =>
-        element.compareDocumentPosition(document.querySelector('.stroke-field')!) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ),
-  ).toBeTruthy();
-  await page.getByLabel('Enable stroke', { exact: true }).check();
-  await page.getByLabel('Stroke width', { exact: true }).fill('3');
-  await page.getByLabel('Stroke width', { exact: true }).press('Tab');
-  await page.getByLabel('Stroke color', { exact: true }).evaluate((input: HTMLInputElement) => {
+  await page.getByRole('button', { name: 'Gradient', exact: true }).click();
+  await expect(page.locator('#scene linearGradient')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Border', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Border', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await page.getByLabel('Border width', { exact: true }).fill('3');
+  await page.getByLabel('Border width', { exact: true }).press('Tab');
+  await expect(page.locator('#scene rect[data-id="rect-a"][stroke-width="3"]')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Edit paints', exact: true }).click();
+  const editor = page.getByRole('dialog', { name: 'Edit paints', exact: true });
+  await editor.getByLabel('Stroke 1 color', { exact: true }).evaluate((input: HTMLInputElement) => {
     input.value = '#ff0000';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
   });
-  await page
-    .getByLabel('Stroke color', { exact: true })
-    .evaluate((input: HTMLInputElement) =>
-      input.dispatchEvent(new Event('change', { bubbles: true })),
-    );
   const shape = (await saved(page)).nodes.find((n) => n.id === 'rect-a')!;
-  expect(shape.fill).toBe('#00ff00');
   expect(shape.appearance?.stroke).toBe('#ff0000');
   expect(shape.appearance?.strokeWidth).toBe(3);
   expect(errors).toEqual([]);
@@ -587,10 +558,28 @@ test('rulers, editable guides and frame layout grids render without entering SVG
 test('gradient, stroke, shadow and blur are rendered and exported', async ({ page }) => {
   const errors = await open(page);
   await select(page, 'rect-a');
-  await page.getByLabel('Gradient fill', { exact: true }).check();
-  await page.getByLabel('Gradient end', { exact: true }).fill('#00ff00');
-  await page.getByLabel('Stroke width', { exact: true }).fill('3');
-  await page.getByLabel('Stroke width', { exact: true }).press('Tab');
+  await page.getByRole('button', { name: 'Edit paints', exact: true }).click();
+  const paintsEditor = page.getByRole('dialog', { name: 'Edit paints', exact: true });
+  await paintsEditor
+    .getByLabel('Fill 1 color', { exact: true })
+    .evaluate((input: HTMLInputElement) => {
+      input.value = '#ff0000';
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  await paintsEditor
+    .getByRole('button', { name: 'Convert fill 1 to gradient', exact: true })
+    .click();
+  const editor = paintsEditor;
+  await expect(editor.getByLabel('Color', { exact: true })).toHaveValue('#ff0000');
+  await editor.getByLabel('Fill 1 stop 2', { exact: true }).click();
+  await editor.getByLabel('Color', { exact: true }).evaluate((input: HTMLInputElement) => {
+    input.value = '#00ff00';
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await paintsEditor.getByRole('button', { name: 'Add stroke', exact: true }).click();
+  await paintsEditor.getByLabel('Stroke 1 width', { exact: true }).fill('3');
+  await paintsEditor.getByLabel('Stroke 1 width', { exact: true }).press('Tab');
+  await paintsEditor.getByRole('button', { name: 'Close paint editor', exact: true }).click();
   await page.getByLabel('Drop shadow', { exact: true }).check();
   await page.getByLabel('Layer blur', { exact: true }).fill('2');
   await page.getByLabel('Layer blur', { exact: true }).press('Tab');
@@ -645,6 +634,124 @@ test('ordered solid paint layers render, export, and can be edited in properties
   expect(svg.indexOf('stroke="#00ff00"')).toBeLessThan(svg.indexOf('stroke="#ffff00"'));
   await page.getByRole('button', { name: 'Add fill', exact: true }).click();
   expect((await saved(page)).nodes[0]?.appearance?.fills).toHaveLength(3);
+  expect(errors).toEqual([]);
+});
+test('gradient paint layers expose stops and handles, persist, and export radial SVG', async ({
+  page,
+}) => {
+  const shape = createNode('rectangle', {
+    id: 'gradient-paint',
+    appearance: {
+      ...defaultAppearance(),
+      fills: [
+        {
+          type: 'radial',
+          opacity: 0.9,
+          stops: [
+            { color: '#ff0000', opacity: 1, position: 0 },
+            { color: '#0000ff', opacity: 0.5, position: 1 },
+          ],
+          start: { x: 0.2, y: 0.5 },
+          end: { x: 0.8, y: 0.5 },
+          radius: { x: 0.2, y: 1 },
+        },
+      ],
+    },
+  });
+  const errors = await open(page, { ...createDocument(), nodes: [shape] });
+  await select(page, 'gradient-paint');
+  await expect(page.locator('#scene radialGradient')).toHaveCount(1);
+  await expect(page.locator('[data-gradient-handle]')).toHaveCount(3);
+  await expect(page.getByRole('button', { name: 'Edit fill 1 gradient', exact: true })).toHaveCount(
+    0,
+  );
+  await expect(page.getByLabel('Fill 1 opacity', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Remove fill 1', exact: true })).toHaveCount(0);
+  await expect(page.getByLabel('Gradient fill', { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel('Gradient end', { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel('Gradient angle', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Gradient', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Edit paints', exact: true }).click();
+  const paintsEditor = page.getByRole('dialog', { name: 'Edit paints', exact: true });
+  await expect(
+    paintsEditor.getByRole('button', { name: 'Convert fill 1 to gradient', exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByRole('dialog', { name: 'Gradient', exact: true })).toHaveCount(0);
+  await expect(
+    paintsEditor.getByRole('button', { name: 'Edit fill 1 gradient', exact: true }),
+  ).toHaveCount(0);
+  const editor = paintsEditor;
+  await expect(editor.getByLabel('Gradient opacity', { exact: true })).toHaveValue('0.9');
+  await expect(
+    editor.getByLabel('Mesh gradient (not yet supported)', { exact: true }),
+  ).toBeDisabled();
+  const closeEditor = editor.getByRole('button', { name: 'Close paint editor', exact: true });
+  await expect(closeEditor).toHaveAttribute('title', 'Close paint editor');
+  await expect(closeEditor).toHaveText('');
+  const track = editor.getByRole('group', { name: /Gradient stops/ });
+  await expect(track.getByRole('button')).toHaveCount(2);
+  await expect(track).toHaveAttribute('tabindex', '0');
+  await expect(track).toHaveAttribute('aria-description', /Press Enter or Space/);
+  await expect(editor.getByRole('button', { name: 'Add gradient stop', exact: true })).toHaveCount(
+    0,
+  );
+  await editor.getByLabel('Fill 1 stop 2', { exact: true }).click();
+  await editor.getByLabel('Gradient stop location', { exact: true }).fill('0.6');
+  await editor.getByLabel('Gradient stop location', { exact: true }).press('Tab');
+  let doc = await saved(page);
+  expect(doc.nodes[0]?.appearance?.fills?.[0]).toMatchObject({
+    type: 'radial',
+    stops: [{ position: 0 }, { position: 0.6 }],
+  });
+  const trackBox = await track.boundingBox();
+  if (!trackBox) throw new Error('Gradient stop track is not visible.');
+  await page.mouse.click(trackBox.x + trackBox.width * 0.4, trackBox.y + trackBox.height / 2);
+  await expect(track.getByRole('button')).toHaveCount(3);
+  expect(
+    Number(await editor.getByLabel('Gradient stop location', { exact: true }).inputValue()),
+  ).toBeCloseTo(0.4, 2);
+  await editor.getByLabel('Fill 1 stop 1', { exact: true }).click();
+  await expect(editor.getByLabel('Color', { exact: true })).toHaveValue('#ff0000');
+  await expect(track.getByRole('button')).toHaveCount(3);
+  await editor.getByLabel('Fill 1 stop 2', { exact: true }).click();
+  await expect(editor.getByLabel('Color', { exact: true })).toHaveValue('#ffffff');
+  const selectedStop = editor.getByLabel('Fill 1 stop 2', { exact: true }),
+    selectedStopBox = await selectedStop.boundingBox();
+  if (!selectedStopBox) throw new Error('Gradient stop handle is not visible.');
+  await page.mouse.move(
+    selectedStopBox.x + selectedStopBox.width / 2,
+    selectedStopBox.y + selectedStopBox.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(trackBox.x + trackBox.width * 0.5, trackBox.y + trackBox.height / 2);
+  await page.mouse.up();
+  expect(
+    Number(await editor.getByLabel('Gradient stop location', { exact: true }).inputValue()),
+  ).toBeCloseTo(0.5, 2);
+  await editor.getByLabel('Gradient stop opacity', { exact: true }).fill('0.7');
+  await editor.getByLabel('Gradient stop opacity', { exact: true }).press('Tab');
+  await editor.getByLabel('Color', { exact: true }).evaluate((input: HTMLInputElement) => {
+    input.value = '#00ff00';
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  doc = await saved(page);
+  const fill = doc.nodes[0]?.appearance?.fills?.[0];
+  if (!fill || fill.type !== 'radial') throw new Error('Expected the radial gradient paint.');
+  const stops = fill.stops;
+  expect(stops).toMatchObject([
+    { color: '#ff0000', position: 0 },
+    { color: '#00ff00', opacity: 0.7 },
+    { color: '#0000ff', position: 0.6 },
+  ]);
+  expect(stops[1]?.position).toBeCloseTo(0.5, 2);
+  await editor.getByLabel('Linear gradient', { exact: true }).check();
+  await editor.getByLabel('Radial gradient', { exact: true }).check();
+  await editor.getByRole('button', { name: 'Close paint editor', exact: true }).click();
+  const download = page.waitForEvent('download');
+  await page.locator('#export').click();
+  const svg = await readFile((await (await download).path())!, 'utf8');
+  expect(svg).toContain('radialGradient');
+  expect(svg).toContain('stop-opacity="0.5"');
   expect(errors).toEqual([]);
 });
 test('pen tool creates a closed path, points can be edited, and booleans produce geometry', async ({
@@ -837,7 +944,11 @@ test('dark editor visual fixture includes new tools and appearance controls', as
   await select(page, 'rect-a');
   await page.locator('#theme-select').selectOption('dark');
   await tools(page);
-  await page.getByLabel('Gradient fill', { exact: true }).check();
+  await page.getByRole('button', { name: 'Edit paints', exact: true }).click();
+  await page
+    .getByRole('dialog', { name: 'Edit paints', exact: true })
+    .getByRole('button', { name: 'Convert fill 1 to gradient', exact: true })
+    .click();
   await page.screenshot({ path: testInfo.outputPath('editor-dark.png'), fullPage: true });
   expect(errors).toEqual([]);
 });

@@ -85,6 +85,46 @@ test('native imports retain ordered visible solid fill and stroke paints', () =>
   ]);
   assert.ok(!report.warnings.some((warning) => warning.includes('reduced')));
 });
+test('native imports retain linear and radial gradients with normalized handles and ordered stops', () => {
+  const nodes = basicFigNodes() as Record<string, unknown>[],
+    card = nodes[3]!;
+  card.fillPaints = [
+    {
+      type: 'GRADIENT_RADIAL',
+      opacity: 0.75,
+      visible: true,
+      gradientStops: [
+        { position: 1, color: { r: 0, g: 0, b: 1, a: 0.5 } },
+        { position: 0, color: { r: 1, g: 0, b: 0, a: 1 } },
+      ],
+      gradientHandlePositions: [
+        { x: 0.25, y: 0.5 },
+        { x: 0.75, y: 0.5 },
+        { x: 0.25, y: 1 },
+      ],
+    },
+  ];
+  const { document, report } = convertFig(
+    { ...decodeFig(makeFig(nodes)), message: { type: 'NODE_CHANGES', nodeChanges: nodes } },
+    'Gradients',
+  );
+  const fill = document.nodes.find((node) => node.name === 'Card')!.appearance!.fills![0]!;
+  assert.deepEqual(fill, {
+    type: 'radial',
+    opacity: 0.75,
+    stops: [
+      { color: '#ff0000', opacity: 1, position: 0 },
+      { color: '#0000ff', opacity: 0.5, position: 1 },
+    ],
+    start: { x: 0.25, y: 0.5 },
+    end: { x: 0.75, y: 0.5 },
+    radius: { x: 0.25, y: 1 },
+  });
+  assert.equal(
+    report.warnings.some((warning) => warning.includes('Gradient')),
+    false,
+  );
+});
 test('imported nodes remain editable and moving a frame carries children with one undo', () => {
   const result = importFig(makeFig(), 'Test');
   const store = new EditorStore(result.document);

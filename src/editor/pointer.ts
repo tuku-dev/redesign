@@ -52,6 +52,32 @@ export function bindPointer(
         changed: boolean;
       }
     | undefined;
+  let gradientDrag:
+    | {
+        before: DesignDocument;
+        pointerId: number;
+        nodeId: string;
+        handle: 'start' | 'end' | 'radius';
+        changed: boolean;
+      }
+    | undefined;
+  const finishGradientDrag = (cancel: boolean) => {
+    if (!gradientDrag) return;
+    const { before, changed } = gradientDrag;
+    gradientDrag = undefined;
+    if (cancel) {
+      store.doc = before;
+      store.refresh();
+    } else if (changed) {
+      try {
+        store.commit(before);
+      } catch (error) {
+        store.doc = before;
+        store.refresh();
+        notify(errorMessage(error));
+      }
+    }
+  };
   const finishCornerDrag = (cancel: boolean) => {
     if (!cornerDrag) return;
     const { before, changed, key, individual } = cornerDrag;
@@ -94,7 +120,7 @@ export function bindPointer(
         store.selected = new Set([node.id]);
         store.change(() => {
           node.fill = store.canvasPaintColor;
-          if (node.appearance?.fills?.length)
+          if (node.appearance?.fills?.[0]?.type === 'solid')
             node.appearance.fills[0]!.color = store.canvasPaintColor;
         });
       } else {
@@ -117,14 +143,15 @@ export function bindPointer(
               const appearance = clone(item.appearance ?? defaultAppearance());
               appearance.stroke = color;
               appearance.strokeWidth = Math.max(1, appearance.strokeWidth);
-              if (appearance.strokes?.length) {
+              if (appearance.strokes?.[0]?.type === 'solid') {
                 appearance.strokes[0]!.color = color;
                 appearance.strokes[0]!.width = Math.max(1, appearance.strokes[0]!.width);
               }
               item.appearance = appearance;
             } else {
               item.fill = color;
-              if (item.appearance?.fills?.length) item.appearance.fills[0]!.color = color;
+              if (item.appearance?.fills?.[0]?.type === 'solid')
+                item.appearance.fills[0].color = color;
             }
           }),
         );
@@ -142,7 +169,29 @@ export function bindPointer(
     }
     const target = e.target instanceof Element ? e.target : null,
       corner = target?.closest('[data-corner-radius]')?.getAttribute('data-corner-radius'),
+      gradientHandle = target
+        ?.closest('[data-gradient-handle]')
+        ?.getAttribute('data-gradient-handle'),
       handle = target?.closest('[data-resize]')?.getAttribute('data-resize');
+    if (
+      gradientHandle &&
+      ['start', 'end', 'radius'].includes(gradientHandle) &&
+      store.chosen().length === 1
+    ) {
+      const node = store.current(),
+        gradient = node?.appearance?.fills?.find((paint) => paint.type !== 'solid');
+      if (node && gradient && !isLocked(store.doc, node)) {
+        e.stopImmediatePropagation();
+        gradientDrag = {
+          before: clone(store.doc),
+          pointerId: e.pointerId,
+          nodeId: node.id,
+          handle: gradientHandle as 'start' | 'end' | 'radius',
+          changed: false,
+        };
+        return;
+      }
+    }
     if (
       corner === 'vertex' &&
       store.chosen().length === 1 &&
@@ -261,6 +310,20 @@ export function bindPointer(
     }
   });
   canvas.addEventListener('pointermove', (e) => {
+    if (gradientDrag && e.pointerId === gradientDrag.pointerId) {
+      const node = store.doc.nodes.find((item) => item.id === gradientDrag!.nodeId),
+        gradient = node?.appearance?.fills?.find((paint) => paint.type !== 'solid');
+      if (node && gradient) {
+        const point = localPoint(local(e), node);
+        gradient[gradientDrag.handle] = {
+          x: Math.max(-1000, Math.min(1000, point.x / node.width)),
+          y: Math.max(-1000, Math.min(1000, point.y / node.height)),
+        };
+        gradientDrag.changed = true;
+        store.refresh('all');
+      }
+      return;
+    }
     if (cornerDrag?.pointerId === e.pointerId) {
       const node = store.doc.nodes.find((item) => item.id === cornerDrag!.nodeId);
       if (!node) return finishCornerDrag(true);
@@ -321,6 +384,11 @@ export function bindPointer(
   };
   canvas.addEventListener('pointerup', () => {
     setDragCursor(null);
+    if (gradientDrag) {
+      finishGradientDrag(false);
+      resetPointerCursor();
+      return;
+    }
     if (cornerDrag) {
       finishCornerDrag(false);
       resetPointerCursor();
@@ -334,14 +402,20 @@ export function bindPointer(
   });
   canvas.addEventListener('pointercancel', () => {
     setDragCursor(null);
-    if (cornerDrag) {
+    if (gradientDrag) {
+      finishGradientDrag(true);
+      resetPointerCursor();
+    } else if (cornerDrag) {
       finishCornerDrag(true);
       resetPointerCursor();
     } else gestures.cancel();
   });
   canvas.addEventListener('lostpointercapture', () => {
     setDragCursor(null);
-    if (cornerDrag) {
+    if (gradientDrag) {
+      finishGradientDrag(true);
+      resetPointerCursor();
+    } else if (cornerDrag) {
       finishCornerDrag(true);
       resetPointerCursor();
     } else gestures.cancel();
