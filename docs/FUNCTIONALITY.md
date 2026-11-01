@@ -4,7 +4,7 @@
 
 Build a web-based design application targeting Figma Design functionality, interaction behavior, rendering fidelity, and editable native `.fig` interchange in both directions. This is the working feature backlog, not a claim of complete Figma coverage. Expand it as reference behavior is investigated. Other Figma products require separate specifications.
 
-Status updated on 2026-10-31. **Basic** means an implementation exists but browser verification and parity testing remain pending. **Pending** means not implemented. **Research** means feasibility or reference behavior must be established. No feature is currently certified as matching Figma exactly.
+Status updated on 2026-11-01. **Basic** means an implementation exists but browser verification and parity testing remain pending. **Pending** means not implemented. **Research** means feasibility or reference behavior must be established. No feature is currently certified as matching Figma exactly.
 
 ## 1. Files and workspace
 
@@ -146,8 +146,8 @@ Status updated on 2026-10-31. **Basic** means an implementation exists but brows
 | ID | Functionality | Status / required behavior |
 | --- | --- | --- |
 | IO-01 | Native reDesign files | Basic; editable versioned JSON round trip |
-| IO-02 | Native Figma import | Research; identify codec and preserve supported semantics |
-| IO-03 | Native Figma export | Research; Open detects `.fig` (fig-kiwi header or ZIP) and reports a clear unsupported message instead of a JSON error; no codec exists; genuine `.fig` accepted and editable in Figma |
+| IO-02 | Native Figma import | Partial/experimental; ZIP/bare fig-kiwi, embedded-schema interpreter, DEFLATE/Zstandard; editable pages, frames/groups, rectangles, ellipses and plain text; import-loss review, bounded worker, two real licensed fixtures; vectors/assets/components and Figma fidelity checks pending |
+| IO-03 | Native Figma export | Research; no native encoder or verified editable round trip in Figma |
 | IO-04 | Bidirectional round trips | Pending; edits preserved through both application journeys |
 | IO-05 | SVG export | Basic; whole document; Figma import and visual checks pending |
 | IO-06 | SVG import | Pending; safe parsing and editable path/paint conversion |
@@ -202,7 +202,7 @@ Implementation details and limits are recorded in [`donefun.md`](../donefun.md).
 
 ## Next implementation order
 
-1. **Native file feasibility:** collect authorized minimal `.fig` fixtures, document observed format behavior, and establish whether a minimal editable import/export path is practical. No codec result or native round trip has been demonstrated.
+1. **Native file feasibility:** collect authorized minimal `.fig` fixtures, document observed format behavior, and establish whether a minimal editable import/export path is practical. An experimental native import subset is tested; native encoding and Figma round trips remain unverified.
 2. **Document lifecycle:** finish duplicate/close flows, multiple documents, file browser, offline recovery and version history; preserve each document's state and protect browser-saved drafts.
 3. **Editor completeness:** finish the remaining vector, paint, typography, layout, component and prototype capabilities listed above; verify each against fixtures rather than claiming parity from implementation alone.
 4. **Interoperability and reliability:** add unsupported-feature preflight, asset integrity, broader file-safety tests, SVG/raster/PDF workflows, cross-browser coverage, accessibility audits and large-document benchmarks.

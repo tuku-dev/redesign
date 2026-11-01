@@ -1,8 +1,88 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-app-state="loading">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <!-- Critical loading styles must arrive with HTML, before any app assets. -->
+    <style>
+      html {
+        background: #fff;
+      }
+      html[data-theme='dark'] {
+        background: #2c2c2c;
+      }
+      html:not([data-app-state='ready']) body > :not(#app-loader):not(script):not(noscript) {
+        visibility: hidden;
+      }
+      #app-loader {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        display: grid;
+        place-content: center;
+        justify-items: center;
+        gap: 16px;
+        margin: 0;
+        background: #fff;
+        color: #1e1e1e;
+        text-align: center;
+        font:
+          14px/1.5 Inter,
+          'Segoe UI',
+          Arial,
+          sans-serif;
+      }
+      html[data-theme='dark'] #app-loader {
+        background: #2c2c2c;
+        color: #f5f5f5;
+      }
+      #app-loader .loading-brand {
+        font-size: 38px;
+        font-weight: 700;
+        letter-spacing: -4px;
+      }
+      #app-loader .loading-brand span {
+        color: #0d99ff;
+      }
+      #app-loader .loading-spinner {
+        width: 28px;
+        height: 28px;
+        box-sizing: border-box;
+        border: 3px solid #0d99ff30;
+        border-top-color: #0d99ff;
+        border-radius: 50%;
+        animation: app-spin 0.8s linear infinite;
+      }
+      #app-loader p {
+        max-width: 320px;
+        margin: 0 24px;
+      }
+      #app-loader button {
+        padding: 8px 16px;
+        border: 1px solid #0d99ff;
+        border-radius: 6px;
+        color: inherit;
+        background: transparent;
+        font: inherit;
+        cursor: pointer;
+      }
+      #app-loader button[hidden] {
+        display: none;
+      }
+      html[data-app-state='failed'] #app-loader .loading-spinner {
+        display: none;
+      }
+      @keyframes app-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #app-loader .loading-spinner {
+          animation: none;
+        }
+      }
+    </style>
     <script>
       try {
         const saved = localStorage.getItem('redesign.theme');
@@ -17,10 +97,50 @@
           ? 'dark'
           : 'light';
       }
+      // The entry module itself can fail to download before its error handler runs.
+      window.addEventListener(
+        'error',
+        (event) => {
+          if (event.target?.id !== 'app-entry') return;
+          document.documentElement.dataset.appState = 'failed';
+          document.body?.setAttribute('aria-busy', 'false');
+          const message = document.getElementById('loading-message');
+          if (message) message.textContent = 'reDesign could not load. Reload to try again.';
+          const reload = document.getElementById('loading-retry');
+          if (reload) reload.hidden = false;
+        },
+        true,
+      );
     </script>
     <title>reDesign — Design editor</title>
   </head>
-  <body>
+  <body aria-busy="true">
+    <div id="app-loader" role="status" aria-live="polite" aria-label="Loading reDesign">
+      <div class="loading-brand" aria-hidden="true"><span>r</span>D</div>
+      <div class="loading-spinner" aria-hidden="true"></div>
+      <p id="loading-message">Loading reDesign...</p>
+      <button id="loading-retry" type="button" onclick="location.reload()" hidden>Reload</button>
+    </div>
+    <noscript>
+      <style>
+        #app-loader .loading-spinner,
+        #loading-message {
+          display: none;
+        }
+      </style>
+      <div
+        style="
+          position: fixed;
+          inset: 60% 0 auto;
+          z-index: 2147483647;
+          text-align: center;
+          font: 14px sans-serif;
+          color: #757575;
+        "
+      >
+        Enable JavaScript to use reDesign.
+      </div>
+    </noscript>
     <header>
       <strong class="brand" aria-label="reDesign"><span>r</span>D</strong
       ><span class="breadcrumb">Drafts /</span
@@ -67,7 +187,7 @@
         </div>
         <div id="layers"></div>
         <div class="sidebar-note">
-          reDesign · Early development<br />Native .fig support is pending.
+          reDesign · Early development<br />Experimental .fig import; export pending.
         </div>
       </aside>
       <section id="workspace" aria-label="Design canvas">
@@ -270,8 +390,13 @@
         </div>
       </aside>
     </main>
-    <input type="file" id="file" accept=".redesign,.svg,application/json,image/svg+xml" hidden />
+    <input
+      type="file"
+      id="file"
+      accept=".redesign,.fig,.svg,application/json,image/svg+xml"
+      hidden
+    />
     <div id="toast" role="status" hidden></div>
-    <script type="module" src="/src/main.ts"></script>
+    <script id="app-entry" type="module" src="/src/bootstrap.ts"></script>
   </body>
 </html>

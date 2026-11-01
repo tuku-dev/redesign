@@ -92,3 +92,13 @@ Vector editing uses editor-only `editingVectorId` state. Selection changes, dele
 
 
 Save semantics are explicit: `DocumentFileSaver.save()` writes a retained handle, or persists to browser storage when native saving is unavailable. `save(true)` performs Save As/native picking or requests a name for an explicit download. Ordinary Save never infers a new destination from a changed document title. `reset(handle)` connects native-opened files. File-action capture handles Ctrl/Cmd+S and Shift+S before editor handlers or browser Save Page, commits focused fields/text/gestures, and dispatches a before-save event for pen drafts. The custom `ui/save-dialog.ts` is used only for explicit fallback downloads. Native adapters remain simulated in browser tests; actual OS dialogs are outside automated coverage.
+
+## Native Figma reader
+
+`interop/fig-container.ts` routes files by signature or extension. `fig-reader.ts` creates a dedicated worker and enforces a 15-second deadline. Inside `interop/fig/`, archive parsing reads bounded ZIP central-directory entries and checks canvas CRC; compression bounds DEFLATE output and Zstandard frame/window sizes. The Kiwi interpreter reads each file's embedded schema without dynamic code generation. Geometry, paint and document conversion are separate modules. Only the final validated document and a conversion report cross the worker boundary.
+
+`ui/fig-import-dialog.ts` displays losses before any editor mutation. Accepting opens the imported subset through the existing document registry with no source file handle. Unsupported component/instance/vector subtrees are counted and skipped. The original native schema/data/assets are not retained for rewriting; this is not a round-trip codec. `kiwi-schema` is a development dependency for synthetic test encoding/types; production decompression uses MIT-licensed `fflate` and `fzstd`. Fixtures, licenses and measured results are in `tests/fixtures/fig/` and [research/native-fig.md](research/native-fig.md).
+
+## Startup loading
+
+`index.html` includes critical loader styles and hides the editor before app assets arrive. Its early theme script colors the loading screen using the saved/system preference. `bootstrap.ts` dynamically imports `main.ts`, waits for fonts and a render frame, then reveals the initialized editor and removes the loading screen. Both a missing entry script and a rejected application import show a Reload action while keeping the skeleton hidden. The spinner honors reduced motion; a noscript message explains the JavaScript requirement. No artificial loading delay is added.

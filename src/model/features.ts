@@ -30,6 +30,9 @@ export type StrokeStyle = (typeof STROKE_STYLES)[number];
 export interface Appearance {
   stroke: string;
   strokeWidth: number;
+  /** Independent paint alpha; omitted means opaque. */
+  fillOpacity?: number;
+  strokeOpacity?: number;
   /** Omitted means solid / normal so older documents load unchanged. */
   strokeStyle?: StrokeStyle;
   blendMode?: BlendMode;
@@ -191,6 +194,8 @@ export function validFeatures(n: Record<string, unknown>): boolean {
       !color(a.stroke) ||
       !num(a.strokeWidth, 0, 1000) ||
       !num(a.blur, 0, 1000) ||
+      (a.fillOpacity !== undefined && !num(a.fillOpacity, 0, 1)) ||
+      (a.strokeOpacity !== undefined && !num(a.strokeOpacity, 0, 1)) ||
       (a.strokeStyle !== undefined && !member(a.strokeStyle, [...STROKE_STYLES])) ||
       (a.blendMode !== undefined && !member(a.blendMode, [...BLEND_MODES])) ||
       !object(a.gradient) ||

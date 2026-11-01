@@ -9,7 +9,9 @@ import type { Notify } from '../ui/notifications.ts';
 import { requestDownloadName } from '../ui/save-dialog.ts';
 import { downloadFile } from './download.ts';
 import { exportSvg } from './svg-export.ts';
-import { rejectBinaryDocument } from './fig-container.ts';
+import { isFigDocument } from './fig-container.ts';
+import { readFigFile } from './fig-reader.ts';
+import { confirmFigImport } from '../ui/fig-import-dialog.ts';
 import { importSvg, looksLikeSvg } from './svg-import.ts';
 import { bindDocuments } from '../ui/documents.ts';
 interface OpenDocumentHandle extends DocumentFileHandle {
@@ -109,23 +111,48 @@ export function bindFileActions(
   store.subscribe((update) => {
     if (update.persist && saver.hasFile) el.saveStatus.textContent = 'Unsaved file changes';
   });
+  let importing = false;
   async function openFile(file: File, handle: DocumentFileHandle | null = null): Promise<void> {
-    if (file.size > 100 * 1024 * 1024) throw new Error('File exceeds the 100 MB limit.');
-    await rejectBinaryDocument(file);
-    const text = await file.text();
-    // An SVG is imported as a new document; it never keeps a handle, so Save cannot overwrite the .svg.
-    const svgImport = looksLikeSvg(file, text);
-    const next = svgImport
-      ? importSvg(text, documentNameFromFile(file.name))
-      : validateDocument(JSON.parse(text));
-    prepareSave();
-    next.name = documentNameFromFile(file.name);
-    documents.open(next, svgImport ? null : handle);
-    el.saveStatus.textContent = svgImport
-      ? 'Imported SVG'
-      : handle
-        ? 'Opened local file'
-        : 'Saved in this browser';
+    if (importing) return;
+    importing = true;
+    el.open.disabled = true;
+    try {
+      if (file.size > 100 * 1024 * 1024) throw new Error('File exceeds the 100 MB limit.');
+      if (await isFigDocument(file)) {
+        notify('Reading experimental Figma document...');
+        const result = await readFigFile(file, documentNameFromFile(file.name));
+        if (!(await confirmFigImport(result.report))) return;
+        prepareSave();
+        // Native import must never connect a .fig source handle to the .redesign saver.
+        documents.open(result.document, null);
+        el.saveStatus.textContent = 'Imported Figma subset';
+        notify(
+          'Imported ' +
+            result.report.imported +
+            ' editable layers; ' +
+            result.report.skipped +
+            ' skipped. Native .fig export is unavailable.',
+        );
+        return;
+      }
+      const text = await file.text();
+      // An SVG is imported as a new document; it never keeps a handle, so Save cannot overwrite the .svg.
+      const svgImport = looksLikeSvg(file, text);
+      const next = svgImport
+        ? importSvg(text, documentNameFromFile(file.name))
+        : validateDocument(JSON.parse(text));
+      prepareSave();
+      next.name = documentNameFromFile(file.name);
+      documents.open(next, svgImport ? null : handle);
+      el.saveStatus.textContent = svgImport
+        ? 'Imported SVG'
+        : handle
+          ? 'Opened local file'
+          : 'Saved in this browser';
+    } finally {
+      importing = false;
+      el.open.disabled = false;
+    }
   }
   el.open.onclick = () => {
     if (window.isSecureContext && pickerWindow.showOpenFilePicker) {
@@ -138,6 +165,7 @@ export function bindFileActions(
               accept: {
                 'application/json': ['.redesign', '.json'],
                 'image/svg+xml': ['.svg'],
+                'application/octet-stream': ['.fig'],
               },
             },
           ],

@@ -751,3 +751,23 @@ test('parsePathData handles relative commands, compact arcs, curves and closing'
   assert.equal(parsePathData('M0 0L5 5M9 9L12 12Z').length, 2);
   assert.throws(() => parsePathData('M0 0X5'));
 });
+
+test('independent paint opacity round trips and rejects invalid alpha without changing legacy defaults', () => {
+  const doc = createDocument();
+  doc.nodes = [
+    createNode('rectangle', {
+      appearance: { ...defaultAppearance(), fillOpacity: 0, strokeOpacity: 0.5 },
+    }),
+  ];
+  assert.deepEqual(validateDocument(JSON.parse(JSON.stringify(doc))), doc);
+  for (const field of ['fillOpacity', 'strokeOpacity'] as const) {
+    for (const value of [-0.1, 1.1, NaN, '0.5', null]) {
+      const bad = structuredClone(doc);
+      Object.assign(bad.nodes[0]!.appearance!, { [field]: value });
+      assert.throws(() => validateDocument(bad));
+    }
+  }
+  const legacy = createDocument();
+  legacy.nodes = [createNode('rectangle', { appearance: defaultAppearance() })];
+  assert.deepEqual(validateDocument(legacy), legacy);
+});

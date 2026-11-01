@@ -60,7 +60,7 @@ Select a hotspot layer, choose an **On click** destination frame, then select in
 
 ## Verification and compatibility
 
-Run `npm test` for geometry, document, command and undo regressions. Run `npm run test:e2e` for real Chrome interactions, image/file workflows, exports and prototype navigation. Type checks, lint, formatting and production builds are separate commands listed in the README. Chrome tests do not establish Firefox/Safari support or Figma parity. Native `.fig` import/export remains a separate, unimplemented milestone.
+Run `npm test` for geometry, document, command and undo regressions. Run `npm run test:e2e` for real Chrome interactions, image/file workflows, exports and prototype navigation. Type checks, lint, formatting and production builds are separate commands listed in the README. Chrome tests do not establish Firefox/Safari support or Figma parity. Experimental native `.fig` import supports an editable subset; native export and Figma round trips remain unimplemented/unverified.
 
 ## Save and Save As
 
@@ -72,3 +72,7 @@ Use Ctrl+S to save. Supporting browsers connect a disk file on the first save an
 Under **Tools & resources > Shapes**, choose **Insert line**, **Insert polygon** or **Insert star**; the shape is placed at the viewport center as an editable vector (polygon and star use the side/point count field, 3-60). In the inspector, **Blend mode** and **Stroke style** (solid, dashed, dotted) apply to the selected layer and are included in SVG rendering. Live parameters, arrowheads and per-fill blending remain pending.
 
 Draw a rectangle (R, then drag; hold Ctrl for a perfect square) and, without releasing the mouse, press **Up** or **Down**: the shape becomes a regular polygon with 5, 6, 7... sides (up to 60) or 3 sides at minimum, and 4 sides returns the plain rectangle. The polygon fills the dragged box and is an ordinary editable vector once released.
+
+## Experimental native Figma import
+
+Choose **Open**, select a `.fig`, and review the **Experimental Figma import** dialog. It lists page/layer counts, skipped subtrees and approximations. **Cancel** or Escape preserves the current document. **Import supported layers** opens the subset in a new document, or replaces an untouched blank. Pages, frames/groups, rectangles, ellipses and plain text are supported; component/instance/vector subtrees are skipped, and non-solid paints, effects and advanced metadata are not preserved. Supported layers can be edited and undone normally. The source `.fig` is never overwritten. Native Figma export is unavailable. See [research notes](research/native-fig.md).

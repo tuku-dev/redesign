@@ -49,6 +49,7 @@ async function open(page: Page, doc: DesignDocument = seed()) {
     }
   }, doc);
   await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('data-app-state', 'ready');
   await expect(page.locator('#layers .layer')).toHaveCount(doc.nodes.length);
   return errors;
 }
@@ -1448,4 +1449,66 @@ test('the Image item and Ctrl+Shift+K open the image picker', async ({ page }) =
   const second = page.waitForEvent('filechooser');
   await page.keyboard.press('Control+Shift+K');
   await second;
+});
+
+test('SVG import preserves independent paint alpha through storage and export', async ({
+  page,
+}) => {
+  await open(page, createDocument());
+  const source =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100">' +
+    '<rect width="20" height="20" fill="#ff000080"/>' +
+    '<rect x="30" width="20" height="20" fill="red" fill-opacity="0" stroke="blue" stroke-width="4"/>' +
+    '<g opacity=".5" fill-opacity=".4" stroke-opacity=".6"><rect x="60" width="20" height="20" fill="rgba(255,0,0,50%)" stroke="#00f8" stroke-width="2"/>' +
+    '<rect x="90" width="20" height="20" fill="#f008" fill-opacity=".8"/></g></svg>';
+  await page
+    .locator('#file')
+    .setInputFiles({ name: 'alpha.svg', mimeType: 'image/svg+xml', buffer: Buffer.from(source) });
+  const nodes = (await saved(page)).nodes;
+  expect(nodes).toHaveLength(4);
+  expect(nodes[0]!.appearance?.fillOpacity).toBeCloseTo(128 / 255);
+  expect(nodes[1]!.opacity).toBe(1);
+  expect(nodes[1]!.appearance?.fillOpacity).toBe(0);
+  expect(nodes[1]!.appearance?.strokeOpacity).toBe(1);
+  expect(nodes[2]!.opacity).toBe(0.5);
+  expect(nodes[2]!.appearance?.fillOpacity).toBeCloseTo(0.2);
+  expect(nodes[2]!.appearance?.strokeOpacity).toBeCloseTo((0.6 * 136) / 255);
+  expect(nodes[3]!.appearance?.fillOpacity).toBeCloseTo((0.8 * 136) / 255);
+  await page.reload();
+  expect((await saved(page)).nodes).toEqual(nodes);
+  await expect(page.locator('#scene rect[fill="#ff0000"][fill-opacity="0"]')).toHaveAttribute(
+    'stroke-opacity',
+    '1',
+  );
+  const download = page.waitForEvent('download');
+  await page.locator('#export').click();
+  const output = await readFile((await (await download).path())!, 'utf8');
+  expect(output).toContain('fill-opacity="0"');
+  expect(output).toContain('stroke-opacity="1"');
+});
+
+test('SVG viewBox respects viewport dimensions, alignment, meet, slice and none', async ({
+  page,
+}) => {
+  await open(page, createDocument());
+  const cases = [
+    { attrs: '', box: [50, 0, 100, 100] },
+    { attrs: 'preserveAspectRatio="none"', box: [0, 0, 200, 100] },
+    { attrs: 'preserveAspectRatio="xMaxYMin meet"', box: [100, 0, 100, 100] },
+    { attrs: 'preserveAspectRatio="xMidYMax slice"', box: [0, -100, 200, 200] },
+    { attrs: 'preserveAspectRatio="xMinYMin meet"', box: [0, 0, 100, 100] },
+  ];
+  for (const { attrs, box } of cases) {
+    const source =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="10 20 100 100" ' +
+      attrs +
+      '><rect x="10" y="20" width="100" height="100"/></svg>';
+    await page.locator('#file').setInputFiles({
+      name: 'viewport.svg',
+      mimeType: 'image/svg+xml',
+      buffer: Buffer.from(source),
+    });
+    const node = (await saved(page)).nodes[0]!;
+    expect([node.x, node.y, node.width, node.height]).toEqual(box);
+  }
 });

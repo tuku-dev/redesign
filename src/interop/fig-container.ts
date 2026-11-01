@@ -12,10 +12,7 @@ export function detectContainer(head: Uint8Array): BinaryContainer {
   return 'unknown';
 }
 
-export async function rejectBinaryDocument(file: File): Promise<void> {
+export async function isFigDocument(file: File): Promise<boolean> {
   const head = new Uint8Array(await file.slice(0, 8).arrayBuffer());
-  const kind = detectContainer(head);
-  const isFigName = /\.fig$/i.test(file.name);
-  if (kind === 'unknown' && !isFigName) return;
-  throw new Error('Figma .fig files are not supported yet. Open a .redesign file instead.');
+  return detectContainer(head) !== 'unknown' || /\.fig$/i.test(file.name);
 }

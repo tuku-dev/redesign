@@ -3,7 +3,7 @@ export function documentNameFromFile(filename: string): string {
   return (
     filename
       .trim()
-      .replace(/\.(redesign|json|svg)$/i, '')
+      .replace(/\.(redesign|json|svg|fig)$/i, '')
       .trim() || 'Untitled'
   );
 }

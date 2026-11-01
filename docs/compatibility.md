@@ -18,7 +18,8 @@ reDesign is a web app. Target Figma Design's editor behavior, rendering, shortcu
 | Prototyping and animation | Click navigation, instant/dissolve, modal preview, back and restart tested | Advanced triggers, smart animation, sharing and device presets pending |
 | Multiplayer, comments, history | Pending | Server architecture and consistency |
 | Plugins and developer tools | Pending | API contracts and sandboxing |
-| Native `.fig` import/export | Research pending | Both editable round trips in Figma |
+| Native `.fig` import | Experimental editable subset: pages, frames/groups, rectangles, ellipses and plain text; ZIP/bare Kiwi, DEFLATE/Zstandard; review before lossy conversion | Broader authorized fixtures, vectors/assets/components, text fidelity and Figma reference checks |
+| Native `.fig` export | Not implemented | Both editable round trips in Figma |
 | Additional Figma products | Separate scope, pending | Product-specific acceptance matrices |
 
 ## Acceptance rules
@@ -33,3 +34,5 @@ Record reference dates/versions, fixtures, evidence, and tolerances per feature.
 
 These describe reference capabilities; they do not establish this implementation's parity.
 
+
+Native import evidence, limits and fixture counts are recorded in [research/native-fig.md](research/native-fig.md). Import is partial and does not establish export compatibility.

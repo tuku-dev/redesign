@@ -11,6 +11,8 @@ export function paintShape(shape: SVGElement, n: DesignNode): SVGElement {
   group.append(defs);
   shape.removeAttribute('opacity');
   if (a) {
+    shape.setAttribute('fill-opacity', String(a.fillOpacity ?? 1));
+    shape.setAttribute('stroke-opacity', String(a.strokeOpacity ?? 1));
     shape.setAttribute('stroke', a.stroke);
     shape.setAttribute('stroke-width', String(a.strokeWidth));
     shape.setAttribute('stroke-linejoin', 'round');

@@ -83,6 +83,7 @@ async function start(
     { doc: createDocument(), mode },
   );
   await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('data-app-state', 'ready');
   await expect(page.getByLabel('Document name', { exact: true })).toHaveValue('Untitled');
   return errors;
 }
@@ -330,16 +331,17 @@ test('Ctrl+Shift+S opens the app download dialog without using a browser prompt'
   expect(errors).toEqual([]);
 });
 
-test('opening a .fig file reports that it is unsupported and keeps the document', async ({
+test('opening a malformed .fig reports the format error and keeps the document', async ({
   page,
 }) => {
   await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('data-app-state', 'ready');
   const before = await page.locator('#documents .document-row').count();
   await page.locator('#file').setInputFiles({
     name: 'design.fig',
     mimeType: 'application/octet-stream',
     buffer: Buffer.from('fig-kiwi\u0000\u0000\u0000\u0000'),
   });
-  await expect(page.locator('#toast')).toContainText('.fig files are not supported');
+  await expect(page.locator('#toast')).toContainText('Cannot import .fig');
   await expect(page.locator('#documents .document-row')).toHaveCount(before);
 });

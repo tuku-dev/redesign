@@ -27,6 +27,7 @@ Open http://127.0.0.1:5173. On Windows PowerShell, use `npm.cmd` instead of `npm
 
 ## Code organization
 
+- `src/bootstrap.ts`: startup loading screen, asset readiness and failure recovery.
 - `src/main.ts`: application composition and subscription wiring.
 - `src/model/`: document types, runtime validation, selection and geometry.
 - `src/commands/`: editing operations, transforms, alignment and undo/redo history.
@@ -48,7 +49,7 @@ Draw shapes, frames and text; select single/multiple layers; move, nudge, resize
 Documents autosave under the existing `redesign.document` browser-storage key. Download/reopen version 1 `.redesign` files and export SVG. Existing local file format is unchanged by the TypeScript migration. Browser storage can be cleared, so download important documents.
 
 
-Frames contain child layers and nested frames. Moving, nudging, duplicating or deleting a frame includes its descendants. Draw or drop layers into frames, or use the Parent control; the Layers panel shows nesting. Legacy flat files infer fully enclosed children on load. Frames support Clip content and per-child horizontal/vertical constraints. Drag snapping aligns edges/centers and equal gaps; magenta guides show spacing. Use the Snap toggle or hold Ctrl during a move/resize to bypass snapping. Rotate using the top circular handle or the Angle field; hold Shift during rotation for 15-degree increments. Right-click a selection for 90° clockwise/counterclockwise rotation, 180° rotation, or horizontal/vertical flips. Double-click text to edit inline; Escape cancels, Ctrl/Cmd+Enter or blur commits. Typography controls include installed font family, weight/style, line height, letter spacing, alignment and word wrap. Advanced typography, auto text sizing, collaboration, and native `.fig` import/export remain pending. SVG is not a native Figma document.
+Frames contain child layers and nested frames. Moving, nudging, duplicating or deleting a frame includes its descendants. Draw or drop layers into frames, or use the Parent control; the Layers panel shows nesting. Legacy flat files infer fully enclosed children on load. Frames support Clip content and per-child horizontal/vertical constraints. Drag snapping aligns edges/centers and equal gaps; magenta guides show spacing. Use the Snap toggle or hold Ctrl during a move/resize to bypass snapping. Rotate using the top circular handle or the Angle field; hold Shift during rotation for 15-degree increments. Right-click a selection for 90° clockwise/counterclockwise rotation, 180° rotation, or horizontal/vertical flips. Double-click text to edit inline; Escape cancels, Ctrl/Cmd+Enter or blur commits. Typography controls include installed font family, weight/style, line height, letter spacing, alignment and word wrap. Advanced typography, auto text sizing, collaboration, and native `.fig` export remain pending. SVG is not a native Figma document.
 
 ## Layout, assets and prototypes
 
@@ -63,4 +64,10 @@ Editable documents use `.redesign` (for example, `Dashboard.redesign`). **Save /
 
 Without direct file access, **Save / Ctrl+S** stores the project in this browser without dialogs or downloads. **Download copy / Ctrl+Shift+S** opens an app dialog to name and download a disk copy. That copy does not update automatically: ordinary downloads cannot overwrite an existing disk file. The UI distinguishes browser saves from connected-file saves. Browser storage has a quota and can be cleared, so download important projects.
 
-Ctrl+S is handled even when an input or textarea has focus; current edits are committed before saving. Cancel/failure does not rename the project. Open uses the selected filename without its extension for the header/tab title. SVG export remains `.svg`; native `.fig` support remains pending.
+Ctrl+S is handled even when an input or textarea has focus; current edits are committed before saving. Cancel/failure does not rename the project. Open uses the selected filename without its extension for the header/tab title. SVG export remains `.svg`; native `.fig` export remains pending.
+
+## Experimental Figma import
+
+Use **Open** to select a native `.fig` file. Review the supported-layer count, skipped subtrees and conversion warnings, then choose **Import supported layers** or **Cancel**. The first subset imports pages, frames/groups, rectangles, ellipses and plain text with solid paints. Supported layers remain editable; components, instances, vectors, images and other advanced content are not preserved. The original file is never connected to the document saver.
+
+ZIP and bare fig-kiwi readers use the file's embedded schema, bounded DEFLATE/Zstandard decoding and a worker timeout. Two public licensed fixtures and synthetic regressions are tested. Native export and editable round trips in Figma are **not implemented or verified**. See [native import research](docs/research/native-fig.md) for the acceptance matrix, source provenance and remaining work.

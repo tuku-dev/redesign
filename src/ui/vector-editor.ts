@@ -255,6 +255,10 @@ export function bindVectorEditor(
     'pointerdown',
     (e) => {
       lastHit = null;
+      if (store.canvasColorMode) {
+        lastTap = null;
+        return;
+      }
       if (e.button !== 0 || (e.target as Element).closest('[data-editor-overlay]')) return;
       const target = e.target as Element,
         r = target.getAttribute('data-vector-ring'),

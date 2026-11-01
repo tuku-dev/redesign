@@ -93,7 +93,7 @@ export function validateDocument(value: unknown): DesignDocument {
     !Array.isArray(value.nodes) ||
     value.nodes.length > 10000
   )
-    throw new Error('Unsupported reDesign document. Native .fig import is pending.');
+    throw new Error('Unsupported reDesign document.');
   const nodes: DesignNode[] = [];
   const ids = new Set<string>();
   const legacy = new Set<string>();

@@ -1092,3 +1092,13 @@ select:focus-visible {
   font: inherit;
   font-size: 12px;
 }
+
+.fig-import-dialog {
+  max-height: 85vh;
+  overflow: auto;
+}
+.fig-import-dialog li {
+  margin: 8px 0;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}

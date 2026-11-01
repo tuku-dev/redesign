@@ -9,6 +9,11 @@ interface Style {
   fill: string;
   stroke: string;
   strokeWidth: number;
+  fillAlpha: number;
+  strokeAlpha: number;
+  fillOpacity: number;
+  strokeOpacity: number;
+  color: string;
   opacity: number;
   fontSize: number;
 }
@@ -61,6 +66,15 @@ const num = (value: string | null | undefined, fallback = 0): number => {
   const n = parseFloat(value ?? '');
   return Number.isFinite(n) ? n : fallback;
 };
+
+const opacity = (value: string | null | undefined, fallback = 1): number =>
+  Math.max(
+    0,
+    Math.min(
+      1,
+      value?.trim().endsWith('%') ? num(value, fallback * 100) / 100 : num(value, fallback),
+    ),
+  );
 
 function parseTransform(value: string | null): Matrix {
   let m = IDENTITY;
@@ -117,7 +131,7 @@ function parseColor(value: string, current: string): { color: string; alpha: num
     if ([r, g, b].every((n) => Number.isFinite(n)))
       return {
         color: '#' + [r, g, b].map((n) => n!.toString(16).padStart(2, '0')).join(''),
-        alpha: parts[3] ? Math.max(0, Math.min(1, num(parts[3], 1))) : 1,
+        alpha: opacity(parts[3]),
       };
   }
   const named = NAMED[v];
@@ -145,21 +159,28 @@ function readStyle(el: Element, parent: Style): Style {
     const i = decl.indexOf(':');
     if (i > 0) props.set(decl.slice(0, i).trim().toLowerCase(), decl.slice(i + 1).trim());
   }
-  const current = parseColor(props.get('color') ?? '', '#000000');
+  const current = props.has('color')
+    ? parseColor(props.get('color')!, parent.color)
+    : { color: parent.color, alpha: 1 };
   const currentColor = current === 'none' ? '#000000' : current.color;
-  const paint = (name: string, inherited: string): string => {
+  const paint = (name: 'fill' | 'stroke') => {
     const raw = props.get(name);
-    if (raw === undefined) return inherited;
-    const parsed = parseColor(raw, currentColor);
-    return parsed === 'none' ? 'none' : parsed.color;
+    return raw === undefined || raw === 'inherit'
+      ? { color: parent[name], alpha: parent[name === 'fill' ? 'fillAlpha' : 'strokeAlpha'] }
+      : parseColor(raw, currentColor);
   };
-  const own = props.has('opacity') ? num(props.get('opacity'), 1) : 1;
-  const fillOpacity = props.has('fill-opacity') ? num(props.get('fill-opacity'), 1) : 1;
+  const fill = paint('fill'),
+    stroke = paint('stroke');
   return {
-    fill: paint('fill', parent.fill),
-    stroke: paint('stroke', parent.stroke),
+    fill: fill === 'none' ? 'none' : fill.color,
+    stroke: stroke === 'none' ? 'none' : stroke.color,
+    fillAlpha: fill === 'none' ? 1 : fill.alpha,
+    strokeAlpha: stroke === 'none' ? 1 : stroke.alpha,
+    fillOpacity: opacity(props.get('fill-opacity'), parent.fillOpacity),
+    strokeOpacity: opacity(props.get('stroke-opacity'), parent.strokeOpacity),
+    color: currentColor,
     strokeWidth: props.has('stroke-width') ? num(props.get('stroke-width'), 1) : parent.strokeWidth,
-    opacity: Math.max(0, Math.min(1, parent.opacity * own * fillOpacity)),
+    opacity: parent.opacity * opacity(props.get('opacity')),
     fontSize: props.has('font-size') ? num(props.get('font-size'), 16) : parent.fontSize,
   };
 }
@@ -411,9 +432,31 @@ export function importSvg(source: string, filename = 'Imported'): DesignDocument
     viewBox[2]! > 0 &&
     viewBox[3]! > 0
   ) {
-    const w = root.getAttribute('width'),
-      sx = w && !w.includes('%') && num(w) > 0 ? num(w) / viewBox[2]! : 1;
-    base = multiply([sx, 0, 0, sx, 0, 0], [1, 0, 0, 1, -viewBox[0]!, -viewBox[1]!]);
+    const dimension = (name: string, fallback: number) => {
+      const value = root.getAttribute(name);
+      return value && !value.includes('%') && num(value) > 0 ? num(value) : fallback;
+    };
+    const width = dimension('width', viewBox[2]!),
+      height = dimension('height', viewBox[3]!);
+    let sx = width / viewBox[2]!,
+      sy = height / viewBox[3]!;
+    const parts = (root.getAttribute('preserveAspectRatio') ?? 'xMidYMid meet')
+      .trim()
+      .split(/\s+/)
+      .filter((p) => p !== 'defer');
+    const align = parts[0] ?? 'xMidYMid';
+    let tx = 0,
+      ty = 0;
+    if (align !== 'none') {
+      sx = sy = (parts[1] === 'slice' ? Math.max : Math.min)(sx, sy);
+      tx =
+        (width - viewBox[2]! * sx) *
+        (align.includes('xMax') ? 1 : align.includes('xMin') ? 0 : 0.5);
+      ty =
+        (height - viewBox[3]! * sy) *
+        (align.includes('YMax') ? 1 : align.includes('YMin') ? 0 : 0.5);
+    }
+    base = multiply([sx, 0, 0, sy, tx, ty], [1, 0, 0, 1, -viewBox[0]!, -viewBox[1]!]);
   }
 
   const paintProps = (
@@ -428,12 +471,14 @@ export function importSvg(source: string, filename = 'Imported'): DesignDocument
       hasStroke,
       fill: hasFill ? style.fill : '#d9d9d9',
       opacity: style.opacity,
-      ...(hasStroke
+      ...(hasStroke || style.fillAlpha * style.fillOpacity !== 1
         ? {
             appearance: {
               ...defaultAppearance(),
-              stroke: style.stroke,
-              strokeWidth: style.strokeWidth * scale,
+              fillOpacity: style.fillAlpha * style.fillOpacity,
+              strokeOpacity: style.strokeAlpha * style.strokeOpacity,
+              stroke: hasStroke ? style.stroke : '#000000',
+              strokeWidth: hasStroke ? style.strokeWidth * scale : 0,
             },
           }
         : {}),
@@ -595,7 +640,18 @@ export function importSvg(source: string, filename = 'Imported'): DesignDocument
     }
   };
 
-  visit(root, base, { fill: '#000000', stroke: 'none', strokeWidth: 1, opacity: 1, fontSize: 16 });
+  visit(root, base, {
+    fill: '#000000',
+    stroke: 'none',
+    strokeWidth: 1,
+    opacity: 1,
+    fontSize: 16,
+    fillAlpha: 1,
+    strokeAlpha: 1,
+    fillOpacity: 1,
+    strokeOpacity: 1,
+    color: '#000000',
+  });
   if (!nodes.length) throw new Error('No supported shapes found in this SVG.');
   doc.nodes = nodes;
   return validateDocument(doc);
