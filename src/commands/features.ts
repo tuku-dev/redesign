@@ -91,7 +91,17 @@ export class FeatureCommands {
     this.store.change(() =>
       this.editable()
         .filter((n) => n.type !== 'group')
-        .forEach((n) => (n.appearance = clone(value))),
+        .forEach((n) => {
+          n.appearance = clone(value);
+          const fill = n.appearance.fills?.[0],
+            stroke = n.appearance.strokes?.[0];
+          if (fill) n.fill = fill.color;
+          if (n.appearance.strokes) {
+            n.appearance.stroke = stroke?.color ?? n.appearance.stroke;
+            n.appearance.strokeWidth = stroke?.width ?? 0;
+            n.appearance.strokeOpacity = stroke?.opacity ?? 1;
+          }
+        }),
     );
   }
   grid(value: LayoutGrid | undefined): void {

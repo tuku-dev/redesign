@@ -6,6 +6,7 @@ import { nodeTransform } from '../model/rotation.ts';
 import { svg } from './svg.ts';
 import { renderShape } from './shapes.ts';
 import { roundedRectPath } from '../model/geometry.ts';
+import { strokeLayers } from '../model/paint-layers.ts';
 let sequence = 0;
 export function renderDocument(
   doc: DesignDocument,
@@ -34,7 +35,11 @@ export function renderDocument(
           d: pathData(n),
           fill: n.vector.closed ? 'transparent' : 'none',
           stroke: 'transparent',
-          'stroke-width': Math.max(options.vectorHitWidth, n.appearance?.strokeWidth ?? 0),
+          'stroke-width': Math.max(
+            options.vectorHitWidth,
+            n.appearance?.strokeWidth ?? 0,
+            ...strokeLayers(n).map((stroke) => stroke.width),
+          ),
           'pointer-events': n.vector.closed ? 'all' : 'stroke',
           'data-id': n.id,
           'data-vector-hit': 'true',

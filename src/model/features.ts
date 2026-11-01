@@ -27,9 +27,24 @@ export const BLEND_MODES = [
 export type BlendMode = (typeof BLEND_MODES)[number];
 export const STROKE_STYLES = ['solid', 'dashed', 'dotted'] as const;
 export type StrokeStyle = (typeof STROKE_STYLES)[number];
+/** A paint layer is drawn in array order, from back to front. */
+export interface SolidPaint {
+  type: 'solid';
+  color: string;
+  opacity: number;
+}
+export interface SolidStrokePaint extends SolidPaint {
+  width: number;
+}
 export interface Appearance {
   stroke: string;
   strokeWidth: number;
+  /**
+   * Optional richer paint stacks. When omitted, the legacy node fill and
+   * appearance stroke fields remain the single visible paints.
+   */
+  fills?: SolidPaint[];
+  strokes?: SolidStrokePaint[];
   /** Independent paint alpha; omitted means opaque. */
   fillOpacity?: number;
   strokeOpacity?: number;
@@ -134,6 +149,12 @@ const num = (v: unknown, min = 0, max = 1e6) =>
   typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max;
 const color = (v: unknown) => typeof v === 'string' && /^#[\da-f]{6}$/i.test(v);
 const member = (v: unknown, values: string[]) => typeof v === 'string' && values.includes(v);
+function solidPaint(v: unknown): boolean {
+  return object(v) && v.type === 'solid' && color(v.color) && num(v.opacity, 0, 1);
+}
+function solidStrokePaint(v: unknown): boolean {
+  return object(v) && solidPaint(v) && num(v.width, 0, 1000);
+}
 function validVectorPath(v: unknown): boolean {
   return (
     object(v) &&
@@ -200,6 +221,12 @@ export function validFeatures(n: Record<string, unknown>): boolean {
       !color(a.stroke) ||
       !num(a.strokeWidth, 0, 1000) ||
       !num(a.blur, 0, 1000) ||
+      (a.fills !== undefined &&
+        (!Array.isArray(a.fills) || a.fills.length > 100 || !a.fills.every(solidPaint))) ||
+      (a.strokes !== undefined &&
+        (!Array.isArray(a.strokes) ||
+          a.strokes.length > 100 ||
+          !a.strokes.every(solidStrokePaint))) ||
       (a.fillOpacity !== undefined && !num(a.fillOpacity, 0, 1)) ||
       (a.strokeOpacity !== undefined && !num(a.strokeOpacity, 0, 1)) ||
       (a.strokeStyle !== undefined && !member(a.strokeStyle, [...STROKE_STYLES])) ||

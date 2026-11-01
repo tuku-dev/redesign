@@ -2,13 +2,18 @@ import { maskSource } from './masks.ts';
 import { bounds } from './geometry.ts';
 import { visualBox, rotatePoint } from './rotation.ts';
 import { isHidden } from './layer-state.ts';
+import { strokeLayers } from './paint-layers.ts';
 import type { Box, DesignDocument, DesignNode } from './types.ts';
 export function clippedVisualBox(doc: DesignDocument, node: DesignNode): Box | null {
   if (isHidden(doc, node) || maskSource(doc, node)) return null;
   const byId = new Map(doc.nodes.map((n) => [n.id, n]));
   const painted = visualBox(node),
     a = node.appearance;
-  const pad = (a?.strokeWidth ?? 0) / 2 + (a?.blur ?? 0) * 2;
+  const strokeWidth = Math.max(
+    a?.strokeWidth ?? 0,
+    ...strokeLayers(node).map((stroke) => stroke.width),
+  );
+  const pad = strokeWidth / 2 + (a?.blur ?? 0) * 2;
   const shadow = a?.shadow.enabled ? a.shadow : undefined;
   const offset = shadow
     ? rotatePoint({ x: shadow.x, y: shadow.y }, { x: 0, y: 0 }, node.rotation)

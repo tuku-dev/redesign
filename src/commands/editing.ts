@@ -93,6 +93,7 @@ export class EditingCommands {
       if (key === 'name' || key === 'fill') {
         if (typeof value !== 'string') throw new Error('Expected text value.');
         n[key] = value;
+        if (key === 'fill' && n.appearance?.fills?.length) n.appearance.fills[0]!.color = value;
       } else {
         if (typeof value !== 'number') throw new Error('Expected numeric value.');
         if (key === 'radius') {

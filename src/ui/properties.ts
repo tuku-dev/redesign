@@ -18,7 +18,9 @@ import { selectedNodes } from '../model/selection.ts';
 import { selectionRoots } from '../model/hierarchy.ts';
 import { FeatureCommands } from '../commands/features.ts';
 import { defaultAppearance } from '../model/features.ts';
+import type { Appearance, SolidPaint, SolidStrokePaint } from '../model/features.ts';
 import { isLocked } from '../model/layer-state.ts';
+import { button, inputField } from './feature-controls.ts';
 type Field = readonly [EditableProperty, string, 'number' | 'text' | 'color'];
 function cornerControl(key: EditableProperty): { corner: CornerName; icon: IconName } | undefined {
   if (key === 'topLeftRadius') return { corner: 'topLeft', icon: 'cornerTopLeft' };
@@ -26,6 +28,24 @@ function cornerControl(key: EditableProperty): { corner: CornerName; icon: IconN
   if (key === 'bottomRightRadius') return { corner: 'bottomRight', icon: 'cornerBottomRight' };
   if (key === 'bottomLeftRadius') return { corner: 'bottomLeft', icon: 'cornerBottomLeft' };
   return undefined;
+}
+function visibleFills(appearance: Appearance, fill: string): SolidPaint[] {
+  return appearance.fills ?? [{ type: 'solid', color: fill, opacity: appearance.fillOpacity ?? 1 }];
+}
+function visibleStrokes(appearance: Appearance): SolidStrokePaint[] {
+  return (
+    appearance.strokes ??
+    (appearance.strokeWidth
+      ? [
+          {
+            type: 'solid',
+            color: appearance.stroke,
+            opacity: appearance.strokeOpacity ?? 1,
+            width: appearance.strokeWidth,
+          },
+        ]
+      : [])
+  );
 }
 function propertyValue(node: DesignNode, key: EditableProperty): number | string | undefined {
   if (key === 'radius') {
@@ -37,6 +57,7 @@ function propertyValue(node: DesignNode, key: EditableProperty): number | string
   if (key === 'topRightRadius') return radii.topRight;
   if (key === 'bottomRightRadius') return radii.bottomRight;
   if (key === 'bottomLeftRadius') return radii.bottomLeft;
+  if (key === 'fill') return node.appearance?.fills?.[0]?.color ?? node.fill;
   return node[key];
 }
 function displayNumber(value: number): string {
@@ -159,7 +180,10 @@ export function renderProperties(
         store,
         (color) => {
           store.canvasPaintColor = color;
-          selectedNodes(store.doc, store.selected).forEach((node) => (node.fill = color));
+          selectedNodes(store.doc, store.selected).forEach((node) => {
+            node.fill = color;
+            if (node.appearance?.fills?.length) node.appearance.fills[0]!.color = color;
+          });
         },
         notify,
       );
@@ -215,6 +239,7 @@ export function renderProperties(
   }
   if (supportsStroke) {
     const appearance = n.appearance ?? defaultAppearance(),
+      primaryStroke = visibleStrokes(appearance)[0],
       stroke = document.createElement('div'),
       caption = document.createElement('span'),
       enabled = document.createElement('input'),
@@ -225,17 +250,17 @@ export function renderProperties(
     stroke.className = 'field stroke-field';
     caption.textContent = 'Stroke';
     enabled.type = 'checkbox';
-    enabled.checked = appearance.strokeWidth > 0;
+    enabled.checked = (primaryStroke?.width ?? appearance.strokeWidth) > 0;
     enabled.setAttribute('aria-label', 'Enable stroke');
     enabled.title = 'Enable stroke';
     color.type = 'color';
-    color.value = appearance.stroke;
+    color.value = primaryStroke?.color ?? appearance.stroke;
     color.setAttribute('aria-label', 'Stroke color');
     color.title = 'Stroke color';
     width.type = 'number';
     width.min = '0';
     width.step = 'any';
-    width.value = String(appearance.strokeWidth);
+    width.value = String(primaryStroke?.width ?? appearance.strokeWidth);
     width.setAttribute('aria-label', 'Stroke width');
     width.title = 'Stroke width';
     widthCaption.textContent = 'Width';
@@ -259,22 +284,162 @@ export function renderProperties(
               ...(node.appearance ?? defaultAppearance()),
               stroke: value,
             };
+            if (node.appearance.strokes?.length) node.appearance.strokes[0]!.color = value;
           }),
       notify,
     );
     enabled.onchange = () =>
       updateStroke((value) => {
         value.strokeWidth = enabled.checked ? Math.max(1, value.strokeWidth) : 0;
+        if (value.strokes?.length) value.strokes[0]!.width = value.strokeWidth;
       });
     width.onchange = () => {
       if (width.value === '') return;
-      updateStroke((value) => (value.strokeWidth = Number(width.value)));
+      updateStroke((value) => {
+        value.strokeWidth = Number(width.value);
+        if (value.strokes?.length) value.strokes[0]!.width = value.strokeWidth;
+      });
     };
     stroke.append(caption, enabled, color, widthCaption, width);
     if (fillControl) grid.append(fillControl);
     grid.append(stroke);
   } else if (fillControl) {
     grid.append(fillControl);
+  }
+  if (!multi && supportsStroke) {
+    const layers = document.createElement('div');
+    layers.className = 'property-group';
+    const heading = document.createElement('h3');
+    heading.textContent = 'Paint layers';
+    layers.append(heading);
+    const update = (action: (value: Appearance) => void) => {
+      const next = structuredClone(n.appearance ?? defaultAppearance());
+      action(next);
+      featureCommands.appearance(next);
+    };
+    const paints = n.appearance ?? defaultAppearance();
+    const fills = visibleFills(paints, n.fill);
+    fills.forEach((fill, index) => {
+      inputField(
+        layers,
+        `Fill ${index + 1} color`,
+        fill.color,
+        'color',
+        (color) =>
+          update((value) => {
+            value.fills = visibleFills(value, n.fill);
+            value.fills[index]!.color = color;
+          }),
+        notify,
+      );
+      inputField(
+        layers,
+        `Fill ${index + 1} opacity`,
+        fill.opacity,
+        'number',
+        (opacity) =>
+          update((value) => {
+            value.fills = visibleFills(value, n.fill);
+            value.fills[index]!.opacity = Number(opacity);
+          }),
+        notify,
+      );
+      layers.append(
+        button(
+          `Remove fill ${index + 1}`,
+          () =>
+            update((value) => {
+              value.fills = visibleFills(value, n.fill);
+              value.fills.splice(index, 1);
+            }),
+          notify,
+        ),
+      );
+    });
+    layers.append(
+      button(
+        'Add fill',
+        () =>
+          update((value) => {
+            value.fills = [
+              ...visibleFills(value, n.fill),
+              { type: 'solid', color: '#000000', opacity: 1 },
+            ];
+          }),
+        notify,
+      ),
+    );
+    const strokes = visibleStrokes(paints);
+    strokes.forEach((stroke, index) => {
+      inputField(
+        layers,
+        `Stroke ${index + 1} color`,
+        stroke.color,
+        'color',
+        (color) =>
+          update((value) => {
+            value.strokes = visibleStrokes(value);
+            value.strokes[index]!.color = color;
+            if (index === 0) value.stroke = color;
+          }),
+        notify,
+      );
+      inputField(
+        layers,
+        `Stroke ${index + 1} width`,
+        stroke.width,
+        'number',
+        (width) =>
+          update((value) => {
+            value.strokes = visibleStrokes(value);
+            value.strokes[index]!.width = Number(width);
+            if (index === 0) value.strokeWidth = Number(width);
+          }),
+        notify,
+      );
+      inputField(
+        layers,
+        `Stroke ${index + 1} opacity`,
+        stroke.opacity,
+        'number',
+        (opacity) =>
+          update((value) => {
+            value.strokes = visibleStrokes(value);
+            value.strokes[index]!.opacity = Number(opacity);
+            if (index === 0) value.strokeOpacity = Number(opacity);
+          }),
+        notify,
+      );
+      layers.append(
+        button(
+          `Remove stroke ${index + 1}`,
+          () =>
+            update((value) => {
+              value.strokes = visibleStrokes(value);
+              value.strokes.splice(index, 1);
+              const first = value.strokes[0];
+              value.stroke = first?.color ?? value.stroke;
+              value.strokeWidth = first?.width ?? 0;
+              value.strokeOpacity = first?.opacity ?? 1;
+            }),
+          notify,
+        ),
+      );
+    });
+    layers.append(
+      button(
+        'Add stroke',
+        () =>
+          update((value) => {
+            value.strokes = [
+              ...visibleStrokes(value),
+              { type: 'solid', color: '#000000', opacity: 1, width: 1 },
+            ];
+          }),
+        notify,
+      ),
+    );
+    group.append(layers);
   }
   if (!multi && n.type === 'text') {
     const text = document.createElement('textarea');

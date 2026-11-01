@@ -53,7 +53,7 @@ Frames contain child layers and nested frames. Moving, nudging, duplicating or d
 
 ## Layout, assets and prototypes
 
-Use **Pages** in the left panel to organize screens. Expand **Tools & resources** for image insertion, the pen tool, component insertion, rulers/guides and prototype presentation. The right inspector exposes auto layout, sizing, component actions, gradients, strokes, effects, grids, vector vertices and click interactions. See [feature guide](docs/EDITOR_FEATURES.md) for instructions and remaining limits.
+Use **Pages** in the left panel to organize screens. Expand **Tools & resources** for image insertion, the pen tool, component insertion, rulers/guides and prototype presentation. The right inspector exposes auto layout, sizing, component actions, ordered solid fill and stroke layers, gradients, effects, grids, vector vertices and click interactions. See [feature guide](docs/EDITOR_FEATURES.md) for instructions and remaining limits.
 
 Run `npm run test:e2e` for real browser checks. Windows defaults to installed Google Chrome; set `PLAYWRIGHT_CHANNEL=msedge` to use Edge. Other platforms use Playwright Chromium (`npx playwright install chromium`). Tests start a loopback Vite server and use isolated browser data. Failed tests retain traces/screenshots in ignored `test-results/`.
 

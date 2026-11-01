@@ -605,6 +605,48 @@ test('gradient, stroke, shadow and blur are rendered and exported', async ({ pag
   expect(svg).toContain('stroke-width="3"');
   expect(errors).toEqual([]);
 });
+test('ordered solid paint layers render, export, and can be edited in properties', async ({
+  page,
+}) => {
+  const appearance = {
+    ...defaultAppearance(),
+    fills: [
+      { type: 'solid' as const, color: '#ff0000', opacity: 1 },
+      { type: 'solid' as const, color: '#0000ff', opacity: 0.5 },
+    ],
+    strokes: [
+      { type: 'solid' as const, color: '#00ff00', opacity: 1, width: 2 },
+      { type: 'solid' as const, color: '#ffff00', opacity: 0.5, width: 4 },
+    ],
+  };
+  const shape = createNode('rectangle', { id: 'paint-stack', appearance });
+  const errors = await open(page, { ...createDocument(), nodes: [shape] });
+  await select(page, shape.id);
+  await expect(page.getByLabel('Fill 1 color', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Stroke 2 width', { exact: true })).toHaveValue('4');
+  expect(
+    await page
+      .locator('#scene [data-id="paint-stack"]')
+      .evaluateAll((nodes) =>
+        nodes
+          .map((node) => [node.getAttribute('fill'), node.getAttribute('stroke')])
+          .filter(([fill, stroke]) => fill !== null || stroke !== null),
+      ),
+  ).toEqual([
+    ['#ff0000', 'none'],
+    ['#0000ff', 'none'],
+    ['none', '#00ff00'],
+    ['none', '#ffff00'],
+  ]);
+  const download = page.waitForEvent('download');
+  await page.locator('#export').click();
+  const svg = await readFile((await (await download).path())!, 'utf8');
+  expect(svg.indexOf('fill="#ff0000"')).toBeLessThan(svg.indexOf('fill="#0000ff"'));
+  expect(svg.indexOf('stroke="#00ff00"')).toBeLessThan(svg.indexOf('stroke="#ffff00"'));
+  await page.getByRole('button', { name: 'Add fill', exact: true }).click();
+  expect((await saved(page)).nodes[0]?.appearance?.fills).toHaveLength(3);
+  expect(errors).toEqual([]);
+});
 test('pen tool creates a closed path, points can be edited, and booleans produce geometry', async ({
   page,
 }) => {

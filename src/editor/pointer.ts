@@ -92,7 +92,11 @@ export function bindPointer(
           return;
         }
         store.selected = new Set([node.id]);
-        store.change(() => (node.fill = store.canvasPaintColor));
+        store.change(() => {
+          node.fill = store.canvasPaintColor;
+          if (node.appearance?.fills?.length)
+            node.appearance.fills[0]!.color = store.canvasPaintColor;
+        });
       } else {
         const selected = store.chosen().filter((item) => !isLocked(store.doc, item));
         if (!selected.length) {
@@ -113,8 +117,15 @@ export function bindPointer(
               const appearance = clone(item.appearance ?? defaultAppearance());
               appearance.stroke = color;
               appearance.strokeWidth = Math.max(1, appearance.strokeWidth);
+              if (appearance.strokes?.length) {
+                appearance.strokes[0]!.color = color;
+                appearance.strokes[0]!.width = Math.max(1, appearance.strokes[0]!.width);
+              }
               item.appearance = appearance;
-            } else item.fill = color;
+            } else {
+              item.fill = color;
+              if (item.appearance?.fills?.length) item.appearance.fills[0]!.color = color;
+            }
           }),
         );
       }

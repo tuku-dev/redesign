@@ -771,3 +771,40 @@ test('independent paint opacity round trips and rejects invalid alpha without ch
   legacy.nodes = [createNode('rectangle', { appearance: defaultAppearance() })];
   assert.deepEqual(validateDocument(legacy), legacy);
 });
+test('ordered solid paint layers persist, validate, and undo while retaining legacy paints', () => {
+  const n = createNode('rectangle'),
+    { s, c } = editor([n]);
+  s.selected = new Set([n.id]);
+  const appearance = defaultAppearance();
+  appearance.fills = [
+    { type: 'solid', color: '#112233', opacity: 0.25 },
+    { type: 'solid', color: '#aabbcc', opacity: 0.75 },
+  ];
+  appearance.strokes = [
+    { type: 'solid', color: '#010203', opacity: 1, width: 2 },
+    { type: 'solid', color: '#040506', opacity: 0.5, width: 6 },
+  ];
+  c.appearance(appearance);
+  assert.deepEqual(s.current()?.appearance?.fills, appearance.fills);
+  assert.deepEqual(s.current()?.appearance?.strokes, appearance.strokes);
+  assert.equal(s.current()?.fill, '#112233');
+  assert.equal(s.current()?.appearance?.stroke, '#010203');
+  assert.equal(s.current()?.appearance?.strokeWidth, 2);
+  assert.deepEqual(validateDocument(JSON.parse(JSON.stringify(s.doc))), s.doc);
+  s.undo();
+  assert.equal(s.current()?.appearance, undefined);
+  for (const invalid of [
+    { type: 'solid', color: '#ffffff', opacity: 2 },
+    { type: 'gradient', color: '#ffffff', opacity: 1 },
+  ])
+    assert.throws(() =>
+      validateDocument({
+        ...createDocument(),
+        nodes: [
+          createNode('rectangle', {
+            appearance: { ...defaultAppearance(), fills: [invalid] as never[] },
+          }),
+        ],
+      }),
+    );
+});

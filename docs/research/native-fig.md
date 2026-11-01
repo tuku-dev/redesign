@@ -23,14 +23,16 @@ Two public fixtures from Sketch revision `450e3b350a6f9cf05d659459cf240def6b7f04
 | Pages | Public CANVAS entries; internal-only pages excluded |
 | Frames/groups | Hierarchy, positions, supported transforms, visibility and locking |
 | Rectangles/ellipses | Geometry, circular corner radii, solid fill/stroke and independent paint alpha |
+| Vectors | Editable cached Bezier fill paths, native winding rules and simple stroke-network centerlines |
 | Text | Plain characters, one font/style/size, basic alignment/spacing; installed-font metrics may differ |
 | Layout | Existing positions only; responsive auto layout and constraints are not preserved |
-| Components/instances/vectors | Unsupported subtrees skipped and counted |
-| Images/gradients/effects | Not converted; encountered paints/effects disclosed |
+| Components/instances | Unsupported subtrees skipped and counted |
+| Images | Embedded PNG/JPEG/GIF/WebP image fills with dimensions, opacity and fitting |
+| Gradients/effects | Not converted; encountered paints/effects disclosed |
 | Variables/styles/prototypes | Not preserved |
 | Native export | Unimplemented; the original binary is not retained for lossless rewriting |
 
-The real `corners.fig` fixture yields **6 imported / 4 skipped** layers and a corner-smoothing warning. `structure.fig` yields **10 imported / 13 skipped** layers and paint/effect warnings. These are subset counts, not fidelity scores. Per-corner arcs substitute for Figma smoothing; centered strokes approximate inside/outside strokes. Nonuniform/reflected text can differ. Exact rich text and font shaping remain unverified.
+The real `corners.fig` fixture yields **10 imported / 0 skipped** layers. `structure.fig` yields **18 imported / 5 skipped** layers, including two embedded raster images. These are subset counts, not fidelity scores. Cached vector fills do not retain their original network topology; branched stroke networks, per-region paints and exact custom image crops are unsupported. Per-corner arcs substitute for Figma smoothing; centered strokes approximate inside/outside strokes. Nonuniform/reflected text can differ. Exact rich text and font shaping remain unverified.
 
 ## Input limits and failure behavior
 

@@ -67,6 +67,24 @@ test('ZIP and bare streams import identical pages, text, paints, hierarchy and s
     ['Frame', 'Card', 'Dot', 'Label'],
   );
 });
+test('native imports retain ordered visible solid fill and stroke paints', () => {
+  const nodes = basicFigNodes() as Record<string, unknown>[],
+    rawCard = nodes[3]!;
+  rawCard.fillPaints = [solid(1, 0, 0, 0.5), solid(0, 0, 1, 0.75)];
+  rawCard.strokePaints = [solid(0, 1, 0), solid(1, 1, 0, 0.25)];
+  rawCard.strokeWeight = 3;
+  const { document, report } = importFig(makeFig(nodes), 'Paints');
+  const importedCard = document.nodes.find((node) => node.name === 'Card')!;
+  assert.deepEqual(importedCard.appearance?.fills, [
+    { type: 'solid', color: '#ff0000', opacity: 0.5 },
+    { type: 'solid', color: '#0000ff', opacity: 0.75 },
+  ]);
+  assert.deepEqual(importedCard.appearance?.strokes, [
+    { type: 'solid', color: '#00ff00', opacity: 1, width: 3 },
+    { type: 'solid', color: '#ffff00', opacity: 0.25, width: 3 },
+  ]);
+  assert.ok(!report.warnings.some((warning) => warning.includes('reduced')));
+});
 test('imported nodes remain editable and moving a frame carries children with one undo', () => {
   const result = importFig(makeFig(), 'Test');
   const store = new EditorStore(result.document);
