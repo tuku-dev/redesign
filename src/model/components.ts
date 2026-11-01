@@ -110,6 +110,8 @@ export function syncComponents(doc: DesignDocument, before?: DesignDocument): vo
             else record[key] = clone(template[key]);
           }
         }
+        if (template.maskId) target.maskId = mapping.get(template.maskId);
+        else delete target.maskId;
         if (target !== root) {
           target.parentId = mapping.get(template.parentId!) ?? root.id;
           const srcCenter = localPoint(center(template), source);

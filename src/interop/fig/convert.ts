@@ -5,6 +5,8 @@ import { FIG_LIMITS, figError } from './limits.ts';
 import { record, number, guid, matrix, multiply, geometry, IDENTITY } from './geometry.ts';
 import type { FigRecord, Matrix } from './geometry.ts';
 import { figPaint } from './paint.ts';
+import { figVector } from './vectors.ts';
+import { figImage } from './images.ts';
 
 export interface FigImportReport {
   version: number;
@@ -26,6 +28,8 @@ const TYPES: Record<string, NodeType> = {
   ROUNDED_RECTANGLE: 'rectangle',
   ELLIPSE: 'ellipse',
   TEXT: 'text',
+  VECTOR: 'path',
+  LINE: 'path',
 };
 
 /** Deliberately small editable subset. Unsupported subtrees are counted, never silently flattened. */
@@ -98,12 +102,22 @@ export function convertFig(decoded: DecodedFig, name: string): FigImportResult {
     }
     const m = multiply(world, matrix(n.transform)),
       box = geometry(n, m);
-    if (!box) {
+    const vector = type === 'path' ? figVector(n, decoded.message, m, warn) : null;
+    if ((!box && type !== 'path') || (type === 'path' && !vector)) {
       warn('Zero-sized, singular or sheared layers and their children are omitted.');
       skip(n);
       return;
     }
-    const { sx, sy, ...bounds } = box,
+    const { sx, sy, ...bounds } = box ?? {
+        sx: 1,
+        sy: 1,
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 1,
+        rotation: 0,
+        flipY: false,
+      },
       scale = Math.sqrt(sx * sy);
     if (type === 'text' && (Math.abs(sx - sy) > 1e-5 || bounds.flipY))
       warn('Nonuniform or reflected text transforms may render differently.');
@@ -117,8 +131,13 @@ export function convertFig(decoded: DecodedFig, name: string): FigImportResult {
       hidden: n.visible === false,
       locked: n.locked === true,
       radius,
+      ...vector,
       clipContent: type === 'frame' && n.frameMaskDisabled !== true,
     });
+    if (['rectangle', 'ellipse', 'frame'].includes(type)) {
+      const image = figImage(n, decoded.images, warn);
+      if (image) node.image = image;
+    }
     if (type === 'rectangle' || type === 'frame') {
       node.cornerRadii = {
         topLeft: number(n.rectangleTopLeftCornerRadius, number(n.cornerRadius, 0)) * scale,

@@ -46,6 +46,7 @@ export interface ImageAdjustments {
   saturation: number;
 }
 export interface ImageFill {
+  opacity?: number;
   src: string;
   fit: 'cover' | 'contain' | 'stretch';
   focalX: number;
@@ -63,6 +64,7 @@ export interface VectorPoint extends Point {
   radius?: number;
 }
 export interface VectorPath {
+  fillRule?: 'nonzero' | 'evenodd';
   rings: VectorPoint[][];
   closed: boolean;
 }
@@ -75,6 +77,7 @@ export interface LayoutGrid {
   visible: boolean;
 }
 export interface NodeFeatures {
+  maskId?: string;
   layout?: AutoLayout;
   sizing?: Sizing;
   appearance?: Appearance;
@@ -135,6 +138,7 @@ function validVectorPath(v: unknown): boolean {
   return (
     object(v) &&
     typeof v.closed === 'boolean' &&
+    (v.fillRule === undefined || member(v.fillRule, ['nonzero', 'evenodd'])) &&
     Array.isArray(v.rings) &&
     v.rings.length > 0 &&
     v.rings.length <= 1000 &&
@@ -159,6 +163,8 @@ function validVectorPath(v: unknown): boolean {
   );
 }
 export function validFeatures(n: Record<string, unknown>): boolean {
+  if (n.maskId !== undefined && (n.type !== 'group' || typeof n.maskId !== 'string' || !n.maskId))
+    return false;
   const l = n.layout,
     s = n.sizing,
     a = n.appearance,
@@ -216,6 +222,7 @@ export function validFeatures(n: Record<string, unknown>): boolean {
     (!object(i) ||
       !['rectangle', 'ellipse', 'frame'].includes(String(n.type)) ||
       !isRasterData(i.src) ||
+      (i.opacity !== undefined && !num(i.opacity, 0, 1)) ||
       !member(i.fit, ['cover', 'contain', 'stretch']) ||
       !num(i.focalX, 0, 1) ||
       !num(i.focalY, 0, 1) ||

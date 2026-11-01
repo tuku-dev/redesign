@@ -7,6 +7,7 @@ export function renderVectorPoints(
   rings: VectorPoint[][],
   zoom: number,
   editable: boolean,
+  selected?: { ring: number; index: number },
 ): void {
   for (const [r, ring] of rings.entries())
     for (const [i, p] of ring.entries()) {
@@ -52,7 +53,14 @@ export function renderVectorPoints(
           y: p.y - 4 / zoom,
           width: 8 / zoom,
           height: 8 / zoom,
-          fill: editable ? 'var(--surface)' : i === 0 ? '#0d99ff' : 'var(--surface)',
+          fill:
+            selected?.ring === r && selected.index === i
+              ? '#0d99ff'
+              : editable
+                ? 'var(--surface)'
+                : i === 0
+                  ? '#0d99ff'
+                  : 'var(--surface)',
           stroke: '#0d99ff',
           'stroke-width': 1.5 / zoom,
           ...(editable

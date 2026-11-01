@@ -103,7 +103,7 @@ export function paintShape(shape: SVGElement, n: DesignNode): SVGElement {
       height: h,
       preserveAspectRatio: 'none',
       'clip-path': `url(#${id}-clip)`,
-      opacity: 1,
+      opacity: i.opacity ?? 1,
       'data-id': n.id,
     });
     if (

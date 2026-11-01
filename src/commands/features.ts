@@ -1,3 +1,4 @@
+import { insertVectorPoint, deleteVectorPoint } from '../model/vector-edit.ts';
 import { moveAnchor, moveHandle, pointKind } from '../model/bezier.ts';
 import type { VectorPoint } from '../model/features.ts';
 import type { EditorStore } from '../editor/store.ts';
@@ -327,6 +328,16 @@ export class FeatureCommands {
       if (!p) throw new Error('Unknown vector point.');
       moveHandle(p, side, point, independent, { x: n.width, y: n.height });
     });
+  }
+  insertVertex(ring: number, segment: number, t = 0.5): void {
+    const n = this.store.current();
+    if (!n?.vector || isLocked(this.store.doc, n)) return;
+    this.store.change(() => insertVectorPoint(n.vector!, ring, segment, t));
+  }
+  deleteVertex(ring: number, index: number): void {
+    const n = this.store.current();
+    if (!n?.vector || isLocked(this.store.doc, n)) return;
+    this.store.change(() => deleteVectorPoint(n.vector!, ring, index));
   }
   pointKind(ring: number, index: number, smooth: boolean): void {
     const n = this.store.current();

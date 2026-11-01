@@ -9,8 +9,8 @@ function paint(value: unknown, warn: Warn): { color: string; alpha: number } | n
   if (!Array.isArray(value)) return null;
   const visible = value.map(record).filter((p) => p.visible !== false);
   if (visible.length > 1) warn('Multiple paints are reduced to the first visible solid paint.');
-  if (visible.some((p) => p.type !== 'SOLID'))
-    warn('Image, gradient and other non-solid paints are omitted.');
+  if (visible.some((p) => p.type !== 'SOLID' && p.type !== 'IMAGE'))
+    warn('Gradient and other unsupported paints are omitted.');
   const p = visible.find((p) => p.type === 'SOLID');
   if (!p) return null;
   const c = record(p.color);

@@ -1,3 +1,5 @@
+import { OutlineCommands } from '../commands/outline.ts';
+import { MaskCommands } from '../commands/masks.ts';
 import type { AutoLayout, BlendMode, StrokeStyle } from '../model/features.ts';
 import type { EditorStore } from '../editor/store.ts';
 import type { Notify } from './notifications.ts';
@@ -348,6 +350,11 @@ export function renderFeatureProperties(
     n.vector.rings.forEach((ring, r) =>
       ring.forEach((p, i) => {
         const label = 'Path ' + (r + 1) + ' point ' + (i + 1);
+        const insert = button(label + ': Insert after', () => command.insertVertex(r, i), notify);
+        insert.disabled = !n.vector!.closed && i === ring.length - 1;
+        const remove = button(label + ': Delete', () => command.deleteVertex(r, i), notify);
+        remove.disabled = ring.length <= 2 && n.vector!.rings.length <= 1;
+        vector.append(insert, remove);
         vector.append(
           button(
             label + (p.in || p.out ? ': Corner' : ': Smooth'),
@@ -416,6 +423,27 @@ export function renderFeatureProperties(
       );
     }
     container.append(prototype);
+  }
+  if (store.chosen().length >= 2 || n.maskId) {
+    const mask = section('Outline mask'),
+      commands = new MaskCommands(store);
+    mask.append(
+      button(
+        n.maskId ? 'Release outline mask' : 'Use bottom layer as outline mask',
+        () => (n.maskId ? commands.release() : commands.create()),
+        notify,
+      ),
+    );
+    container.append(mask);
+  }
+  if (
+    store.chosen().length === 1 &&
+    ['rectangle', 'ellipse', 'path'].includes(n.type) &&
+    n.appearance?.strokeWidth
+  ) {
+    const outline = section('Vector conversion');
+    outline.append(button('Outline stroke', () => new OutlineCommands(store).outline(), notify));
+    container.append(outline);
   }
   area.append(container);
 }

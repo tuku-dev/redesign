@@ -1,5 +1,5 @@
 import { detectContainer } from '../fig-container.ts';
-import { unwrapFigZip } from './archive.ts';
+import { readFigArchive } from './archive.ts';
 import { inflateFig } from './compression.ts';
 import { FIG_LIMITS, figError } from './limits.ts';
 import { readFigSchema, readFigMessage } from './kiwi.ts';
@@ -8,12 +8,17 @@ export interface DecodedFig {
   container: 'fig-kiwi' | 'zip';
   version: number;
   message: Record<string, unknown>;
+  images: Map<string, Uint8Array>;
 }
 export function decodeFig(bytes: Uint8Array): DecodedFig {
   if (bytes.length > FIG_LIMITS.file) figError('file exceeds the 100 MB limit.');
   const kind = detectContainer(bytes);
   if (kind === 'unknown') figError('not a native fig-kiwi stream or .fig ZIP archive.');
-  const data = kind === 'zip' ? unwrapFigZip(bytes) : bytes;
+  const archive =
+    kind === 'zip'
+      ? readFigArchive(bytes)
+      : { canvas: bytes, images: new Map<string, Uint8Array>() };
+  const data = archive.canvas;
   if (detectContainer(data) !== 'fig-kiwi' || data.length < 12)
     figError('invalid or truncated fig-kiwi header.');
   if (data.length > FIG_LIMITS.canvas) figError('canvas exceeds the import limit.');
@@ -36,5 +41,5 @@ export function decodeFig(bytes: Uint8Array): DecodedFig {
   const message = readFigMessage(inflateFig(chunks[1], FIG_LIMITS.message), schema);
   if (message.type !== 'NODE_CHANGES' || !Array.isArray(message.nodeChanges))
     figError('file does not contain a document snapshot.');
-  return { container: kind, version, message };
+  return { container: kind, version, message, images: archive.images };
 }

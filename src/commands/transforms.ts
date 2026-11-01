@@ -79,6 +79,7 @@ export function cloneNodes(nodes: readonly DesignNode[], dx = 20, dy = 20): Desi
   return nodes.map((n) => ({
     ...clone(n),
     id: ids.get(n.id)!,
+    ...(n.maskId ? { maskId: ids.get(n.maskId) ?? n.maskId } : {}),
     parentId: n.parentId ? (ids.get(n.parentId) ?? n.parentId) : null,
     ...(n.component?.sourceId
       ? {

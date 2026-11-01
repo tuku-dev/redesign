@@ -1,3 +1,4 @@
+import { reconcileMasks } from '../model/masks.ts';
 import { normalizeVector } from '../model/vector.ts';
 import { applyAutoLayout } from '../model/auto-layout.ts';
 import { syncComponents } from '../model/components.ts';
@@ -47,6 +48,7 @@ export class EditorStore {
     return () => this.listeners.delete(listener);
   }
   refresh(view: EditorUpdate['view'] = 'all', persist = false): void {
+    reconcileMasks(this.doc);
     updateGroupBounds(this.doc);
     this.selected = new Set(this.chosen().map((n) => n.id));
     const selection = [...this.selected].join(',');
@@ -63,6 +65,7 @@ export class EditorStore {
     this.listeners.forEach((listener) => listener({ view, persist }));
   }
   commit(before: DesignDocument): void {
+    reconcileMasks(this.doc);
     this.doc.nodes.forEach(normalizeVector);
     applyAutoLayout(this.doc);
     syncComponents(this.doc, before);

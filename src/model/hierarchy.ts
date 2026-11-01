@@ -104,6 +104,16 @@ export function adoptEnclosed(doc: DesignDocument, frame: DesignNode): void {
 export function assertHierarchy(nodes: readonly DesignNode[]): void {
   const byId = new Map(nodes.map((n) => [n.id, n]));
   for (const n of nodes) {
+    if (n.maskId) {
+      const mask = byId.get(n.maskId);
+      if (
+        !mask ||
+        mask.parentId !== n.id ||
+        !['rectangle', 'ellipse', 'path'].includes(mask.type) ||
+        (mask.type === 'path' && !mask.vector?.closed)
+      )
+        throw Error('Invalid outline mask reference.');
+    }
     const visited = new Set([n.id]);
     let parent = n.parentId;
     while (parent !== null) {

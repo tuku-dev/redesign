@@ -72,10 +72,10 @@ Status updated on 2026-11-01. **Basic** means an implementation exists but brows
 | NODE-08 | Clipping and masks | Partial; nested frame clipping in canvas/export and clipped hit filtering; masks pending |
 | NODE-09 | Lines, arrows, polygons and stars | Partial; Insert line, polygon (3-60 sides) and star create editable vector paths; while dragging with the Rectangle tool, Up/Down switch between a triangle, rectangle (4) and 60-sided polygon; live geometry parameters (side count, inner radius) and arrowheads pending |
 | NODE-10 | Pen and vector editing | Partial; straight and cubic Bezier pen paths, click-drag mirrored handles, anchor/handle editing, independent handles, smooth/corner conversion, open/closed compound paths and exact cubic bounds; vector networks and segment insertion pending |
-| NODE-11 | Pencil/freehand | Pending; smoothing and editable paths |
+| NODE-11 | Pencil/freehand | Partial; pen menu and Shift+P draw smoothed editable paths; advanced brush behavior remains pending |
 | NODE-12 | Boolean operations | Partial; union, subtract, intersect and exclude create editable compound paths with holes; operands recover through undo, live boolean containers pending; curves polygonized |
 | NODE-13 | Flatten and outline strokes | Pending; predictable conversion to vector geometry |
-| NODE-14 | Corner controls | Basic uniform radius; independent corners and smoothing pending |
+| NODE-14 | Corner controls | Partial; uniform/per-corner and vector-vertex radii with canvas handles; Figma corner smoothing remains pending |
 | NODE-15 | Image layers | Partial; PNG/JPEG/WebP/GIF picker and drop, embedded image fills, cover/contain/stretch, focal crop and non-destructive brightness/contrast/saturation; clipboard images and tiling pending |
 
 ## 5. Appearance and rendering
@@ -88,7 +88,7 @@ Status updated on 2026-11-01. **Basic** means an implementation exists but brows
 | PAINT-04 | Strokes | Partial; one centered stroke with width/color and round joins/caps; dashed and dotted styles; alignment, custom dash patterns, multiple strokes and stroke outlining pending |
 | PAINT-05 | Opacity and blend modes | Basic layer opacity and a blend mode selector (multiply, screen, overlay and others); per-fill blending pending |
 | PAINT-06 | Shadows and blur | Partial; one drop shadow and layer blur via shared SVG filters; conservative export bounds; inner/background blur and effect stacks pending |
-| PAINT-07 | Color picker | Basic browser picker; hex/RGB/HSL/alpha, eyedropper and shared swatches pending |
+| PAINT-07 | Color picker | Partial; browser picker and canvas fill/stroke sampling exist; advanced color formats, alpha UI and shared swatches remain pending |
 | PAINT-08 | Image adjustments | Partial; non-destructive brightness, contrast and saturation controls (0–200%) for image fills |
 | PAINT-09 | Rendering fidelity | Research; antialiasing, compositing, clipping and export consistency |
 
@@ -146,11 +146,11 @@ Status updated on 2026-11-01. **Basic** means an implementation exists but brows
 | ID | Functionality | Status / required behavior |
 | --- | --- | --- |
 | IO-01 | Native reDesign files | Basic; editable versioned JSON round trip |
-| IO-02 | Native Figma import | Partial/experimental; ZIP/bare fig-kiwi, embedded-schema interpreter, DEFLATE/Zstandard; editable pages, frames/groups, rectangles, ellipses and plain text; import-loss review, bounded worker, two real licensed fixtures; vectors/assets/components and Figma fidelity checks pending |
+| IO-02 | Native Figma import | Partial/experimental; ZIP/bare fig-kiwi, embedded-schema interpreter, DEFLATE/Zstandard; editable pages, frames/groups, rectangles, ellipses and plain text; import-loss review, bounded worker, two real licensed fixtures; cached fill vectors, simple stroke networks and bounded embedded rasters now implemented locally; complex networks/components and Figma fidelity checks pending |
 | IO-03 | Native Figma export | Research; no native encoder or verified editable round trip in Figma |
 | IO-04 | Bidirectional round trips | Pending; edits preserved through both application journeys |
 | IO-05 | SVG export | Basic; whole document; Figma import and visual checks pending |
-| IO-06 | SVG import | Pending; safe parsing and editable path/paint conversion |
+| IO-06 | SVG import | Partial; Open/picker/drop import editable supported shapes and curves; independent paint alpha and viewport mapping tested; complete SVG fidelity remains pending |
 | IO-07 | Raster/PDF interchange | Partial; embedded PNG/JPEG/WebP/GIF import and SVG embedding; PNG/JPEG/PDF export pending |
 | IO-08 | Export presets | Partial; whole-document and selected-subtree SVG export; presets, scales, batch formats and slices pending |
 | IO-09 | Figma API/plugin bridge | Research; explicit interim integration, separate from native file support |
@@ -191,7 +191,7 @@ All items below are **Pending**, with API parity requiring research.
 - QUALITY-04: **Pending** large-document benchmarks, culling, incremental rendering and memory budgets.
 - QUALITY-05: **Pending** screen-reader labels audit, keyboard operation, contrast checks and reduced motion.
 - QUALITY-06: **Pending** server access controls, auditability and private asset storage when backend features arrive.
-- QUALITY-07: **Pending** consistent errors, loading states, import progress and recovery paths.
+- QUALITY-07: **Partial** theme-aware startup loader, startup failure/Reload, native-import worker timeout and conversion review; broader progress/recovery flows remain pending.
 - QUALITY-08: **Pending** localization and platform-specific shortcut conventions.
 
 ## 14. Additional product scope
@@ -200,14 +200,22 @@ Track FigJam whiteboarding, Slides, Sites, Make, Draw, AI assistance, and organi
 
 Implementation details and limits are recorded in [`donefun.md`](../donefun.md). All Basic items still require browser verification.
 
-## Next implementation order
+## Agreed implementation order (2026-11-01)
 
-1. **Native file feasibility:** collect authorized minimal `.fig` fixtures, document observed format behavior, and establish whether a minimal editable import/export path is practical. An experimental native import subset is tested; native encoding and Figma round trips remain unverified.
-2. **Document lifecycle:** finish duplicate/close flows, multiple documents, file browser, offline recovery and version history; preserve each document's state and protect browser-saved drafts.
-3. **Editor completeness:** finish the remaining vector, paint, typography, layout, component and prototype capabilities listed above; verify each against fixtures rather than claiming parity from implementation alone.
-4. **Interoperability and reliability:** add unsupported-feature preflight, asset integrity, broader file-safety tests, SVG/raster/PDF workflows, cross-browser coverage, accessibility audits and large-document benchmarks.
-5. **Shared design systems:** variants, styles, variables, libraries and dependency resolution.
-6. **Backend and extensibility:** accounts, collaboration, comments, shared history, developer tools and plugins, after server-side security and consistency requirements are designed.
+**Resume from [NEXT_STEPS.md](../NEXT_STEPS.md).** It records current local work, test coverage and the exact remaining scope.
+
+This is the sequence accepted by the user. Each stage requires its own checks and an entry in [donefun.md](../donefun.md). An unchecked stage is not complete, even when a basic implementation exists.
+
+- [ ] **1. Expand native Figma import** (IO-02, IO-10, IO-11): vectors/curves and embedded images, asset validation, explicit conversion-loss reporting, real-file and browser regressions. **Implemented locally for cached fill paths/simple stroke networks and embedded raster images; targeted checks passed, full regression/visual parity pending.** Native export and both edited Figma round trips remain separate acceptance gates.
+- [ ] **2. Vector point insertion and deletion** (NODE-10), implemented locally with model/targeted Chrome checks; full regressions pending: insert points on straight/curved segments without changing the curve, delete anchors, preserve closing segments/compound paths, lock protection and undo.
+- [ ] **3. Masks and outline strokes** (NODE-08, NODE-13), outline-mask/solid-stroke baseline implemented locally; broader validation pending: persistent mask relationships, matching display/export/hit testing, and editable stroke-to-vector conversion with undo.
+- [ ] **4. Richer paints** (PAINT-02/03/04/06): multiple fills/strokes, gradient types/stops/handles, stroke alignment and richer shadows/blur. Mark individual capabilities as partial until their acceptance checks pass.
+- [ ] **5. Auto-layout improvements** (LAYOUT-02/03/05/07): wrapping and grid flow, min/max sizing, absolute-positioned children and canvas spacing controls.
+- [ ] **6. Components and variables** (SYSTEM-02/03/04/05/06): variants/properties, nested swaps, shared styles, variable collections/modes/aliases/bindings and library workflows.
+
+**Other remaining work:** rich typography, advanced prototypes, raster/PDF export and presets, workspace navigation, accessibility, performance and cross-browser fidelity remain in the sections above. Native .fig export must be verified in Figma before being presented as supported.
+
+**Deferred:** the user panel, online saving, sharing, collaboration/comments and server-backed history. Do not restart saving work as part of this editor roadmap.
 
 ## Definition of done for each feature
 

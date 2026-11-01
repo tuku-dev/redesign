@@ -173,6 +173,7 @@ export function normalizeVector(n: DesignNode): void {
     ) < 1e-8
   )
     return;
+  next.vector = { ...n.vector, ...next.vector };
   const newCenter = rotatePoint(center(next), center(n), n.rotation);
   Object.assign(n, next, { x: newCenter.x - next.width / 2, y: newCenter.y - next.height / 2 });
 }

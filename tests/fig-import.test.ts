@@ -24,13 +24,14 @@ import {
 } from './fixtures/fig-builder.ts';
 
 const fixture = (name: string) => new Uint8Array(readFileSync('tests/fixtures/fig/' + name));
-test('real version 106 Zstandard fixture imports its editable subset and discloses skipped vectors', () => {
+test('real version 106 Zstandard fixture imports curves and simple network strokes as editable paths', () => {
   const { document, report } = importFig(fixture('corners.fig'), 'Corners');
   assert.equal(report.version, 106);
   assert.equal(report.container, 'zip');
-  assert.equal(report.imported, 6);
-  assert.equal(report.skipped, 4);
-  assert.deepEqual(report.skippedTypes, ['VECTOR']);
+  assert.equal(report.imported, 10);
+  assert.equal(report.skipped, 0);
+  assert.deepEqual(report.skippedTypes, []);
+  assert.equal(document.nodes.filter((n) => n.vector).length, 4);
   assert.equal(report.pages, 1);
   const n = document.nodes.find((n) => n.name === 'rect radius=12, smoothing=none')!;
   assert.equal(n.x, -67);
@@ -43,13 +44,14 @@ test('real version 106 Zstandard fixture imports its editable subset and disclos
 test('real version 48 DEFLATE fixture retains nesting, transformed geometry and internal-page exclusion', () => {
   const { document, report } = importFig(fixture('structure.fig'), 'Structure');
   assert.equal(report.version, 48);
-  assert.equal(report.imported, 10);
-  assert.equal(report.skipped, 13);
+  assert.equal(report.imported, 18);
+  assert.equal(report.skipped, 5);
   assert.equal(report.pages, 1);
   const n = document.nodes.find((n) => n.name === 'Group 1')!;
   assert.notEqual(n.rotation, 0);
   assert.notEqual(n.parentId, null);
-  assert.ok(report.warnings.some((w) => w.includes('non-solid paints')));
+  assert.equal(document.nodes.filter((n) => n.image).length, 2);
+  assert.ok(document.nodes.some((n) => n.image?.src.startsWith('data:image/png')));
 });
 test('ZIP and bare streams import identical pages, text, paints, hierarchy and sibling order', () => {
   const bare = importFig(makeFig(undefined, false), 'Test'),

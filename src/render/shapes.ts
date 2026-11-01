@@ -30,7 +30,7 @@ export function renderShape(n: DesignNode): SVGElement {
       ...attrs,
       fill: n.vector?.closed ? n.fill : 'none',
       d: pathData(n),
-      'fill-rule': 'evenodd',
+      'fill-rule': n.vector?.fillRule ?? 'evenodd',
     });
   else if (n.type === 'text') shape = renderText(n, attrs);
   else if (n.cornerRadii)

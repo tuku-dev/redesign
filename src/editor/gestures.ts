@@ -1,3 +1,4 @@
+import { withinClips } from '../model/clipping.ts';
 import { guideCandidates } from '../render/layout-grid.ts';
 import type { SnapBox } from '../model/snapping.ts';
 import { clippedVisualBox } from '../model/render-bounds.ts';
@@ -145,7 +146,8 @@ export class GestureController {
     if (id) {
       const n = s.doc.nodes.find((n) => n.id === id);
       if (!n || isLocked(s.doc, n) || isHidden(s.doc, n)) return;
-      if (n.type === 'frame' && !s.selected.has(id) && !deep) {
+      if (!withinClips(s.doc, n, point)) id = null;
+      else if (n.type === 'frame' && !s.selected.has(id) && !deep) {
         nestedMarquee = true;
         id = null;
       } else if (!s.selected.has(id) || deep) id = groupedTarget(s.doc, id, deep);

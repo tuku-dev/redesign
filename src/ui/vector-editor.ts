@@ -1,4 +1,5 @@
-﻿import type { EditorElements } from './elements.ts';
+import { segmentParameter } from '../model/vector-edit.ts';
+import type { EditorElements } from './elements.ts';
 import type { EditorStore } from '../editor/store.ts';
 import type { GestureController } from '../editor/gestures.ts';
 import type { ViewportController } from '../editor/viewport.ts';
@@ -55,6 +56,7 @@ export function bindVectorEditor(
     x: number;
     y: number;
   };
+  let anchorSelection: { id: string; ring: number; index: number } | null = null;
   let lastHit: VectorHit | null = null,
     lastTap: VectorHit | null = null,
     lastDoubleAt = -Infinity;
@@ -91,6 +93,7 @@ export function bindVectorEditor(
     store.selected = new Set([id]);
     store.tool = 'select';
     store.editingVectorId = id;
+    anchorSelection = null;
     el.canvas.focus();
     store.refresh();
   }
@@ -184,7 +187,30 @@ export function bindVectorEditor(
           ),
         ),
       );
-      renderVectorPoints(overlay, world, store.zoom, true);
+      world.forEach((ring, r) => {
+        const count = ring.length - (n.vector!.closed ? 0 : 1);
+        for (let i = 0; i < count; i++)
+          overlay.append(
+            svg('path', {
+              d: bezierPathData([[ring[i], ring[(i + 1) % ring.length]]], false),
+              fill: 'none',
+              stroke: 'transparent',
+              'stroke-width': 10 / store.zoom,
+              'data-id': n.id,
+              'data-vector-segment': 'true',
+              'data-vector-segment-ring': r,
+              'data-vector-segment-point': i,
+              cursor: 'crosshair',
+            }),
+          );
+      });
+      renderVectorPoints(
+        overlay,
+        world,
+        store.zoom,
+        true,
+        anchorSelection?.id === n.id ? anchorSelection : undefined,
+      );
     }
   }
   function finish(closed: boolean): void {
@@ -260,10 +286,11 @@ export function bindVectorEditor(
         return;
       }
       if (e.button !== 0 || (e.target as Element).closest('[data-editor-overlay]')) return;
-      const target = e.target as Element,
-        r = target.getAttribute('data-vector-ring'),
-        i = target.getAttribute('data-vector-point'),
-        side = target.getAttribute('data-vector-handle');
+      const target = e.target as Element;
+      const segment = target.hasAttribute('data-vector-segment'),
+        r = target.getAttribute(segment ? 'data-vector-segment-ring' : 'data-vector-ring'),
+        i = target.getAttribute(segment ? 'data-vector-segment-point' : 'data-vector-point'),
+        side = segment ? 'segment' : target.getAttribute('data-vector-handle');
       const hitId =
         target.closest('[data-id]')?.getAttribute('data-id') ??
         ((r !== null && i !== null) || target.closest('[data-resize],[data-rotate]')
@@ -283,6 +310,12 @@ export function bindVectorEditor(
         )
           ? { id: hitId, ring: r, index: i, side, time: e.timeStamp, x: e.clientX, y: e.clientY }
           : null;
+      if (isEditing() && side === 'segment') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        el.canvas.focus();
+        return;
+      }
       if (
         isEditing() &&
         r !== null &&
@@ -296,6 +329,7 @@ export function bindVectorEditor(
           new FeatureCommands(store).pointKind(Number(r), Number(i), false);
           return;
         }
+        anchorSelection = { id: store.current()!.id, ring: Number(r), index: Number(i) };
         drag = {
           id: store.current()!.id,
           ring: Number(r),
@@ -439,7 +473,21 @@ export function bindVectorEditor(
     ) {
       lastTap = null;
       lastDoubleAt = e.timeStamp;
-      if (isEditing() && hit.ring !== null && hit.index !== null && !hit.side) {
+      if (isEditing() && hit.side === 'segment' && hit.ring !== null && hit.index !== null) {
+        const n = store.current()!,
+          r = Number(hit.ring),
+          i = Number(hit.index),
+          ring = n.vector!.rings[r];
+        const p = localPoint(local(e), n),
+          t = segmentParameter(
+            ring[i],
+            ring[(i + 1) % ring.length],
+            { x: (p.x - n.x) / n.width, y: (p.y - n.y) / n.height },
+            { x: n.width, y: n.height },
+          );
+        new FeatureCommands(store).insertVertex(r, i, t);
+        anchorSelection = { id: n.id, ring: r, index: i + 1 };
+      } else if (isEditing() && hit.ring !== null && hit.index !== null && !hit.side) {
         const p = store.current()?.vector?.rings[Number(hit.ring)]?.[Number(hit.index)];
         if (p)
           new FeatureCommands(store).pointKind(
@@ -505,6 +553,19 @@ export function bindVectorEditor(
     (e) => {
       if ((e.target as Element)?.closest?.('input,textarea,select,dialog,[contenteditable]'))
         return;
+      if (isEditing() && (e.key === 'Delete' || e.key === 'Backspace')) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (anchorSelection?.id === store.current()?.id) {
+          try {
+            new FeatureCommands(store).deleteVertex(anchorSelection!.ring, anchorSelection!.index);
+            anchorSelection = null;
+          } catch (error) {
+            notify(errorMessage(error));
+          }
+        } else notify('Select an anchor or use its Delete button in Vector points.');
+        return;
+      }
       if (e.key === 'Escape') lastTap = null;
       if ((drag || placing || draftDrag) && e.key === 'Escape') {
         e.stopImmediatePropagation();

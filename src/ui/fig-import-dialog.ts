@@ -18,7 +18,7 @@ export function confirmFigImport(report: FigImportReport): Promise<boolean> {
     if (report.skipped)
       warnings.unshift('Skipped layers/subtrees: ' + report.skippedTypes.join(', ') + '.');
     warnings.push(
-      'Components, instances, vectors, images, constraints, shared styles, variables, prototypes and unsupported document settings are not preserved.',
+      'Components, instances, branched stroke networks, unsupported image crops, constraints, shared styles, variables, prototypes and unsupported document settings are not preserved.',
     );
     for (const message of warnings) {
       const item = document.createElement('li');

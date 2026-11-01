@@ -1,9 +1,10 @@
+import { maskSource } from './masks.ts';
 import { bounds } from './geometry.ts';
 import { visualBox, rotatePoint } from './rotation.ts';
 import { isHidden } from './layer-state.ts';
 import type { Box, DesignDocument, DesignNode } from './types.ts';
 export function clippedVisualBox(doc: DesignDocument, node: DesignNode): Box | null {
-  if (isHidden(doc, node)) return null;
+  if (isHidden(doc, node) || maskSource(doc, node)) return null;
   const byId = new Map(doc.nodes.map((n) => [n.id, n]));
   const painted = visualBox(node),
     a = node.appearance;
@@ -24,8 +25,10 @@ export function clippedVisualBox(doc: DesignDocument, node: DesignNode): Box | n
     },
     parent = node.parentId ? byId.get(node.parentId) : undefined;
   while (parent && box) {
-    if (parent.type === 'frame' && parent.clipContent) {
-      const clip = visualBox(parent),
+    const mask = parent.maskId ? byId.get(parent.maskId) : undefined;
+    if (mask?.hidden) return null;
+    if (mask || (parent.type === 'frame' && parent.clipContent)) {
+      const clip = visualBox(mask ?? parent),
         x = Math.max(box.x, clip.x),
         y = Math.max(box.y, clip.y),
         right = Math.min(box.x + box.width, clip.x + clip.width),

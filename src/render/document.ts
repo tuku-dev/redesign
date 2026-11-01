@@ -1,3 +1,4 @@
+import { renderMaskShape } from './masks.ts';
 import { pathData } from '../model/vector.ts';
 import { isLocked } from '../model/layer-state.ts';
 import type { DesignDocument, DesignNode } from '../model/types.ts';
@@ -66,7 +67,18 @@ export function renderDocument(
       wrapper.append(defs);
       content.setAttribute('clip-path', `url(#${id})`);
     }
+    if (n.maskId) {
+      const mask = doc.nodes.find((m) => m.id === n.maskId),
+        id = prefix + '-mask-' + clipCount++,
+        defs = svg('defs'),
+        clip = svg('clipPath', { id, clipPathUnits: 'userSpaceOnUse' });
+      if (mask && !mask.hidden) clip.append(renderMaskShape(mask));
+      defs.append(clip);
+      wrapper.append(defs);
+      content.setAttribute('clip-path', 'url(#' + id + ')');
+    }
     for (const child of children.get(n.id) ?? []) {
+      if (child.id === n.maskId) continue;
       const rendered = visit(child);
       if (rendered) content.append(rendered);
     }

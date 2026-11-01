@@ -12,7 +12,10 @@ function crc32(bytes: Uint8Array): number {
 }
 
 /** Read central-directory sizes, including archives whose local sizes use descriptors. */
-export function unwrapFigZip(bytes: Uint8Array): Uint8Array {
+export function readFigArchive(bytes: Uint8Array): {
+  canvas: Uint8Array;
+  images: Map<string, Uint8Array>;
+} {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let eocd = -1;
   for (let p = bytes.length - 22; p >= Math.max(0, bytes.length - 65557); p--) {
@@ -40,6 +43,8 @@ export function unwrapFigZip(bytes: Uint8Array): Uint8Array {
   if (count > FIG_LIMITS.entries || start + size !== eocd)
     figError('ZIP directory exceeds limits or has invalid bounds.');
   const names = new Set<string>();
+  const images = new Map<string, Uint8Array>();
+  let imageBytes = 0;
   let pos = start,
     total = 0,
     canvas: Uint8Array | undefined;
@@ -87,18 +92,30 @@ export function unwrapFigZip(bytes: Uint8Array): Uint8Array {
       !bytes.subarray(local + 30, local + 30 + localNameLength).every((b, k) => b === nameBytes[k])
     )
       figError('invalid ZIP entry bounds/name.');
-    if (name === 'canvas.fig') {
-      if (unpacked > FIG_LIMITS.canvas || !unpacked)
+    const image = /^images\/[0-9a-f]{40}$/i.test(name);
+    if (name === 'canvas.fig' || image) {
+      const limit = image ? 8 * 1024 * 1024 : FIG_LIMITS.canvas;
+      if (unpacked > limit || !unpacked)
         figError('canvas.fig exceeds the import limit or is empty.');
       const data = bytes.subarray(dataStart, dataStart + packed);
       if (method !== 0 && method !== 8) figError('unsupported ZIP compression.');
-      canvas =
-        method === 0 ? data : inflateFig(data, Math.min(unpacked, FIG_LIMITS.canvas), 'deflate');
-      if (canvas.length !== unpacked || crc32(canvas) !== crc)
+      const extracted =
+        method === 0 ? data : inflateFig(data, Math.min(unpacked, limit), 'deflate');
+      if (image) {
+        imageBytes += extracted.length;
+        if (imageBytes > 32 * 1024 * 1024)
+          figError('embedded images exceed the 32 MB import limit.');
+        images.set(name.slice(7).toLowerCase(), extracted);
+      } else canvas = extracted;
+      if (extracted.length !== unpacked || crc32(extracted) !== crc)
         figError('canvas.fig has an invalid size or checksum.');
     }
     pos = end;
   }
   if (pos !== eocd || !canvas) figError('ZIP archive is missing a root canvas.fig.');
-  return canvas;
+  return { canvas, images };
+}
+
+export function unwrapFigZip(bytes: Uint8Array): Uint8Array {
+  return readFigArchive(bytes).canvas;
 }

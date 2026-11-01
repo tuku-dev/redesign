@@ -77,8 +77,8 @@ test('native fixture is parsed in a worker and cancel or Escape preserves the cu
   const errors = await start(page);
   const before = await saved(page);
   await page.locator('#file').setInputFiles('tests/fixtures/fig/corners.fig');
-  await expect(review(page)).toContainText('6 editable layer(s), 4 skipped layer(s)');
-  await expect(review(page)).toContainText('VECTOR');
+  await expect(review(page)).toContainText('10 editable layer(s), 0 skipped layer(s)');
+  await expect(review(page)).toContainText('network topology');
   await expect(review(page)).toContainText('smoothing');
   await page.screenshot({ path: 'test-results/fig-import-review.png' });
   expect(await saved(page)).toEqual(before);
@@ -120,7 +120,7 @@ test('real Zstandard fixture opens its disclosed subset and supports an SVG expo
   await page.locator('#file').setInputFiles('tests/fixtures/fig/corners.fig');
   await expect(review(page)).toBeVisible();
   await review(page).getByRole('button', { name: 'Import supported layers' }).click();
-  await expect(page.locator('#layers .layer')).toHaveCount(6);
+  await expect(page.locator('#layers .layer')).toHaveCount(10);
   expect((await saved(page)).name).toBe('corners');
   const download = page.waitForEvent('download');
   await page.locator('#export').click();
@@ -243,4 +243,42 @@ test('a stalled parser worker is terminated and leaves the current document avai
           .terminated,
     ),
   ).toBe(1);
+});
+
+test('native embedded images render and remain embedded in SVG exports', async ({ page }) => {
+  await start(page, false);
+  await page.locator('#file').setInputFiles('tests/fixtures/fig/structure.fig');
+  await expect(review(page)).toContainText('18 editable layer(s), 5 skipped layer(s)');
+  await review(page).getByRole('button', { name: 'Import supported layers' }).click();
+  await expect(page.locator('#scene image')).toHaveCount(2);
+  const document = await saved(page);
+  expect(document.nodes.filter((n) => n.image)).toHaveLength(2);
+  await page.locator('[data-layer-id="fig:1:24"] .layer-select').click();
+  await expect(page.getByLabel('Image fit', { exact: true })).toHaveValue('cover');
+  const download = page.waitForEvent('download');
+  await page.locator('#export').click();
+  const output = await readFile((await (await download).path())!, 'utf8');
+  expect(output).toContain('data:image/png;base64,');
+  expect(output).toContain('data:image/jpeg;base64,');
+  expect(output).toContain('fill-rule="nonzero"');
+});
+test('imported cubic vectors expose editable anchors and undo restores their original controls', async ({
+  page,
+}) => {
+  await start(page, false);
+  await page.locator('#file').setInputFiles('tests/fixtures/fig/corners.fig');
+  await review(page).getByRole('button', { name: 'Import supported layers' }).click();
+  await page.locator('[data-layer-id="fig:2051:4"] .layer-select').click();
+  await page.keyboard.press('Enter');
+  const anchor = page.locator('[data-vector-editor] [data-vector-anchor]').first();
+  await expect(anchor).toBeVisible();
+  const before = await saved(page),
+    box = (await anchor.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 20, box.y + box.height / 2 + 10, { steps: 5 });
+  await page.mouse.up();
+  expect((await saved(page)).nodes).not.toEqual(before.nodes);
+  await page.keyboard.press('Control+z');
+  expect((await saved(page)).nodes).toEqual(before.nodes);
 });
