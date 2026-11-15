@@ -5,6 +5,7 @@ import { isLocked } from '../model/layer-state.ts';
 import type { Notify } from './notifications.ts';
 import { errorMessage } from './elements.ts';
 import { bindNumberScrub } from './numeric-scrub.ts';
+import { propertySection } from './property-section.ts';
 export function renderDesignOptions(area: HTMLElement, store: EditorStore, notify: Notify): void {
   const nodes = store.chosen(),
     first = nodes[0];
@@ -12,22 +13,13 @@ export function renderDesignOptions(area: HTMLElement, store: EditorStore, notif
   const commands = new NodeOptionCommands(store),
     disabled = nodes.some((n) => isLocked(store.doc, n));
   const section = (title: string) => {
-    const block = document.createElement('div');
-    block.className = 'design-options';
-    const heading = document.createElement('h3');
-    heading.textContent = title;
-    block.append(heading);
-    area.append(block);
+    const block = propertySection(area, title);
+    block.classList.add('design-options');
     return block;
   };
-  function numberField<K extends 'rotation' | 'fontWeight' | 'lineHeight' | 'letterSpacing'>(
-    block: HTMLElement,
-    key: K,
-    label: string,
-    min: number,
-    max: number,
-    step: string,
-  ): void {
+  function numberField<
+    K extends 'rotation' | 'fontSize' | 'fontWeight' | 'lineHeight' | 'letterSpacing',
+  >(block: HTMLElement, key: K, label: string, min: number, max: number, step: string): void {
     const wrap = document.createElement('label');
     wrap.className = 'field';
     const text = document.createElement('span');
@@ -140,6 +132,7 @@ export function renderDesignOptions(area: HTMLElement, store: EditorStore, notif
     };
     label.append(caption, family);
     block.append(label);
+    numberField(block, 'fontSize', 'Size', 1, 1000000, '1');
     numberField(block, 'fontWeight', 'Weight', 100, 900, '100');
     selectField(block, 'fontStyle', 'Style', [
       ['normal', 'Normal'],

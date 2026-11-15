@@ -386,17 +386,10 @@ test('canvas corner handles drag uniformly or select and edit one corner', async
 test('paint editor manages solid fill and stroke controls', async ({ page }) => {
   const errors = await open(page);
   await select(page, 'rect-a');
-  await expect(page.getByRole('button', { name: 'Fill', exact: true })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
-  await page.getByRole('button', { name: 'Gradient', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Fill', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Border', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Fill gradient', exact: true }).click();
   await expect(page.locator('#scene linearGradient')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Border', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Border', exact: true })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
   await page.getByLabel('Border width', { exact: true }).fill('3');
   await page.getByLabel('Border width', { exact: true }).press('Tab');
   await expect(page.locator('#scene rect[data-id="rect-a"][stroke-width="3"]')).toHaveCount(1);
@@ -409,6 +402,47 @@ test('paint editor manages solid fill and stroke controls', async ({ page }) => 
   const shape = (await saved(page)).nodes.find((n) => n.id === 'rect-a')!;
   expect(shape.appearance?.stroke).toBe('#ff0000');
   expect(shape.appearance?.strokeWidth).toBe(3);
+  expect(errors).toEqual([]);
+});
+test('main menus expose file, edit, view, and object actions', async ({ page }) => {
+  const errors = await open(page);
+  const file = page.getByRole('button', { name: 'File', exact: true });
+  await file.click();
+  await expect(page.getByRole('menu', { name: 'File', exact: true })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Open...', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'View', exact: true }).click();
+  await expect(page.getByRole('menu', { name: 'File', exact: true })).toBeHidden();
+  await expect(page.getByRole('menu', { name: 'View', exact: true })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Zoom to fit', exact: true })).toBeVisible();
+  await select(page, 'rect-a');
+  await page.getByRole('button', { name: 'Object', exact: true }).click();
+  await expect(page.getByRole('menuitem', { name: 'Group selection', exact: true })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Align left', exact: true })).toBeDisabled();
+  expect(errors).toEqual([]);
+});
+test('property sections collapse and expand', async ({ page }) => {
+  const errors = await open(page);
+  await select(page, 'rect-a');
+  const fill = page.locator('details.property-group', {
+    has: page.getByRole('heading', { name: 'Fill' }),
+  });
+  await fill.locator('summary').click();
+  await expect(page.getByLabel('Fill color', { exact: true })).toBeHidden();
+  await fill.locator('summary').click();
+  await expect(page.getByLabel('Fill color', { exact: true })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+test('paint color picker and hex value update fill', async ({ page }) => {
+  const errors = await open(page);
+  await select(page, 'rect-a');
+  await page.getByLabel('Fill color', { exact: true }).evaluate((input: HTMLInputElement) => {
+    input.value = '#f24822';
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await page.getByLabel('Fill color hex value', { exact: true }).fill('#0d99ff');
+  await page.getByLabel('Fill color hex value', { exact: true }).press('Tab');
+  const shape = (await saved(page)).nodes.find((n) => n.id === 'rect-a')!;
+  expect(shape.appearance?.fills?.[0]).toMatchObject({ type: 'solid', color: '#0d99ff' });
   expect(errors).toEqual([]);
 });
 test('corner radius controls are not shown for circles', async ({ page }) => {
@@ -670,7 +704,6 @@ test('gradient paint layers expose stops and handles, persist, and export radial
   await expect(page.getByLabel('Gradient fill', { exact: true })).toHaveCount(0);
   await expect(page.getByLabel('Gradient end', { exact: true })).toHaveCount(0);
   await expect(page.getByLabel('Gradient angle', { exact: true })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Gradient', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Edit paints', exact: true }).click();
   const paintsEditor = page.getByRole('dialog', { name: 'Edit paints', exact: true });
   await expect(

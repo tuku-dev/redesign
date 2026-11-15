@@ -16,8 +16,9 @@ import { selectionRoots } from '../model/hierarchy.ts';
 import { FeatureCommands } from '../commands/features.ts';
 import { defaultAppearance } from '../model/features.ts';
 import type { Appearance, Paint, StrokePaint } from '../model/features.ts';
-import { button } from './feature-controls.ts';
+import { button, inputField } from './feature-controls.ts';
 import { openPaintEditor } from './paint-editor.ts';
+import { propertySection } from './property-section.ts';
 type Field = readonly [EditableProperty, string, 'number' | 'text' | 'color'];
 
 function firstFill(appearance: Appearance, fill: string): Paint {
@@ -111,18 +112,23 @@ export function renderProperties(
     return;
   }
   const multi = nodes.length > 1,
-    geometryNodes = multi ? selectionRoots(store.doc, store.selected) : [n],
-    group = document.createElement('div');
-  group.className = 'property-group';
-  const title = document.createElement('h3');
-  title.textContent = multi
-    ? `${nodes.length} layers selected`
-    : n.type[0].toUpperCase() + n.type.slice(1);
-  group.append(title);
-  renderParentControl(group, store, commands, notify);
-  const grid = document.createElement('div');
-  grid.className = 'property-grid';
-  group.append(grid);
+    geometryNodes = multi ? selectionRoots(store.doc, store.selected) : [n];
+  const section = (title: string) => propertySection(area, title);
+  const layer = section(
+    multi ? `${nodes.length} layers selected` : n.type[0].toUpperCase() + n.type.slice(1),
+  );
+  renderParentControl(layer, store, commands, notify);
+  const layerGrid = document.createElement('div');
+  layerGrid.className = 'property-grid';
+  layer.append(layerGrid);
+  const geometry = section('Geometry');
+  const geometryGrid = document.createElement('div');
+  geometryGrid.className = 'property-grid';
+  geometry.append(geometryGrid);
+  const appearanceGroup = section('Appearance');
+  const appearanceGrid = document.createElement('div');
+  appearanceGrid.className = 'property-grid';
+  appearanceGroup.append(appearanceGrid);
   const canRoundCorners = nodes.every((item) => item.type === 'rectangle' || item.vector?.closed);
   const fields: Field[] = multi
     ? [
@@ -151,7 +157,6 @@ export function renderProperties(
       ['bottomRightRadius', 'Bottom-right radius', 'number'],
       ['bottomLeftRadius', 'Bottom-left radius', 'number'],
     );
-  if (nodes.every((item) => item.type === 'text')) fields.push(['fontSize', 'Size', 'number']);
   const supportsStroke = nodes.every((item) => item.type !== 'group'),
     featureCommands = new FeatureCommands(store);
   for (const [key, label, type] of fields) {
@@ -215,16 +220,12 @@ export function renderProperties(
       }
     };
     if (!corner) wrap.prepend(caption, input);
-    grid.append(wrap);
+    const targetGrid =
+      key === 'name' ? layerGrid : key === 'opacity' ? appearanceGrid : geometryGrid;
+    targetGrid.append(wrap);
   }
   if (!multi && supportsStroke) {
-    const paints = document.createElement('div');
-    paints.className = 'property-group';
-    const heading = document.createElement('h3');
-    heading.textContent = 'Paint';
-    paints.append(heading);
     const appearance = n.appearance ?? defaultAppearance();
-    const target = store.paintTarget;
     const updateAppearance = (action: (value: Appearance) => void) => {
       const current = store.doc.nodes.find((node) => node.id === n.id);
       if (!current) return;
@@ -232,7 +233,11 @@ export function renderProperties(
       action(next);
       featureCommands.appearance(next);
     };
-    const replacePaint = (value: Appearance, paint: Paint | StrokePaint) => {
+    const replacePaint = (
+      value: Appearance,
+      target: 'fill' | 'border',
+      paint: Paint | StrokePaint,
+    ) => {
       if (target === 'fill') {
         value.fills = [paint, ...(value.fills?.slice(1) ?? [])];
         return;
@@ -240,124 +245,104 @@ export function renderProperties(
       if (!('width' in paint)) throw new Error('Border paints require a width.');
       value.strokes = [paint, ...(value.strokes?.slice(1) ?? [])];
     };
-    const currentPaint =
-      target === 'fill' ? firstFill(appearance, n.fill) : firstStroke(appearance);
-    const paintModes = document.createElement('div');
-    paintModes.className = 'paint-mode-switch';
-    for (const [mode, label] of [
-      ['solid', 'Solid color'],
-      ['gradient', 'Gradient'],
-    ] as const) {
-      const selected =
-        mode === 'solid' ? currentPaint.type === 'solid' : currentPaint.type !== 'solid';
-      const control = button(
-        label,
-        () =>
+    const renderPaintSection = (target: 'fill' | 'border', title: string) => {
+      const paints = section(title);
+      const currentPaint =
+        target === 'fill' ? firstFill(appearance, n.fill) : firstStroke(appearance);
+      const paintModes = document.createElement('div');
+      paintModes.className = 'paint-mode-switch';
+      for (const [mode, label] of [
+        ['solid', 'Solid color'],
+        ['gradient', 'Gradient'],
+      ] as const) {
+        const selected =
+          mode === 'solid' ? currentPaint.type === 'solid' : currentPaint.type !== 'solid';
+        const control = button(
+          label,
+          () =>
+            updateAppearance((value) => {
+              const current = target === 'fill' ? firstFill(value, n.fill) : firstStroke(value);
+              if (mode === 'solid') {
+                const color = current.type === 'solid' ? current.color : current.stops[0]?.color;
+                const solid = {
+                  type: 'solid' as const,
+                  color: color || '#000000',
+                  opacity: current.opacity,
+                };
+                replacePaint(
+                  value,
+                  target,
+                  target === 'fill' ? solid : { ...solid, width: firstStroke(value).width },
+                );
+              } else {
+                const color = current.type === 'solid' ? current.color : current.stops[0]?.color;
+                const gradient = linearGradient(color || '#000000', current.opacity);
+                replacePaint(
+                  value,
+                  target,
+                  target === 'fill' ? gradient : { ...gradient, width: firstStroke(value).width },
+                );
+              }
+            }),
+          notify,
+        );
+        control.className = 'paint-mode-option';
+        control.textContent = '';
+        control.setAttribute('aria-label', `${title} ${label.toLowerCase()}`);
+        control.title = label;
+        control.setAttribute('aria-pressed', String(selected));
+        control.style.background =
+          mode === 'solid'
+            ? currentPaint.type === 'solid'
+              ? currentPaint.color
+              : (currentPaint.stops[0]?.color ?? '#000000')
+            : currentPaint.type === 'solid'
+              ? paintPreview(linearGradient(currentPaint.color, currentPaint.opacity))
+              : paintPreview(currentPaint);
+        paintModes.append(control);
+      }
+      paints.append(paintModes);
+      if (currentPaint.type === 'solid') {
+        const label = target === 'fill' ? 'Fill color' : 'Border color';
+        inputField(
+          paints,
+          label,
+          currentPaint.color,
+          'color',
+          (color) =>
+            updateAppearance((value) => {
+              const current = target === 'fill' ? firstFill(value, n.fill) : firstStroke(value);
+              if (current.type === 'solid') current.color = color;
+              replacePaint(value, target, current);
+            }),
+          notify,
+        );
+      }
+      if (target === 'border') {
+        const width = document.createElement('label');
+        width.className = 'feature-field';
+        const caption = document.createElement('span');
+        caption.textContent = 'Border width';
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.min = '0';
+        input.step = 'any';
+        input.value = String(firstStroke(appearance).width);
+        input.setAttribute('aria-label', 'Border width');
+        bindNumberScrub(caption, input);
+        input.onchange = () =>
           updateAppearance((value) => {
-            const current = target === 'fill' ? firstFill(value, n.fill) : firstStroke(value);
-            if (mode === 'solid') {
-              const color = current.type === 'solid' ? current.color : current.stops[0]?.color;
-              const solid = {
-                type: 'solid' as const,
-                color: color || '#000000',
-                opacity: current.opacity,
-              };
-              replacePaint(
-                value,
-                target === 'fill' ? solid : { ...solid, width: firstStroke(value).width },
-              );
-            } else {
-              const color = current.type === 'solid' ? current.color : current.stops[0]?.color;
-              const gradient = linearGradient(color || '#000000', current.opacity);
-              replacePaint(
-                value,
-                target === 'fill' ? gradient : { ...gradient, width: firstStroke(value).width },
-              );
-            }
-          }),
-        notify,
-      );
-      control.className = 'paint-mode-option';
-      control.textContent = '';
-      control.setAttribute('aria-label', label);
-      control.title = label;
-      control.setAttribute('aria-pressed', String(selected));
-      control.style.background =
-        mode === 'solid'
-          ? currentPaint.type === 'solid'
-            ? currentPaint.color
-            : (currentPaint.stops[0]?.color ?? '#000000')
-          : currentPaint.type === 'solid'
-            ? paintPreview(linearGradient(currentPaint.color, currentPaint.opacity))
-            : paintPreview(currentPaint);
-      paintModes.append(control);
-    }
-    paints.append(paintModes);
-    const targets = document.createElement('div');
-    targets.className = 'paint-target-switch';
-    for (const [value, label] of [
-      ['fill', 'Fill'],
-      ['border', 'Border'],
-    ] as const) {
-      const control = button(
-        label,
-        () => {
-          store.paintTarget = value;
-          store.refresh();
-        },
-        notify,
-      );
-      control.className = 'paint-target-option';
-      control.textContent = '';
-      control.setAttribute('aria-label', label);
-      control.title = label;
-      control.setAttribute('aria-pressed', String(target === value));
-      control.style.background = paintPreview(
-        value === 'fill' ? firstFill(appearance, n.fill) : firstStroke(appearance),
-      );
-      targets.append(control);
-    }
-    paints.append(targets);
-    if (currentPaint.type === 'solid') {
-      const label = target === 'fill' ? 'Fill color' : 'Border color';
-      const color = document.createElement('label');
-      color.className = 'feature-field';
-      const caption = document.createElement('span');
-      caption.textContent = label;
-      const input = document.createElement('input');
-      input.type = 'color';
-      input.value = currentPaint.color;
-      input.setAttribute('aria-label', label);
-      input.onchange = () =>
-        updateAppearance((value) => {
-          const current = target === 'fill' ? firstFill(value, n.fill) : firstStroke(value);
-          if (current.type === 'solid') current.color = input.value;
-          replacePaint(value, current);
-        });
-      color.append(caption, input);
-      paints.append(color);
-    }
-    if (target === 'border') {
-      const width = document.createElement('label');
-      width.className = 'feature-field';
-      const caption = document.createElement('span');
-      caption.textContent = 'Border width';
-      const input = document.createElement('input');
-      input.type = 'number';
-      input.min = '0';
-      input.step = 'any';
-      input.value = String(firstStroke(appearance).width);
-      input.setAttribute('aria-label', 'Border width');
-      bindNumberScrub(caption, input);
-      input.onchange = () =>
-        updateAppearance((value) => {
-          const current = firstStroke(value);
-          current.width = Number(input.value);
-          replacePaint(value, current);
-        });
-      width.append(caption, input);
-      paints.append(width);
-    }
+            const current = firstStroke(value);
+            current.width = Number(input.value);
+            replacePaint(value, target, current);
+          });
+        width.append(caption, input);
+        paints.append(width);
+      }
+    };
+    renderPaintSection('fill', 'Fill');
+    renderPaintSection('border', 'Border');
+    const paints = section('Multiple paints');
     paints.append(
       button(
         'Edit paints',
@@ -372,35 +357,18 @@ export function renderProperties(
         notify,
       ),
     );
-    group.append(paints);
   }
   if (!multi && n.type === 'text') {
+    const content = section('Content');
     const text = document.createElement('textarea');
     text.value = n.text;
     text.setAttribute('aria-label', 'Text content');
     text.onchange = () => commands.setText(text.value);
-    group.append(document.createElement('br'), text);
+    content.append(text);
   }
-  renderDesignOptions(group, store, notify);
-  const actions = document.createElement('div');
-  actions.className = 'property-group';
-  actions.append(
-    actionButton('Duplicate', 'duplicate', () => commands.duplicate()),
-    actionButton('Copy', 'duplicate', () => clipboard.copy()),
-    actionButton('Paste', 'duplicate', () => clipboard.paste()),
-    actionButton('Delete', 'delete', () => commands.remove()),
-  );
-  if (!multi)
-    actions.append(
-      actionButton('Bring forward', 'forward', () => commands.reorder(1)),
-      actionButton('Send backward', 'backward', () => commands.reorder(-1)),
-    );
+  renderDesignOptions(area, store, notify);
   if (multi) {
-    const alignment = document.createElement('div');
-    alignment.className = 'property-group';
-    const heading = document.createElement('h3');
-    heading.textContent = 'Align';
-    alignment.append(heading);
+    const alignment = section('Align');
     const alignModes: readonly (readonly [Alignment, string, IconName])[] = [
       ['left', 'Align left', 'alignLeft'],
       ['center', 'Align horizontal centers', 'alignCenterX'],
@@ -466,7 +434,17 @@ export function renderProperties(
       spacingModes.map(([axis, label, icon]) => [label, icon, () => commands.distribute(axis)]),
       nodes.length < 3,
     );
-    area.append(alignment);
   }
-  area.append(group, actions);
+  const actions = section('Actions');
+  actions.append(
+    actionButton('Duplicate', 'duplicate', () => commands.duplicate()),
+    actionButton('Copy', 'duplicate', () => clipboard.copy()),
+    actionButton('Paste', 'duplicate', () => clipboard.paste()),
+    actionButton('Delete', 'delete', () => commands.remove()),
+  );
+  if (!multi)
+    actions.append(
+      actionButton('Bring forward', 'forward', () => commands.reorder(1)),
+      actionButton('Send backward', 'backward', () => commands.reorder(-1)),
+    );
 }

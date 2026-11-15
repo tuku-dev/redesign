@@ -142,8 +142,145 @@
       </div>
     </noscript>
     <header>
-      <strong class="brand" aria-label="reDesign"><span>r</span>D</strong
-      ><span class="breadcrumb">Drafts /</span
+      <strong class="brand" aria-label="reDesign"><span>r</span>D</strong>
+      <nav id="main-menu" class="main-menu" aria-label="Main menu">
+        <div class="main-menu-group">
+          <button
+            type="button"
+            data-main-menu="file"
+            aria-haspopup="menu"
+            aria-expanded="false"
+            aria-controls="file-menu"
+          >
+            File
+          </button>
+          <div id="file-menu" class="main-menu-panel" role="menu" aria-label="File" hidden>
+            <button type="button" role="menuitem" data-main-menu-action="new">New</button>
+            <button type="button" role="menuitem" data-main-menu-action="open">Open...</button>
+            <button type="button" role="menuitem" data-main-menu-action="save">Save</button>
+            <button type="button" role="menuitem" data-main-menu-action="save-as">
+              Save as...
+            </button>
+            <span role="separator"></span>
+            <button type="button" role="menuitem" data-main-menu-action="export">
+              Export SVG...
+            </button>
+          </div>
+        </div>
+        <div class="main-menu-group">
+          <button
+            type="button"
+            data-main-menu="edit"
+            aria-haspopup="menu"
+            aria-expanded="false"
+            aria-controls="edit-menu"
+          >
+            Edit
+          </button>
+          <div id="edit-menu" class="main-menu-panel" role="menu" aria-label="Edit" hidden>
+            <button type="button" role="menuitem" data-main-menu-action="undo">Undo</button>
+            <button type="button" role="menuitem" data-main-menu-action="redo">Redo</button>
+            <span role="separator"></span>
+            <button type="button" role="menuitem" data-main-menu-action="cut">Cut</button>
+            <button type="button" role="menuitem" data-main-menu-action="copy">Copy</button>
+            <button type="button" role="menuitem" data-main-menu-action="paste">Paste</button>
+            <button type="button" role="menuitem" data-main-menu-action="duplicate">
+              Duplicate
+            </button>
+            <button type="button" role="menuitem" data-main-menu-action="delete">Delete</button>
+            <span role="separator"></span>
+            <button type="button" role="menuitem" data-main-menu-action="select-all">
+              Select all
+            </button>
+            <button type="button" role="menuitem" data-main-menu-action="deselect-all">
+              Deselect all
+            </button>
+          </div>
+        </div>
+        <div class="main-menu-group">
+          <button
+            type="button"
+            data-main-menu="view"
+            aria-haspopup="menu"
+            aria-expanded="false"
+            aria-controls="view-menu"
+          >
+            View
+          </button>
+          <div id="view-menu" class="main-menu-panel" role="menu" aria-label="View" hidden>
+            <button type="button" role="menuitem" data-main-menu-action="zoom-in">Zoom in</button>
+            <button type="button" role="menuitem" data-main-menu-action="zoom-out">Zoom out</button>
+            <button type="button" role="menuitem" data-main-menu-action="zoom-reset">
+              Reset zoom
+            </button>
+            <button type="button" role="menuitem" data-main-menu-action="fit-all">
+              Zoom to fit
+            </button>
+            <button type="button" role="menuitem" data-main-menu-action="fit-selection">
+              Zoom to selection
+            </button>
+            <span role="separator"></span>
+            <button type="button" role="menuitem" data-main-menu-action="snap-grid">
+              Snap to grid
+            </button>
+          </div>
+        </div>
+        <div class="main-menu-group">
+          <button
+            type="button"
+            data-main-menu="object"
+            aria-haspopup="menu"
+            aria-expanded="false"
+            aria-controls="object-menu"
+          >
+            Object
+          </button>
+          <div id="object-menu" class="main-menu-panel" role="menu" aria-label="Object" hidden>
+            <button type="button" role="menuitem" data-main-menu-action="group">
+              Group selection
+            </button>
+            <button type="button" role="menuitem" data-main-menu-action="frame">
+              Frame selection
+            </button>
+            <button type="button" role="menuitem" data-main-menu-action="ungroup">
+              Ungroup selection
+            </button>
+            <span role="separator"></span>
+            <button type="button" role="menuitem" data-main-menu-action="bring-front">
+              Bring to front
+            </button>
+            <button type="button" role="menuitem" data-main-menu-action="bring-forward">
+              Bring forward
+            </button>
+            <button type="button" role="menuitem" data-main-menu-action="send-backward">
+              Send backward
+            </button>
+            <button type="button" role="menuitem" data-main-menu-action="send-back">
+              Send to back
+            </button>
+            <span role="separator"></span>
+            <button type="button" role="menuitem" data-main-menu-action="align-left">
+              Align left
+            </button>
+            <button type="button" role="menuitem" data-main-menu-action="align-center">
+              Align horizontal centers
+            </button>
+            <button type="button" role="menuitem" data-main-menu-action="align-right">
+              Align right
+            </button>
+            <button type="button" role="menuitem" data-main-menu-action="align-top">
+              Align top
+            </button>
+            <button type="button" role="menuitem" data-main-menu-action="align-middle">
+              Align vertical centers
+            </button>
+            <button type="button" role="menuitem" data-main-menu-action="align-bottom">
+              Align bottom
+            </button>
+          </div>
+        </div>
+      </nav>
+      <span class="breadcrumb">Drafts /</span
       ><input id="document-name" aria-label="Document name" value="Untitled" /><span
         id="save-status"
         role="status"

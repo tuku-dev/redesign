@@ -7,6 +7,7 @@ export function getElements() {
   return {
     canvas: required('canvas', SVGSVGElement),
     workspace: required('workspace', HTMLElement),
+    mainMenu: required('main-menu', HTMLElement),
     snapGridEnabled: required('snap-grid-enabled', HTMLButtonElement),
     shapeMenuToggle: required('shape-menu-toggle', HTMLButtonElement),
     shapeMenu: required('shape-menu', HTMLElement),

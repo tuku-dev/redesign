@@ -22,6 +22,7 @@ import { getElements } from './ui/elements.ts';
 import { createNotifications } from './ui/notifications.ts';
 import { mountIcons } from './ui/icons.ts';
 import { bindToolbar, renderToolbar } from './ui/toolbar.ts';
+import { bindTopMenu, renderTopMenu } from './ui/top-menu.ts';
 import { renderLayers } from './ui/layers.ts';
 import { renderProperties } from './ui/properties.ts';
 import { renderScene } from './render/scene.ts';
@@ -58,6 +59,7 @@ store.subscribe((update) => {
   inlineText.sync();
   if (update.view === 'all') {
     renderToolbar(elements, store);
+    renderTopMenu(elements, services);
     renderLayers(elements.layers, store);
     renderProperties(elements.properties, store, commands, clipboard, notify, elements.canvas);
   }
@@ -83,6 +85,7 @@ const services: MenuServices = {
   exportSelection: () => exportSelection(store, notify),
 };
 bindContextMenu(elements, services, gestures, viewport, notify);
+bindTopMenu(elements, services, gestures, notify);
 bindActionShortcuts(services, gestures);
 bindWorkspace(elements, store, gestures, viewport, notify);
 mountIcons();

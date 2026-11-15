@@ -1,6 +1,7 @@
 import type { NodeOptions } from './types.ts';
 export const DEFAULT_OPTIONS = {
   rotation: 0,
+  fontSize: 28,
   flipX: false,
   flipY: false,
   clipContent: false,
@@ -17,6 +18,7 @@ export const DEFAULT_OPTIONS = {
 export function nodeOptions(value: Partial<NodeOptions> = {}): NodeOptions {
   return {
     rotation: value.rotation ?? 0,
+    fontSize: value.fontSize ?? 28,
     flipX: value.flipX ?? false,
     flipY: value.flipY ?? false,
     clipContent: value.clipContent ?? false,
@@ -34,6 +36,7 @@ export function nodeOptions(value: Partial<NodeOptions> = {}): NodeOptions {
 export function validNodeOptions(value: Record<string, unknown>): boolean {
   const numeric: Record<string, readonly [number, number]> = {
     rotation: [-1000000, 1000000],
+    fontSize: [1, 1000000],
     fontWeight: [100, 900],
     lineHeight: [0.5, 10],
     letterSpacing: [-10000, 10000],

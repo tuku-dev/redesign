@@ -3,6 +3,68 @@ import { errorMessage } from './elements.ts';
 import { bindNumberScrub } from './numeric-scrub.ts';
 import type { EditorStore } from '../editor/store.ts';
 import { bindColorPreview } from './color-preview.ts';
+
+function normalizedColor(value: string): string | undefined {
+  const hex = value.trim();
+  if (/^#[\da-f]{6}$/i.test(hex)) return hex.toLowerCase();
+  if (/^#[\da-f]{3}$/i.test(hex))
+    return `#${hex
+      .slice(1)
+      .split('')
+      .map((digit) => digit + digit)
+      .join('')}`.toLowerCase();
+  return undefined;
+}
+
+function colorField(
+  parent: HTMLElement,
+  label: string,
+  value: string,
+  change: (v: string) => void,
+  notify: Notify,
+  liveColor?: { store: EditorStore; preview: (v: string) => void },
+): HTMLInputElement {
+  const wrap = document.createElement('div');
+  wrap.className = 'feature-field color-field';
+  const caption = document.createElement('span');
+  caption.textContent = label;
+  const controls = document.createElement('div');
+  controls.className = 'color-controls';
+  const input = document.createElement('input');
+  input.type = 'color';
+  input.value = value;
+  input.setAttribute('aria-label', label);
+  const hex = document.createElement('input');
+  hex.type = 'text';
+  hex.value = value.toUpperCase();
+  hex.maxLength = 7;
+  hex.spellcheck = false;
+  hex.setAttribute('aria-label', `${label} hex value`);
+  const apply = (color: string) => {
+    input.value = color;
+    hex.value = color.toUpperCase();
+    if (liveColor) {
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    } else run(notify, () => change(color));
+  };
+  if (liveColor) bindColorPreview(input, liveColor.store, liveColor.preview, notify);
+  else input.onchange = () => apply(input.value);
+  input.addEventListener('input', () => (hex.value = input.value.toUpperCase()));
+  hex.onchange = () => {
+    const color = normalizedColor(hex.value);
+    if (!color) {
+      hex.value = input.value.toUpperCase();
+      return;
+    }
+    apply(color);
+  };
+  controls.append(input, hex);
+  wrap.append(caption, controls);
+  parent.append(wrap);
+  return input;
+}
+
 export function section(title: string): HTMLDivElement {
   const el = document.createElement('div');
   el.className = 'property-group feature-section';
@@ -60,6 +122,7 @@ export function inputField(
   notify: Notify,
   liveColor?: { store: EditorStore; preview: (v: string) => void },
 ): HTMLInputElement {
+  if (type === 'color') return colorField(parent, label, String(value), change, notify, liveColor);
   const wrap = document.createElement('label');
   wrap.className = 'feature-field';
   const caption = document.createElement('span');
@@ -72,9 +135,7 @@ export function inputField(
     input.step = 'any';
     bindNumberScrub(caption, input);
   }
-  if (type === 'color' && liveColor)
-    bindColorPreview(input, liveColor.store, liveColor.preview, notify);
-  else input.onchange = () => run(notify, () => change(input.value));
+  input.onchange = () => run(notify, () => change(input.value));
   wrap.append(caption, input);
   parent.append(wrap);
   return input;

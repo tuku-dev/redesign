@@ -21,7 +21,6 @@ export function createNode(type: NodeType, props: Partial<DesignNode> = {}): Des
     opacity: 1,
     radius: 0,
     text: 'Your text',
-    fontSize: 28,
     ...nodeOptions({ clipContent: type === 'frame' }),
     ...props,
   };
