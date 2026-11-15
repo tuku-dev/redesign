@@ -3,6 +3,7 @@ import { errorMessage } from './elements.ts';
 import { bindNumberScrub } from './numeric-scrub.ts';
 import type { EditorStore } from '../editor/store.ts';
 import { bindColorPreview } from './color-preview.ts';
+import { bindPickerOpacity, openColorPicker } from './color-picker.ts';
 
 function normalizedColor(value: string): string | undefined {
   const hex = value.trim();
@@ -51,6 +52,10 @@ function colorField(
   if (liveColor) bindColorPreview(input, liveColor.store, liveColor.preview, notify);
   else input.onchange = () => apply(input.value);
   input.addEventListener('input', () => (hex.value = input.value.toUpperCase()));
+  input.onclick = (event) => {
+    event.preventDefault();
+    openColorPicker(input, apply);
+  };
   hex.onchange = () => {
     const color = normalizedColor(hex.value);
     if (!color) {
@@ -139,6 +144,18 @@ export function inputField(
   wrap.append(caption, input);
   parent.append(wrap);
   return input;
+}
+
+/** Bind the swatch's paint alpha to the shared custom picker's opacity controls. */
+export function bindColorOpacity(
+  color: HTMLInputElement,
+  label: string,
+  value: number,
+  change: (value: string) => void,
+  notify: Notify,
+): { value: string } {
+  color.setAttribute('aria-description', `${label} is available in the color picker.`);
+  return bindPickerOpacity(color, value, (value) => run(notify, () => change(value)));
 }
 export function checkbox(
   parent: HTMLElement,

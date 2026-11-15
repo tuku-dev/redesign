@@ -1,12 +1,18 @@
 ﻿import { selectionRoots } from '../model/hierarchy.ts';
 import { bounds } from '../model/geometry.ts';
-import { visualBox, center, nodeTransform } from '../model/rotation.ts';
+import {
+  visualBox,
+  center,
+  nodeTransform,
+  transformNodePoint,
+  angleAt,
+} from '../model/rotation.ts';
 import { isLocked } from '../model/layer-state.ts';
 import type { Box, ResizeHandle } from '../model/types.ts';
 import type { EditorStore } from '../editor/store.ts';
 import type { GestureController } from '../editor/gestures.ts';
 import { svg } from './svg.ts';
-import { pointerCursor, rotateCursor } from './cursors.ts';
+import { pointerCursor, rotateCursorAt } from './cursors.ts';
 import type { SvgAttributes } from './svg.ts';
 import { renderGuides } from './guides.ts';
 import { cornerRadii } from '../model/geometry.ts';
@@ -61,8 +67,28 @@ export function renderSelection(
       c = center(box);
     const transform = single ? nodeTransform(single) : null;
     if (transform) controls.setAttribute('transform', transform);
+    const rotationCursor = (point: { x: number; y: number }) =>
+      rotateCursorAt(angleAt(single ? transformNodePoint(point, single) : point, c) + 90);
     controls.append(outline(box));
     if (!roots.some((n) => isLocked(store.doc, n)) && !store.editingTextId) {
+      // Screen-sized hit areas outside each corner leave the resize squares
+      // and the object's interior available for their existing interactions.
+      for (const corner of ['nw', 'ne', 'se', 'sw'] as const) {
+        const [x, y] = handles[corner];
+        const hit = svg('path', {
+          d: 'M6 -6H20V20H-6V6H6Z',
+          transform: `translate(${box.x + box.width * x} ${box.y + box.height * y}) scale(${(x ? 1 : -1) / zoom} ${(y ? 1 : -1) / zoom})`,
+          fill: 'transparent',
+          'pointer-events': 'all',
+          'data-rotate': 'true',
+          'data-rotate-corner': corner,
+          cursor: rotationCursor({ x: box.x + box.width * x, y: box.y + box.height * y }),
+        });
+        const title = svg('title');
+        title.textContent = 'Drag to rotate. Hold Shift to snap to 15°.';
+        hit.append(title);
+        controls.append(hit);
+      }
       const gradient = single && fillLayers(single).find((paint) => paint.type !== 'solid');
       if (single && gradient) {
         const handle = (point: { x: number; y: number }, name: string) => {
@@ -131,7 +157,7 @@ export function renderSelection(
           stroke: 'var(--accent)',
           'stroke-width': 1 / zoom,
           'data-rotate': 'true',
-          cursor: rotateCursor,
+          cursor: rotationCursor({ x: c.x, y: box.y - 28 / zoom }),
         }),
       );
       const addHandle = (cx: number, cy: number, selected: boolean, attrs: SvgAttributes) => {

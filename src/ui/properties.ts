@@ -16,7 +16,7 @@ import { selectionRoots } from '../model/hierarchy.ts';
 import { FeatureCommands } from '../commands/features.ts';
 import { defaultAppearance } from '../model/features.ts';
 import type { Appearance, Paint, StrokePaint } from '../model/features.ts';
-import { button, inputField } from './feature-controls.ts';
+import { button, bindColorOpacity, inputField } from './feature-controls.ts';
 import { openGradientEditor, renderGradientEditor } from './gradient-editor.ts';
 import { openPaintEditor } from './paint-editor.ts';
 import { propertySection } from './property-section.ts';
@@ -246,14 +246,16 @@ export function renderProperties(
       if (!('width' in paint)) throw new Error('Border paints require a width.');
       value.strokes = [paint, ...(value.strokes?.slice(1) ?? [])];
     };
-    const gradientEditorOptions = () => ({
+    const gradientEditorOptions = (target: 'fills' | 'strokes' = 'fills') => ({
       fillIndex: 0,
+      target,
       getAppearance: () =>
         store.doc.nodes.find((node) => node.id === n.id)?.appearance ?? defaultAppearance(),
       update: updateAppearance,
       remove: () =>
         updateAppearance((value) => {
-          value.fills = value.fills?.slice(1) ?? [];
+          if (target === 'fills') value.fills = value.fills?.slice(1) ?? [];
+          else value.strokes = value.strokes?.slice(1) ?? [];
         }),
       notify,
     });
@@ -312,15 +314,16 @@ export function renderProperties(
             : currentPaint.type === 'solid'
               ? paintPreview(linearGradient(currentPaint.color, currentPaint.opacity))
               : paintPreview(currentPaint);
-        if (target === 'fill' && mode === 'gradient' && currentPaint.type !== 'solid') {
-          control.ondblclick = () => openGradientEditor(gradientEditorOptions());
+        if (mode === 'gradient' && currentPaint.type !== 'solid') {
+          control.ondblclick = () =>
+            openGradientEditor(gradientEditorOptions(target === 'fill' ? 'fills' : 'strokes'));
         }
         paintModes.append(control);
       }
       paints.append(paintModes);
       if (currentPaint.type === 'solid') {
         const label = target === 'fill' ? 'Fill color' : 'Border color';
-        inputField(
+        const color = inputField(
           paints,
           label,
           currentPaint.color,
@@ -329,6 +332,18 @@ export function renderProperties(
             updateAppearance((value) => {
               const current = target === 'fill' ? firstFill(value, n.fill) : firstStroke(value);
               if (current.type === 'solid') current.color = color;
+              replacePaint(value, target, current);
+            }),
+          notify,
+        );
+        bindColorOpacity(
+          color,
+          `${label} opacity`,
+          currentPaint.opacity,
+          (opacity) =>
+            updateAppearance((value) => {
+              const current = target === 'fill' ? firstFill(value, n.fill) : firstStroke(value);
+              current.opacity = Number(opacity);
               replacePaint(value, target, current);
             }),
           notify,

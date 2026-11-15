@@ -5,9 +5,9 @@ import type { EditorElements } from '../ui/elements.ts';
 import { errorMessage } from '../ui/elements.ts';
 import type { Notify } from '../ui/notifications.ts';
 import { isResizeHandle } from '../render/selection-overlay.ts';
-import { pointerCursor, rotateCursor, toolCursor } from '../render/cursors.ts';
+import { pointerCursor, rotateCursor, rotateCursorAt, toolCursor } from '../render/cursors.ts';
 import { cornerRadii } from '../model/geometry.ts';
-import { localPoint } from '../model/rotation.ts';
+import { angleAt, localPoint } from '../model/rotation.ts';
 import { isLocked } from '../model/layer-state.ts';
 import { defaultAppearance } from '../model/features.ts';
 import type { CornerName, DesignDocument, Point } from '../model/types.ts';
@@ -58,6 +58,7 @@ export function bindPointer(
         pointerId: number;
         nodeId: string;
         handle: 'start' | 'end' | 'radius';
+        offset: { x: number; y: number };
         changed: boolean;
       }
     | undefined;
@@ -181,12 +182,21 @@ export function bindPointer(
       const node = store.current(),
         gradient = node?.appearance?.fills?.find((paint) => paint.type !== 'solid');
       if (node && gradient && !isLocked(store.doc, node)) {
+        const handle = gradientHandle as 'start' | 'end' | 'radius';
+        const origin = gradient[handle];
+        if (!origin) return;
+        const point = localPoint(p, node);
         e.stopImmediatePropagation();
+        setDragCursor('crosshair');
         gradientDrag = {
           before: clone(store.doc),
           pointerId: e.pointerId,
           nodeId: node.id,
-          handle: gradientHandle as 'start' | 'end' | 'radius',
+          handle,
+          offset: {
+            x: origin.x - (point.x - node.x) / Math.max(node.width, 1e-6),
+            y: origin.y - (point.y - node.y) / Math.max(node.height, 1e-6),
+          },
           changed: false,
         };
         return;
@@ -275,7 +285,7 @@ export function bindPointer(
       }
     }
     if (target?.closest('[data-rotate]')) {
-      setDragCursor(rotateCursor);
+      setDragCursor(target.closest('[data-rotate]')?.getAttribute('cursor') ?? rotateCursor);
       gestures.startRotate(p);
       return;
     }
@@ -316,8 +326,17 @@ export function bindPointer(
       if (node && gradient) {
         const point = localPoint(local(e), node);
         gradient[gradientDrag.handle] = {
-          x: Math.max(-1000, Math.min(1000, point.x / node.width)),
-          y: Math.max(-1000, Math.min(1000, point.y / node.height)),
+          x: Math.max(
+            -1000,
+            Math.min(1000, (point.x - node.x) / Math.max(node.width, 1e-6) + gradientDrag.offset.x),
+          ),
+          y: Math.max(
+            -1000,
+            Math.min(
+              1000,
+              (point.y - node.y) / Math.max(node.height, 1e-6) + gradientDrag.offset.y,
+            ),
+          ),
         };
         gradientDrag.changed = true;
         store.refresh('all');
@@ -367,8 +386,11 @@ export function bindPointer(
       store.refresh('all');
       return;
     }
+    const point = local(e);
+    if (gestures.active?.kind === 'rotate')
+      setDragCursor(rotateCursorAt(angleAt(point, gestures.active.pivot) + 90));
     gestures.move(
-      local(e),
+      point,
       { x: e.clientX, y: e.clientY },
       {
         aspect: e.shiftKey,

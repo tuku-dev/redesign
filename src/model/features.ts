@@ -40,12 +40,12 @@ export interface GradientStop {
 }
 /** Gradient geometry is normalized to the painted layer's bounding box. */
 export interface GradientPaint {
-  type: 'linear' | 'radial';
+  type: 'linear' | 'radial' | 'angular' | 'diamond';
   opacity: number;
   stops: GradientStop[];
   start: Point;
   end: Point;
-  /** The radial gradient's second radius handle. */
+  /** The radial or diamond gradient's second radius handle. */
   radius?: Point;
 }
 export type Paint = SolidPaint | GradientPaint;
@@ -174,7 +174,7 @@ function point(v: unknown): boolean {
 function gradientPaint(v: unknown): boolean {
   return (
     object(v) &&
-    (v.type === 'linear' || v.type === 'radial') &&
+    member(v.type, ['linear', 'radial', 'angular', 'diamond']) &&
     num(v.opacity, 0, 1) &&
     point(v.start) &&
     point(v.end) &&

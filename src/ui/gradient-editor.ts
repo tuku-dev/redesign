@@ -1,10 +1,12 @@
+import { showDraggableModal } from './modal.ts';
 import type { Appearance, GradientPaint } from '../model/features.ts';
 import type { Notify } from './notifications.ts';
-import { button, inputField } from './feature-controls.ts';
+import { button, bindColorOpacity, inputField, selectField } from './feature-controls.ts';
 import { createIcon } from './icons.ts';
 
 interface GradientEditorOptions {
   fillIndex: number;
+  target?: 'fills' | 'strokes';
   getAppearance: () => Appearance;
   update: (action: (value: Appearance) => void) => void;
   remove: () => void;
@@ -26,6 +28,8 @@ export function openGradientEditor(options: GradientEditorOptions): void {
 
 export function renderGradientEditor(options: GradientEditorOptions): void {
   const { fillIndex, getAppearance, update, remove, notify, onClose } = options;
+  const target = options.target ?? 'fills';
+  const paintLabel = target === 'fills' ? 'Fill' : 'Border';
   const dialog = options.host ? undefined : document.createElement('dialog');
   const host = options.host ?? dialog!;
   if (dialog) {
@@ -44,7 +48,7 @@ export function renderGradientEditor(options: GradientEditorOptions): void {
   const set = (action: (gradient: GradientPaint) => number | void, rerender = true) => {
     let nextSelected = selectedStop;
     update((appearance) => {
-      const gradient = appearance.fills?.[fillIndex];
+      const gradient = appearance[target]?.[fillIndex];
       if (!gradient || gradient.type === 'solid') return;
       nextSelected = action(gradient) ?? selectedStop;
     });
@@ -64,7 +68,7 @@ export function renderGradientEditor(options: GradientEditorOptions): void {
       return value.stops.indexOf(stop);
     });
   const render = () => {
-    const gradient = getAppearance().fills?.[fillIndex];
+    const gradient = getAppearance()[target]?.[fillIndex];
     if (!gradient || gradient.type === 'solid') {
       close();
       return;
@@ -73,7 +77,7 @@ export function renderGradientEditor(options: GradientEditorOptions): void {
     const selected = gradient.stops[selectedStop]!;
     const header = document.createElement('div');
     if (dialog) {
-      header.className = 'gradient-editor-header';
+      header.className = 'modal-header gradient-editor-header';
       const title = document.createElement('h2');
       title.id = 'gradient-editor-title';
       title.textContent = 'Gradient';
@@ -87,29 +91,29 @@ export function renderGradientEditor(options: GradientEditorOptions): void {
       header.append(title, closeButton);
     }
 
-    const types = document.createElement('fieldset');
+    const types = document.createElement('div');
     types.className = 'gradient-types';
-    types.setAttribute('aria-label', `Fill ${fillIndex + 1} gradient type`);
-    for (const [type, label] of [
-      ['linear', 'Linear'],
-      ['radial', 'Radial'],
-    ] as const) {
-      const control = document.createElement('label');
-      const input = document.createElement('input');
-      input.type = 'radio';
-      input.name = `gradient-type-${fillIndex}`;
-      input.value = type;
-      input.checked = gradient.type === type;
-      input.setAttribute('aria-label', `${label} gradient`);
-      input.onchange = () =>
+    selectField(
+      types,
+      'Gradient type',
+      gradient.type,
+      [
+        ['linear', 'Linear'],
+        ['radial', 'Radial'],
+        ['angular', 'Angular'],
+        ['diamond', 'Diamond'],
+      ],
+      (type) =>
         set((value) => {
-          value.type = type;
-          if (type === 'radial') value.radius ??= { x: 0.5, y: 1 };
-          else delete value.radius;
-        }, false);
-      control.append(input, document.createTextNode(label));
-      types.append(control);
-    }
+          value.type = type as GradientPaint['type'];
+          if (type === 'radial' || type === 'diamond') {
+            const dx = value.end.x - value.start.x;
+            const dy = value.end.y - value.start.y;
+            value.radius ??= { x: value.start.x - dy, y: value.start.y + dx };
+          } else delete value.radius;
+        }),
+      notify,
+    );
     const stops = document.createElement('div');
     stops.className = 'gradient-stop-track';
     stops.setAttribute('role', 'group');
@@ -135,7 +139,7 @@ export function renderGradientEditor(options: GradientEditorOptions): void {
       handle.className = 'gradient-stop-handle';
       handle.style.left = `${Math.max(0, Math.min(1, stop.position)) * 100}%`;
       handle.style.setProperty('--stop-color', stop.color);
-      handle.setAttribute('aria-label', `Fill ${fillIndex + 1} stop ${index + 1}`);
+      handle.setAttribute('aria-label', `${paintLabel} ${fillIndex + 1} stop ${index + 1}`);
       handle.setAttribute('aria-pressed', String(index === selectedStop));
       handle.title = `Select stop ${index + 1}`;
       let ignoreClick = false;
@@ -154,7 +158,6 @@ export function renderGradientEditor(options: GradientEditorOptions): void {
         if (!options.trackOnly) {
           color.value = stop.color;
           opacity.value = String(stop.opacity);
-          location.value = String(stop.position);
         }
         stops
           .querySelectorAll<HTMLButtonElement>('.gradient-stop-handle')
@@ -174,7 +177,6 @@ export function renderGradientEditor(options: GradientEditorOptions): void {
           draft.stops.sort((a, b) => a.position - b.position);
           handle.style.left = `${position * 100}%`;
           paintTrack(stops, draft);
-          if (!options.trackOnly) location.value = String(position);
         };
         const finish = (upEvent: PointerEvent) => {
           handle.removeEventListener('pointermove', move);
@@ -253,43 +255,29 @@ export function renderGradientEditor(options: GradientEditorOptions): void {
         }),
       notify,
     );
-    const opacity = inputField(
-      controls,
-      'Gradient stop opacity',
+    const opacity = bindColorOpacity(
+      color,
+      'Color opacity',
       selected.opacity,
-      'number',
       (opacity) =>
         set((value) => {
           value.stops[selectedStop]!.opacity = Number(opacity);
         }),
       notify,
     );
-    const location = inputField(
-      controls,
-      'Gradient stop location',
-      selected.position,
-      'number',
-      (position) =>
-        set((value) => {
-          const stop = value.stops[selectedStop]!;
-          stop.position = Number(position);
-          value.stops.sort((a, b) => a.position - b.position);
-          return value.stops.indexOf(stop);
-        }),
-      notify,
-    );
     const actions = document.createElement('div');
     actions.className = 'gradient-editor-actions';
-    actions.append(
-      button(
-        'Remove gradient',
-        () => {
-          remove();
-          close();
-        },
-        notify,
-      ),
-    );
+    if (!dialog)
+      actions.append(
+        button(
+          'Remove gradient',
+          () => {
+            remove();
+            close();
+          },
+          notify,
+        ),
+      );
     host.replaceChildren(
       ...(dialog ? [header] : []),
       types,
@@ -309,7 +297,7 @@ export function renderGradientEditor(options: GradientEditorOptions): void {
   }
   render();
   if (dialog) {
-    dialog.showModal();
+    showDraggableModal(dialog);
     dialog.querySelector<HTMLElement>('input, button')?.focus();
   }
 }

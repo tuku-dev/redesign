@@ -1,6 +1,7 @@
+import { showDraggableModal } from './modal.ts';
 import type { Appearance, Paint, StrokePaint } from '../model/features.ts';
 import type { Notify } from './notifications.ts';
-import { button, inputField } from './feature-controls.ts';
+import { button, bindColorOpacity, inputField } from './feature-controls.ts';
 import { renderGradientEditor } from './gradient-editor.ts';
 import { createIcon } from './icons.ts';
 
@@ -49,7 +50,7 @@ export function openPaintEditor(options: PaintEditorOptions): void {
     closeButton.append(createIcon('close'));
     closeButton.onclick = close;
     const heading = document.createElement('div');
-    heading.className = 'gradient-editor-header';
+    heading.className = 'modal-header gradient-editor-header';
     heading.append(title, closeButton);
     const content = document.createElement('div');
     content.className = 'paint-editor-content';
@@ -66,7 +67,7 @@ export function openPaintEditor(options: PaintEditorOptions): void {
       const section = document.createElement('div');
       section.className = 'paint-editor-row';
       if (paint.type === 'solid') {
-        inputField(
+        const color = inputField(
           section,
           `Fill ${index + 1} color`,
           paint.color,
@@ -101,11 +102,10 @@ export function openPaintEditor(options: PaintEditorOptions): void {
             notify,
           ),
         );
-        inputField(
-          section,
+        bindColorOpacity(
+          color,
           `Fill ${index + 1} opacity`,
           paint.opacity,
-          'number',
           (opacity) =>
             updateAndRender((value) => {
               value.fills = fills(value, fill);
@@ -163,7 +163,7 @@ export function openPaintEditor(options: PaintEditorOptions): void {
       if (stroke.type !== 'solid') return;
       const section = document.createElement('div');
       section.className = 'paint-editor-row';
-      inputField(
+      const color = inputField(
         section,
         `Stroke ${index + 1} color`,
         stroke.color,
@@ -190,11 +190,10 @@ export function openPaintEditor(options: PaintEditorOptions): void {
           }),
         notify,
       );
-      inputField(
-        section,
+      bindColorOpacity(
+        color,
         `Stroke ${index + 1} opacity`,
         stroke.opacity,
-        'number',
         (opacity) =>
           updateAndRender((value) => {
             value.strokes = strokes(value);
@@ -242,6 +241,6 @@ export function openPaintEditor(options: PaintEditorOptions): void {
   });
   document.body.append(dialog);
   render();
-  dialog.showModal();
+  showDraggableModal(dialog);
   dialog.querySelector<HTMLElement>('input, button')?.focus();
 }

@@ -14,7 +14,14 @@ import {
 import { clone } from '../model/types.ts';
 import { isLocked } from '../model/layer-state.ts';
 import { allNodes } from '../model/workspace.ts';
-import { section, button, inputField, selectField, checkbox } from './feature-controls.ts';
+import {
+  section,
+  button,
+  bindColorOpacity,
+  inputField,
+  selectField,
+  checkbox,
+} from './feature-controls.ts';
 export function renderFeatureProperties(
   area: HTMLElement,
   store: EditorStore,
@@ -152,7 +159,7 @@ export function renderFeatureProperties(
       notify,
     );
     if (a.shadow.enabled) {
-      for (const key of ['x', 'y', 'blur', 'opacity'] as const)
+      for (const key of ['x', 'y', 'blur'] as const)
         inputField(
           appearance,
           `Shadow ${key}`,
@@ -161,7 +168,7 @@ export function renderFeatureProperties(
           (v) => paint((a) => (a.shadow[key] = Number(v))),
           notify,
         );
-      inputField(
+      const color = inputField(
         appearance,
         'Shadow color',
         a.shadow.color,
@@ -169,6 +176,13 @@ export function renderFeatureProperties(
         (v) => paint((a) => (a.shadow.color = v)),
         notify,
         { store, preview: (color) => previewPaint((value) => (value.shadow.color = color)) },
+      );
+      bindColorOpacity(
+        color,
+        'Shadow opacity',
+        a.shadow.opacity,
+        (value) => paint((appearance) => (appearance.shadow.opacity = Number(value))),
+        notify,
       );
     }
     inputField(

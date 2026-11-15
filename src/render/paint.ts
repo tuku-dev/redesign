@@ -1,13 +1,22 @@
 import type { DesignNode } from '../model/types.ts';
 import { fillLayers, strokeLayers } from '../model/paint-layers.ts';
 import { svg } from './svg.ts';
+import { complexGradient } from './complex-gradient.ts';
 let sequence = 0;
 function paintValue(
   defs: SVGElement,
   id: string,
   paint: ReturnType<typeof fillLayers>[number],
+  node: DesignNode,
 ): { fill: string; opacity: string } {
   if (paint.type === 'solid') return { fill: paint.color, opacity: String(paint.opacity) };
+  if (paint.type === 'angular' || paint.type === 'diamond') {
+    const width = 'width' in paint ? Number(paint.width) : 0;
+    defs.append(
+      complexGradient(paint, id, width / Math.max(node.width, 1), width / Math.max(node.height, 1)),
+    );
+    return { fill: `url(#${id})`, opacity: String(paint.opacity) };
+  }
   const gradient =
     paint.type === 'linear'
       ? svg('linearGradient', {
@@ -121,7 +130,7 @@ export function paintShape(shape: SVGElement, n: DesignNode): SVGElement {
     for (const [index, layer] of fillLayers(n).entries()) {
       if (!canFill) break;
       const fill = shape.cloneNode(true) as SVGElement;
-      const value = paintValue(defs, `${id}-fill-${index}`, layer);
+      const value = paintValue(defs, `${id}-fill-${index}`, layer, n);
       fill.setAttribute('fill', value.fill);
       fill.setAttribute('fill-opacity', value.opacity);
       fill.setAttribute('stroke', 'none');
@@ -203,7 +212,7 @@ export function paintShape(shape: SVGElement, n: DesignNode): SVGElement {
   } else if (usesLayeredPaints) {
     for (const [index, layer] of strokeLayers(n).entries()) {
       const stroke = shape.cloneNode(true) as SVGElement;
-      const value = paintValue(defs, `${id}-stroke-${index}`, layer);
+      const value = paintValue(defs, `${id}-stroke-${index}`, layer, n);
       stroke.setAttribute('fill', 'none');
       stroke.setAttribute('stroke', value.fill);
       stroke.setAttribute('stroke-opacity', value.opacity);

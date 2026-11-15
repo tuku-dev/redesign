@@ -139,6 +139,21 @@ test('canceling the app download dialog leaves the header and document untouched
   await expect(page.locator('#undo')).toBeDisabled();
   expect(errors).toEqual([]);
 });
+test('clicking outside the download modal cancels and allows it to reopen', async ({ page }) => {
+  const errors = await start(page);
+  await page.locator('#save-as').click();
+  const dialog = page.getByRole('dialog', { name: 'Download a copy' });
+  await dialog.getByLabel('File name', { exact: true }).fill('Canceled name');
+  await page.mouse.click(5, 5);
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByLabel('Document name', { exact: true })).toHaveValue('Untitled');
+  await page.locator('#save-as').click();
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel('File name', { exact: true })).toHaveValue('Untitled');
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  expect(errors).toEqual([]);
+});
+
 test('opening an externally renamed file uses its filename instead of stale embedded metadata', async ({
   page,
 }) => {

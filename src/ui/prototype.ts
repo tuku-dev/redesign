@@ -1,3 +1,4 @@
+import { showDraggableModal } from './modal.ts';
 import type { EditorStore } from '../editor/store.ts';
 import type { Notify } from './notifications.ts';
 import { PrototypeSession } from '../model/prototype.ts';
@@ -19,7 +20,7 @@ export function presentPrototype(store: EditorStore, notify: Notify): void {
     title = document.createElement('strong');
   dialog.className = 'prototype-dialog';
   dialog.setAttribute('aria-label', 'Prototype preview');
-  toolbar.className = 'prototype-toolbar';
+  toolbar.className = 'modal-header prototype-toolbar';
   stage.className = 'prototype-stage';
   const back = button(
       'Back',
@@ -100,6 +101,6 @@ export function presentPrototype(store: EditorStore, notify: Notify): void {
   // Keep editor keyboard shortcuts out of the preview, including native dialog Escape.
   dialog.addEventListener('keydown', (e) => e.stopPropagation());
   render();
-  dialog.showModal();
+  showDraggableModal(dialog);
   close.focus();
 }

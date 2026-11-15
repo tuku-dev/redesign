@@ -1,6 +1,6 @@
 import { defaultAppearance } from '../../src/model/features.ts';
 import { test, expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { createDocument, createNode } from '../../src/model/document.ts';
 import type { DesignDocument } from '../../src/model/types.ts';
@@ -58,6 +58,13 @@ const select = (page: Page, id: string) =>
 const tools = (page: Page) => page.getByText('Tools & resources', { exact: true }).click();
 const saved = (page: Page) =>
   page.evaluate(() => JSON.parse(localStorage.getItem('redesign.document')!) as DesignDocument);
+async function setPickerOpacity(page: Page, swatch: Locator, percent: number) {
+  await swatch.click();
+  const picker = page.getByRole('dialog', { name: 'Color picker', exact: true });
+  await picker.getByLabel('Color opacity percent', { exact: true }).fill(String(percent));
+  await picker.getByLabel('Color opacity percent', { exact: true }).press('Tab');
+  await picker.getByRole('button', { name: 'Close color picker', exact: true }).click();
+}
 test('clicking a child selects it and right-clicking frame background selects the frame', async ({
   page,
 }) => {
@@ -441,10 +448,76 @@ test('paint color picker and hex value update fill', async ({ page }) => {
   });
   await page.getByLabel('Fill color hex value', { exact: true }).fill('#0d99ff');
   await page.getByLabel('Fill color hex value', { exact: true }).press('Tab');
+  await setPickerOpacity(page, page.getByLabel('Fill color', { exact: true }), 40);
+  await setPickerOpacity(page, page.getByLabel('Border color', { exact: true }), 60);
   const shape = (await saved(page)).nodes.find((n) => n.id === 'rect-a')!;
-  expect(shape.appearance?.fills?.[0]).toMatchObject({ type: 'solid', color: '#0d99ff' });
+  expect(shape.appearance?.fills?.[0]).toMatchObject({
+    type: 'solid',
+    color: '#0d99ff',
+    opacity: 0.4,
+  });
+  expect(shape.appearance?.strokes?.[0]).toMatchObject({ opacity: 0.6 });
   expect(errors).toEqual([]);
 });
+test('custom color picker supports formats, palette drags, hue and percentage opacity', async ({
+  page,
+}) => {
+  const errors = await open(page);
+  await select(page, 'rect-a');
+  await page.getByLabel('Fill color', { exact: true }).click();
+  const picker = page.getByRole('dialog', { name: 'Color picker', exact: true });
+  const code = picker.getByLabel('Color value', { exact: true });
+  const format = picker.getByLabel('Color format', { exact: true });
+  await code.fill('E74D4D');
+  await code.press('Tab');
+  await format.selectOption('RGB');
+  await expect(code).toHaveValue('231, 77, 77');
+  await code.fill('0, 255, 0');
+  await code.press('Tab');
+  await format.selectOption('HSL');
+  await expect(code).toHaveValue('120, 100, 50');
+  await format.selectOption('HSB');
+  await expect(code).toHaveValue('120, 100, 100');
+  await code.fill('240, 100, 100');
+  await code.press('Tab');
+  await format.selectOption('Hex');
+  await expect(code).toHaveValue('0000FF');
+  await code.fill('invalid');
+  await code.press('Tab');
+  await expect(code).toHaveValue('0000FF');
+  const palette = (await picker
+    .getByRole('group', { name: 'Saturation and brightness' })
+    .boundingBox())!;
+  await page.mouse.move(palette.x + 20, palette.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(palette.x + palette.width / 2, palette.y + palette.height / 2, {
+    steps: 5,
+  });
+  await page.mouse.up();
+  await expect(code).toHaveValue('404080');
+  await picker.getByLabel('Hue', { exact: true }).focus();
+  await page.keyboard.press('Home');
+  await expect(code).toHaveValue('804040');
+  await picker.getByLabel('Color opacity slider', { exact: true }).focus();
+  await page.keyboard.press('Home');
+  await page.keyboard.press('ArrowRight');
+  await expect(picker.getByLabel('Color opacity percent', { exact: true })).toHaveValue('1');
+  await picker.getByLabel('Color opacity percent', { exact: true }).fill('45');
+  await picker.getByLabel('Color opacity percent', { exact: true }).press('Tab');
+  await picker.screenshot({ path: 'test-results/custom-color-picker.png' });
+  await picker.getByRole('button', { name: 'Close color picker', exact: true }).click();
+  const fill = (await saved(page)).nodes.find((node) => node.id === 'rect-a')!.appearance!
+    .fills![0]!;
+  expect(fill).toMatchObject({ color: '#804040', opacity: 0.45 });
+  await page.reload();
+  await select(page, 'rect-a');
+  await page.getByLabel('Fill color', { exact: true }).click();
+  await expect(picker.getByLabel('Color opacity percent', { exact: true })).toHaveValue('45');
+  await page.keyboard.press('Escape');
+  await expect(picker).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
 test('corner radius controls are not shown for circles', async ({ page }) => {
   const errors = await open(page);
   await select(page, 'circle-b');
@@ -609,6 +682,10 @@ test('gradient, stroke, shadow and blur are rendered and exported', async ({ pag
   await page.getByLabel('Border width', { exact: true }).fill('3');
   await page.getByLabel('Border width', { exact: true }).press('Tab');
   await page.getByLabel('Drop shadow', { exact: true }).check();
+  await setPickerOpacity(page, page.getByLabel('Shadow color', { exact: true }), 30);
+  expect(
+    (await saved(page)).nodes.find((node) => node.id === 'rect-a')!.appearance!.shadow.opacity,
+  ).toBe(0.3);
   await page.getByLabel('Layer blur', { exact: true }).fill('2');
   await page.getByLabel('Layer blur', { exact: true }).press('Tab');
   await expect(page.locator('#scene linearGradient')).toHaveCount(1);
@@ -666,8 +743,7 @@ test('ordered solid paint layers render, export, and can be edited in properties
     input.value = '#abcdef';
     input.dispatchEvent(new Event('change', { bubbles: true }));
   });
-  await editor.getByLabel('Fill 1 opacity', { exact: true }).fill('0.7');
-  await editor.getByLabel('Fill 1 opacity', { exact: true }).press('Tab');
+  await setPickerOpacity(page, editor.getByLabel('Fill 1 color', { exact: true }), 70);
   await editor.getByLabel('Stroke 2 width', { exact: true }).fill('6');
   await editor.getByLabel('Stroke 2 width', { exact: true }).press('Tab');
   await editor.getByRole('button', { name: 'Add fill', exact: true }).click();
@@ -689,6 +765,326 @@ test('ordered solid paint layers render, export, and can be edited in properties
   expect(paints.strokes![1]!.width).toBe(6);
   expect(errors).toEqual([]);
 });
+test('outside clicks dismiss only the active modal and ignore drags started inside', async ({
+  page,
+}) => {
+  const errors = await open(page);
+  await select(page, 'rect-a');
+  await page.getByRole('button', { name: 'Edit paints', exact: true }).click();
+  const paints = page.getByRole('dialog', { name: 'Edit paints', exact: true });
+  await paints.getByLabel('Fill 1 color', { exact: true }).click();
+  const picker = page.getByRole('dialog', { name: 'Color picker', exact: true });
+  await picker.getByLabel('Color value', { exact: true }).click();
+  await expect(picker).toBeVisible();
+  const header = (await picker.locator('h2').boundingBox())!;
+  await page.mouse.move(header.x + 10, header.y + 10);
+  await page.mouse.down();
+  await page.mouse.move(5, 5, { steps: 5 });
+  await page.mouse.up();
+  await expect(picker).toBeVisible();
+  const viewport = page.viewportSize()!;
+  await page.mouse.click(viewport.width - 5, viewport.height - 5);
+  await expect(picker).toHaveCount(0);
+  await expect(paints).toBeVisible();
+  await page.mouse.click(viewport.width - 5, viewport.height - 5);
+  await expect(paints).toHaveCount(0);
+  await page.getByRole('button', { name: 'Fill gradient', exact: true }).click();
+  await page.getByRole('button', { name: 'Fill gradient', exact: true }).dblclick();
+  const gradient = page.getByRole('dialog', { name: 'Gradient', exact: true });
+  await expect(gradient).toBeVisible();
+  await page.mouse.click(5, 5);
+  await expect(gradient).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test('gradient handles follow the pointer without jumping on moved, rotated and flipped objects', async ({
+  page,
+}) => {
+  const shape = createNode('rectangle', {
+    id: 'gradient-drag',
+    x: 160,
+    y: 130,
+    width: 220,
+    height: 150,
+    rotation: 35,
+    flipX: true,
+    appearance: {
+      ...defaultAppearance(),
+      fills: [
+        {
+          type: 'radial',
+          opacity: 1,
+          stops: [
+            { color: '#ff0000', opacity: 1, position: 0 },
+            { color: '#0000ff', opacity: 1, position: 1 },
+          ],
+          start: { x: 0.2, y: 0.3 },
+          end: { x: 0.8, y: 0.6 },
+          radius: { x: 0.3, y: 0.9 },
+        },
+      ],
+    },
+  });
+  const errors = await open(page, { ...createDocument(), nodes: [shape] });
+  await select(page, shape.id);
+  await page.locator('#zoom-in').click();
+  for (const name of ['start', 'end', 'radius']) {
+    const handle = page.locator(`[data-gradient-handle="${name}"]`);
+    const box = (await handle.boundingBox())!;
+    const start = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    await page.mouse.move(start.x + 2, start.y - 1);
+    await page.mouse.down();
+    await page.mouse.move(start.x + 37, start.y + 23, { steps: 5 });
+    const during = (await handle.boundingBox())!;
+    expect(during.x + during.width / 2).toBeCloseTo(start.x + 35, 1);
+    expect(during.y + during.height / 2).toBeCloseTo(start.y + 24, 1);
+    await expect(page.locator('#canvas')).toHaveCSS('cursor', 'crosshair');
+    await page.mouse.up();
+    expect((await saved(page)).nodes[0]).toMatchObject({
+      x: 160,
+      y: 130,
+      width: 220,
+      height: 150,
+      rotation: 35,
+    });
+    await page.locator('#undo').click();
+    expect((await saved(page)).nodes[0]!.appearance!.fills).toEqual(shape.appearance!.fills);
+    await select(page, shape.id);
+  }
+  expect(errors).toEqual([]);
+});
+
+test('hovering outside each corner offers rotation while square handles still resize', async ({
+  page,
+}) => {
+  const shape = createNode('rectangle', {
+    id: 'corner-rotation',
+    x: 100,
+    y: 100,
+    width: 120,
+    height: 80,
+  });
+  const errors = await open(page, { ...createDocument(), nodes: [shape] });
+  await select(page, shape.id);
+  await expect(page.locator('[data-rotate-corner]')).toHaveCount(4);
+  const directions: Record<string, number> = { nw: 305, ne: 55, se: 125, sw: 235 };
+  for (const corner of ['nw', 'ne', 'se', 'sw']) {
+    const area = page.locator(`[data-rotate-corner="${corner}"]`);
+    const cursorBefore = (await area.getAttribute('cursor'))!;
+    expect(decodeURIComponent(cursorBefore)).toContain(`rotate(${directions[corner]} 12 12)`);
+    const point = await area.evaluate((element) => {
+      const p = new DOMPoint(12, 12).matrixTransform(
+        (element as SVGGraphicsElement).getScreenCTM()!,
+      );
+      return { x: p.x, y: p.y };
+    });
+    await page.mouse.move(point.x, point.y);
+    expect(
+      await page.evaluate(
+        ({ x, y }) => document.elementFromPoint(x, y)?.getAttribute('data-rotate-corner'),
+        point,
+      ),
+    ).toBe(corner);
+    await expect(area).toHaveCSS('cursor', /grab/);
+    const square = (await page.locator(`[data-resize="${corner}"]`).boundingBox())!;
+    expect(
+      await page.evaluate(
+        ({ x, y, width, height }) =>
+          document.elementFromPoint(x + width / 2, y + height / 2)?.getAttribute('data-resize'),
+        square,
+      ),
+    ).toBe(corner);
+    const box = (await page.locator(`#scene [data-id="${shape.id}"]`).boundingBox())!;
+    const cx = box.x + box.width / 2,
+      cy = box.y + box.height / 2;
+    const dx = point.x - cx,
+      dy = point.y - cy;
+    const angle = (37 * Math.PI) / 180;
+    await page.keyboard.down('Shift');
+    await page.mouse.move(point.x, point.y);
+    await page.mouse.down();
+    await page.mouse.move(
+      cx + dx * Math.cos(angle) - dy * Math.sin(angle),
+      cy + dx * Math.sin(angle) + dy * Math.cos(angle),
+      { steps: 8 },
+    );
+    expect(
+      await page
+        .locator('#canvas')
+        .evaluate((canvas) => (canvas as HTMLElement).style.getPropertyValue('--drag-cursor')),
+    ).not.toBe(cursorBefore);
+    await page.mouse.up();
+    await page.keyboard.up('Shift');
+    expect((await saved(page)).nodes[0]).toMatchObject({ rotation: 30, width: 120, height: 80 });
+    await page.locator('#undo').click();
+    expect((await saved(page)).nodes[0]!.rotation).toBe(0);
+    await page.locator('#redo').click();
+    expect((await saved(page)).nodes[0]!.rotation).toBe(30);
+    await page.locator('#undo').click();
+    await select(page, shape.id);
+  }
+  await page.locator('#redo').click();
+  await select(page, shape.id);
+  await page.locator('#zoom-in').click();
+  await page.locator('#zoom-in').click();
+  for (const corner of ['nw', 'ne', 'se', 'sw']) {
+    const cursor = (await page.locator(`[data-rotate-corner="${corner}"]`).getAttribute('cursor'))!;
+    expect(decodeURIComponent(cursor)).toContain(
+      `rotate(${(directions[corner]! + 30) % 360} 12 12)`,
+    );
+    const point = await page.locator(`[data-rotate-corner="${corner}"]`).evaluate((element) => {
+      const matrix = (element as SVGGraphicsElement).getScreenCTM()!;
+      const point = new DOMPoint(12, 12).matrixTransform(matrix);
+      return { x: point.x, y: point.y, scale: Math.hypot(matrix.a, matrix.b) };
+    });
+    expect(point.scale).toBeCloseTo(1, 5);
+    expect(
+      await page.evaluate(
+        ({ x, y }) => document.elementFromPoint(x, y)?.getAttribute('data-rotate-corner'),
+        point,
+      ),
+    ).toBe(corner);
+  }
+  await page.getByRole('button', { name: `Lock ${shape.name}`, exact: true }).click();
+  await expect(page.locator('[data-rotate-corner]')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test('paint and gradient modals drag by their headers and remain editable', async ({ page }) => {
+  const errors = await open(page);
+  await select(page, 'rect-a');
+  for (const kind of ['paint', 'gradient']) {
+    if (kind === 'paint')
+      await page.getByRole('button', { name: 'Edit paints', exact: true }).click();
+    else {
+      await page.getByRole('button', { name: 'Fill gradient', exact: true }).click();
+      await page.getByRole('button', { name: 'Fill gradient', exact: true }).dblclick();
+    }
+    const dialog = page.getByRole('dialog');
+    const before = (await dialog.boundingBox())!;
+    const header = (await dialog.locator('h2').boundingBox())!;
+    await page.mouse.move(header.x + 10, header.y + header.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(header.x + 70, header.y + header.height / 2 + 30, { steps: 5 });
+    await page.mouse.up();
+    const after = (await dialog.boundingBox())!;
+    expect(after.x - before.x).toBeCloseTo(60, 0);
+    expect(after.y - before.y).toBeCloseTo(30, 0);
+    if (kind === 'gradient') {
+      await dialog.getByLabel('Gradient type', { exact: true }).selectOption('radial');
+      await expect(dialog.getByLabel('Gradient type', { exact: true })).toHaveValue('radial');
+      expect((await dialog.boundingBox())!.x).toBeCloseTo(after.x, 0);
+    }
+    await dialog.getByRole('button', { name: `Close ${kind} editor`, exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+  }
+  expect(errors).toEqual([]);
+});
+
+test('border gradient swatch opens the shared gradient modal', async ({ page }) => {
+  const errors = await open(page);
+  await select(page, 'rect-a');
+  const originalFills = (await saved(page)).nodes.find((node) => node.id === 'rect-a')!.appearance
+    ?.fills;
+  await page.getByRole('button', { name: 'Border gradient', exact: true }).click();
+  await page.getByRole('button', { name: 'Border gradient', exact: true }).dblclick();
+  const editor = page.getByRole('dialog', { name: 'Gradient', exact: true });
+  await expect(editor.getByLabel('Gradient type', { exact: true })).toBeVisible();
+  await editor.getByLabel('Gradient type', { exact: true }).selectOption('radial');
+  await editor.getByRole('button', { name: 'Close gradient editor', exact: true }).click();
+  const appearance = (await saved(page)).nodes.find((node) => node.id === 'rect-a')!.appearance!;
+  expect(appearance.strokes![0]!.type).toBe('radial');
+  expect(appearance.fills).toEqual(originalFills);
+  await page.reload();
+  await select(page, 'rect-a');
+  await page.getByRole('button', { name: 'Border gradient', exact: true }).dblclick();
+  await expect(editor.getByLabel('Gradient type', { exact: true })).toHaveValue('radial');
+  expect(errors).toEqual([]);
+});
+
+test('all four gradient types use a dropdown, persist and export self-contained SVG', async ({
+  page,
+}) => {
+  const shape = createNode('rectangle', {
+    id: 'four-gradients',
+    x: 0,
+    y: 0,
+    width: 200,
+    height: 200,
+    appearance: {
+      ...defaultAppearance(),
+      fills: [
+        {
+          type: 'linear',
+          opacity: 1,
+          stops: [
+            { color: '#ff0000', opacity: 1, position: 0 },
+            { color: '#0000ff', opacity: 1, position: 1 },
+          ],
+          start: { x: 0.5, y: 0.5 },
+          end: { x: 1, y: 0.5 },
+        },
+      ],
+    },
+  });
+  const errors = await open(page, { ...createDocument(), nodes: [shape] });
+  await select(page, shape.id);
+  await page.getByRole('button', { name: 'Fill gradient', exact: true }).dblclick();
+  const editor = page.getByRole('dialog', { name: 'Gradient', exact: true });
+  const type = editor.getByLabel('Gradient type', { exact: true });
+  await expect(type.locator('option')).toHaveText(['Linear', 'Radial', 'Angular', 'Diamond']);
+  await expect(editor.getByRole('radio')).toHaveCount(0);
+  for (const kind of ['linear', 'radial', 'angular', 'diamond']) {
+    await type.selectOption(kind);
+    expect((await saved(page)).nodes[0]!.appearance!.fills![0]!.type).toBe(kind);
+  }
+  await type.selectOption('angular');
+  await editor.getByRole('button', { name: 'Close gradient editor', exact: true }).click();
+  for (const kind of ['angular', 'diamond']) {
+    if (kind === 'diamond') {
+      await page.getByRole('button', { name: 'Fill gradient', exact: true }).dblclick();
+      await type.selectOption(kind);
+      await editor.getByRole('button', { name: 'Close gradient editor', exact: true }).click();
+    }
+    await expect(page.locator(`#scene pattern[data-gradient-type="${kind}"]`)).toHaveCount(1);
+    await page.screenshot({ path: `test-results/${kind}-gradient.png` });
+    const download = page.waitForEvent('download');
+    await page.locator('#export').click();
+    const xml = await readFile((await (await download).path())!, 'utf8');
+    expect(xml).toContain(`data-gradient-type="${kind}"`);
+    expect(xml).not.toContain('foreignObject');
+    const pixels = await page.evaluate(async (xml) => {
+      const image = new Image();
+      image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
+      await image.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 200;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(image, 0, 0, 200, 200);
+      return [
+        [140, 125],
+        [125, 140],
+        [65, 65],
+      ].map(([x, y]) => Array.from(ctx.getImageData(x!, y!, 1, 1).data));
+    }, xml);
+    for (const pixel of pixels) expect(pixel[3]).toBeGreaterThan(240);
+    if (kind === 'angular') {
+      expect(pixels[0]![0]).toBeGreaterThan(pixels[0]![2]!);
+      expect(pixels[2]![2]).toBeGreaterThan(pixels[2]![0]!);
+    } else {
+      // Diamond distance is |x| + |y|, so mirrored coordinates have identical colors.
+      expect(Math.abs(pixels[0]![0]! - pixels[1]![0]!)).toBeLessThan(4);
+      expect(pixels[0]![0]).toBeGreaterThan(75);
+      expect(pixels[0]![0]).toBeLessThan(100);
+    }
+  }
+  await page.reload();
+  await select(page, shape.id);
+  await page.getByRole('button', { name: 'Fill gradient', exact: true }).dblclick();
+  await expect(type).toHaveValue('diamond');
+  expect(errors).toEqual([]);
+});
+
 test('sidebar gradient stop drags reach the final position in one undo step', async ({ page }) => {
   const errors = await open(page);
   await select(page, 'rect-a');
@@ -779,21 +1175,33 @@ test('gradient paint layers expose stops and handles, persist, and export radial
     0,
   );
   await editor.getByLabel('Fill 1 stop 2', { exact: true }).click();
-  await editor.getByLabel('Gradient stop location', { exact: true }).fill('0.6');
-  await editor.getByLabel('Gradient stop location', { exact: true }).press('Tab');
+  await expect(editor.getByLabel('Gradient stop location', { exact: true })).toHaveCount(0);
+  await expect(editor.getByLabel('Gradient stop opacity', { exact: true })).toHaveCount(0);
+  const initialTrack = (await track.boundingBox())!;
+  const lastStop = (await editor.getByLabel('Fill 1 stop 2', { exact: true }).boundingBox())!;
+  await page.mouse.move(lastStop.x + lastStop.width / 2, lastStop.y + lastStop.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(
+    initialTrack.x + initialTrack.width * 0.6,
+    initialTrack.y + initialTrack.height / 2,
+  );
+  await page.mouse.up();
   let doc = await saved(page);
   expect(doc.nodes[0]?.appearance?.fills?.[0]).toMatchObject({
     type: 'radial',
-    stops: [{ position: 0 }, { position: 0.6 }],
   });
+  const movedGradient = doc.nodes[0]!.appearance!.fills![0]!;
+  if (movedGradient.type === 'solid') throw new Error('Expected gradient');
+  expect(movedGradient.stops[1]!.position).toBeCloseTo(0.6, 2);
   const trackBox = await track.boundingBox();
   if (!trackBox) throw new Error('Gradient stop track is not visible.');
   await page.mouse.click(trackBox.x + trackBox.width * 0.4, trackBox.y + trackBox.height / 2);
   await expect(track.getByRole('button')).toHaveCount(3);
   await editor.getByLabel('Fill 1 stop 2', { exact: true }).click();
-  expect(
-    Number(await editor.getByLabel('Gradient stop location', { exact: true }).inputValue()),
-  ).toBeCloseTo(0.4, 2);
+  await expect(editor.getByLabel('Fill 1 stop 2', { exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
   await editor.getByLabel('Fill 1 stop 1', { exact: true }).click();
   await expect(editor.getByLabel('Color', { exact: true })).toHaveValue('#ff0000');
   await expect(track.getByRole('button')).toHaveCount(3);
@@ -810,11 +1218,7 @@ test('gradient paint layers expose stops and handles, persist, and export radial
   await page.mouse.move(trackBox.x + trackBox.width * 0.5, trackBox.y + trackBox.height / 2);
   await page.mouse.up();
   await editor.getByLabel('Fill 1 stop 2', { exact: true }).click();
-  expect(
-    Number(await editor.getByLabel('Gradient stop location', { exact: true }).inputValue()),
-  ).toBeCloseTo(0.5, 2);
-  await editor.getByLabel('Gradient stop opacity', { exact: true }).fill('0.7');
-  await editor.getByLabel('Gradient stop opacity', { exact: true }).press('Tab');
+  await setPickerOpacity(page, editor.getByLabel('Color', { exact: true }), 70);
   await editor.getByLabel('Fill 1 stop 2', { exact: true }).click();
   await editor.getByLabel('Color', { exact: true }).evaluate((input: HTMLInputElement) => {
     input.value = '#00ff00';
@@ -827,11 +1231,11 @@ test('gradient paint layers expose stops and handles, persist, and export radial
   expect(stops).toMatchObject([
     { color: '#ff0000', position: 0 },
     { color: '#00ff00', opacity: 0.7 },
-    { color: '#0000ff', position: 0.6 },
+    { color: '#0000ff' },
   ]);
   expect(stops[1]?.position).toBeCloseTo(0.5, 2);
-  await editor.getByLabel('Linear gradient', { exact: true }).check();
-  await editor.getByLabel('Radial gradient', { exact: true }).check();
+  await editor.getByLabel('Gradient type', { exact: true }).selectOption('linear');
+  await editor.getByLabel('Gradient type', { exact: true }).selectOption('radial');
   await editor.getByRole('button', { name: 'Close gradient editor', exact: true }).click();
   const download = page.waitForEvent('download');
   await page.locator('#export').click();

@@ -25,8 +25,22 @@ export const pickerCursor = cursor(pickerPicture, 4, 20, 'crosshair');
 export const penCursor = cursor(penPicture, 12, 3, 'crosshair');
 // Serif capital "I": one vertical line with a bar at the top and bottom.
 export const textCursor = cursor(textPicture, 12, 12, 'text');
-// Curved arrow with a head at each end.
-export const rotateCursor = cursor(rotatePicture, 12, 10, 'grab');
+const rotationCursors = new Map<number, string>();
+/** Point the curved arrow toward the selection, including rotated/flipped corners. */
+export function rotateCursorAt(degrees: number): string {
+  const angle = (((Math.round(degrees / 5) * 5) % 360) + 360) % 360;
+  let value = rotationCursors.get(angle);
+  if (!value) {
+    const picture = rotatePicture.replace(
+      /(<svg\b[^>]*>)([\s\S]*)(<\/svg>)/,
+      `$1<g transform="rotate(${angle} 12 12)">$2</g>$3`,
+    );
+    value = cursor(picture, 12, 12, 'grab');
+    rotationCursors.set(angle, value);
+  }
+  return value;
+}
+export const rotateCursor = rotateCursorAt(0);
 
 export function toolCursor(store: EditorStore, pen = false): string {
   if (store.space || store.tool === 'hand') return 'grab';

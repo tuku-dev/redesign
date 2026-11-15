@@ -1,4 +1,5 @@
-﻿/** Filename entry belongs to the app; it never uses window.prompt. */
+import { showDraggableModal } from './modal.ts';
+/** Filename entry belongs to the app; it never uses window.prompt. */
 export function requestDownloadName(current: string): Promise<string | null> {
   return new Promise((resolve) => {
     const dialog = document.createElement('dialog');
@@ -9,6 +10,9 @@ export function requestDownloadName(current: string): Promise<string | null> {
     const heading = document.createElement('h2');
     heading.id = 'save-dialog-title';
     heading.textContent = 'Download a copy';
+    const header = document.createElement('div');
+    header.className = 'modal-header';
+    header.append(heading);
     const note = document.createElement('p');
     note.textContent =
       'Save keeps changes in this browser. A downloaded copy does not update automatically.';
@@ -33,7 +37,7 @@ export function requestDownloadName(current: string): Promise<string | null> {
     save.textContent = 'Download copy';
     save.className = 'primary';
     actions.append(cancel, save);
-    form.append(heading, note, label, actions);
+    form.append(header, note, label, actions);
     dialog.append(form);
     document.body.append(dialog);
     let result: string | null = null;
@@ -59,7 +63,7 @@ export function requestDownloadName(current: string): Promise<string | null> {
       },
       { once: true },
     );
-    dialog.showModal();
+    showDraggableModal(dialog);
     input.focus();
     input.select();
   });

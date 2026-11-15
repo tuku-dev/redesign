@@ -91,6 +91,13 @@ test('gradient paint layers validate ordered stops and preserve editable geometr
   });
   const doc = { ...createDocument(), nodes: [n] };
   assert.deepEqual(validateDocument(JSON.parse(JSON.stringify(doc))), doc);
+  for (const type of ['linear', 'radial', 'angular', 'diamond'] as const) {
+    const variant = structuredClone(doc);
+    const gradient = variant.nodes[0].appearance!.fills![0]!;
+    if (gradient.type === 'solid') throw new Error('Expected gradient');
+    gradient.type = type;
+    assert.deepEqual(validateDocument(JSON.parse(JSON.stringify(variant))), variant);
+  }
   const invalid = structuredClone(doc);
   invalid.nodes[0].appearance!.fills = [
     {

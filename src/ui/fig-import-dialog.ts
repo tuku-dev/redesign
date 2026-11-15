@@ -1,3 +1,4 @@
+import { showDraggableModal } from './modal.ts';
 import type { FigImportReport } from '../interop/fig/import.ts';
 
 /** Every native import gets a review step before opening its lossy editable subset. */
@@ -8,6 +9,9 @@ export function confirmFigImport(report: FigImportReport): Promise<boolean> {
     dialog.setAttribute('aria-label', 'Review experimental Figma import');
     const title = document.createElement('h2');
     title.textContent = 'Experimental Figma import';
+    const header = document.createElement('div');
+    header.className = 'modal-header';
+    header.append(title);
     const summary = document.createElement('p');
     summary.textContent = `${report.pages} page(s), ${report.imported} editable layer(s), ${report.skipped} skipped layer(s). Writer version ${report.version}.`;
     const note = document.createElement('p');
@@ -49,9 +53,9 @@ export function confirmFigImport(report: FigImportReport): Promise<boolean> {
       finish(false);
     });
     actions.append(cancel, accept);
-    dialog.append(title, summary, note, list, actions);
+    dialog.append(header, summary, note, list, actions);
     document.body.append(dialog);
-    dialog.showModal();
+    showDraggableModal(dialog);
     cancel.focus();
   });
 }
