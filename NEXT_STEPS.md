@@ -5,8 +5,7 @@ Updated 2026-11-01. Implementation stopped at the user's request to conserve usa
 ## Start here next time
 
 1. Read this file, inspect git status, and preserve current work. Do not rebuild already implemented features.
-2. Update compatibility/research details for the new import subset, review screenshots, then commit/push only when requested.
-3. Continue the agreed checklist in [docs/FUNCTIONALITY.md](docs/FUNCTIONALITY.md), beginning with richer paints after stabilizing the current changes.
+2. Continue the agreed checklist in [docs/FUNCTIONALITY.md](docs/FUNCTIONALITY.md), beginning with richer paints.
 
 ## Implemented locally in this batch
 
@@ -15,16 +14,18 @@ Updated 2026-11-01. Implementation stopped at the user's request to conserve usa
 | 1. Native .fig vectors/images | Editable cached Bezier fill paths; simple network stroke centerlines; native winding rules; embedded PNG/JPEG/GIF/WebP image fills, dimensions, opacity and fitting; ZIP asset CRC/size checks | Branched stroke networks, per-region paints and exact custom image crops remain unsupported. Cached fill paths do not retain the original network topology. No native export or verified Figma round trips. |
 | 2. Point insertion/deletion | Double-click an editing-mode segment to insert; inspector Insert after/Delete; click an anchor then Delete/Backspace; exact cubic subdivision, closing segments, compound-ring handling, locks and undo | Minimum two anchors per remaining path. Deleting a point intentionally changes adjacent geometry. Figma vector networks remain outside the local path model. |
 | 3. Masks/outline strokes | Use the bottom selected closed shape as an outline mask; release mask; mask-aware canvas selection/export bounds; cloning/deletion/reference handling. Solid strokes convert to editable filled outlines while retaining the original fill/opacity. | Outline masks ignore paint alpha/luminance. Stroke conversion is polygonized: curve tolerance 0.25 world units, 32-point round caps/joins and generated-coordinate quantization. Dashed strokes, effects and text/frame/group stroke outlining are rejected. Full visual parity remains unverified. |
+| 4. Ordered solid paint layers | Add, remove and edit ordered solid fills and strokes; retain them in native `.fig` imports and SVG export while preserving legacy single-paint documents. | Gradient layers, paint blend modes, stroke alignment, and effect stacks remain unsupported. |
 
 Two public native fixtures now yield **10 imported / 0 skipped** layers (corners, writer 106) and **18 imported / 5 skipped** (structure, writer 48), including two raster images. Earlier counts in the chronological work log describe older behavior.
 
 ## Validation
 
-- **204 Node model/format/controller tests pass.**
+- **206 Node model/format/controller tests pass.**
 - Strict TypeScript production build, ESLint and formatting checks pass.
-- Full Chrome browser suite: **83 passed**.
+- Full Chrome browser suite: **84 passed**.
 - The mask reload timeout was caused by the E2E fixture clearing `localStorage` on every navigation. The fixture now only seeds an absent document, verifying actual persisted mask state after reload.
 - Point-insertion segment overlays now use separate segment-coordinate data attributes, avoiding ambiguity with legacy anchor selectors.
+- Production-preview screenshots of the `corners` and `structure` native fixtures rendered the expected editable geometry and embedded raster asset.
 - Production-preview QA remains pending.
 
 ## Code map
@@ -39,7 +40,7 @@ Two public native fixtures now yield **10 imported / 0 skipped** layers (corners
 ## Remaining agreed work
 
 - [ ] Finish broad validation/documentation of stages 1-3; inspect native assets, masks and outlined strokes visually. Test mask interactions with components/pages/clipboard and export selection. Broader current-version .fig fixtures remain needed.
-- [ ] Richer paints: multiple fills/strokes, richer gradient types and stops/handles, stroke alignment, inner shadows/background blur and effect stacks. **Not started in this batch.**
+- [ ] Richer paints: ordered solid multiple fills/strokes are complete. Gradient types/stops/handles, stroke alignment, inner shadows/background blur and effect stacks remain.
 - [ ] Auto layout: wrapping/grid flow, min/max sizing, absolute children and canvas spacing controls. **Not started in this batch.**
 - [ ] Components/design systems: variants/properties, nested swaps, shared styles, variables/collections/modes/aliases/bindings and libraries. **Not started in this batch.**
 - [ ] Other backlog: rich typography, advanced prototypes, raster/PDF export and presets, workspace search/sections, performance, accessibility and cross-browser checks.

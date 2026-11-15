@@ -17,6 +17,7 @@ import { FeatureCommands } from '../commands/features.ts';
 import { defaultAppearance } from '../model/features.ts';
 import type { Appearance, Paint, StrokePaint } from '../model/features.ts';
 import { button, inputField } from './feature-controls.ts';
+import { openGradientEditor, renderGradientEditor } from './gradient-editor.ts';
 import { openPaintEditor } from './paint-editor.ts';
 import { propertySection } from './property-section.ts';
 type Field = readonly [EditableProperty, string, 'number' | 'text' | 'color'];
@@ -245,10 +246,50 @@ export function renderProperties(
       if (!('width' in paint)) throw new Error('Border paints require a width.');
       value.strokes = [paint, ...(value.strokes?.slice(1) ?? [])];
     };
+    const gradientEditorOptions = () => ({
+      fillIndex: 0,
+      getAppearance: () =>
+        store.doc.nodes.find((node) => node.id === n.id)?.appearance ?? defaultAppearance(),
+      update: updateAppearance,
+      remove: () =>
+        updateAppearance((value) => {
+          value.fills = value.fills?.slice(1) ?? [];
+        }),
+      notify,
+    });
     const renderPaintSection = (target: 'fill' | 'border', title: string) => {
       const paints = section(title);
       const currentPaint =
         target === 'fill' ? firstFill(appearance, n.fill) : firstStroke(appearance);
+      const setPaintMode = (mode: 'solid' | 'gradient') => {
+        const selected =
+          mode === 'solid' ? currentPaint.type === 'solid' : currentPaint.type !== 'solid';
+        if (selected) return;
+        updateAppearance((value) => {
+          const current = target === 'fill' ? firstFill(value, n.fill) : firstStroke(value);
+          if (mode === 'solid') {
+            const color = current.type === 'solid' ? current.color : current.stops[0]?.color;
+            const solid = {
+              type: 'solid' as const,
+              color: color || '#000000',
+              opacity: current.opacity,
+            };
+            replacePaint(
+              value,
+              target,
+              target === 'fill' ? solid : { ...solid, width: firstStroke(value).width },
+            );
+            return;
+          }
+          const color = current.type === 'solid' ? current.color : current.stops[0]?.color;
+          const gradient = linearGradient(color || '#000000', current.opacity);
+          replacePaint(
+            value,
+            target,
+            target === 'fill' ? gradient : { ...gradient, width: firstStroke(value).width },
+          );
+        });
+      };
       const paintModes = document.createElement('div');
       paintModes.className = 'paint-mode-switch';
       for (const [mode, label] of [
@@ -257,35 +298,7 @@ export function renderProperties(
       ] as const) {
         const selected =
           mode === 'solid' ? currentPaint.type === 'solid' : currentPaint.type !== 'solid';
-        const control = button(
-          label,
-          () =>
-            updateAppearance((value) => {
-              const current = target === 'fill' ? firstFill(value, n.fill) : firstStroke(value);
-              if (mode === 'solid') {
-                const color = current.type === 'solid' ? current.color : current.stops[0]?.color;
-                const solid = {
-                  type: 'solid' as const,
-                  color: color || '#000000',
-                  opacity: current.opacity,
-                };
-                replacePaint(
-                  value,
-                  target,
-                  target === 'fill' ? solid : { ...solid, width: firstStroke(value).width },
-                );
-              } else {
-                const color = current.type === 'solid' ? current.color : current.stops[0]?.color;
-                const gradient = linearGradient(color || '#000000', current.opacity);
-                replacePaint(
-                  value,
-                  target,
-                  target === 'fill' ? gradient : { ...gradient, width: firstStroke(value).width },
-                );
-              }
-            }),
-          notify,
-        );
+        const control = button(label, () => setPaintMode(mode), notify);
         control.className = 'paint-mode-option';
         control.textContent = '';
         control.setAttribute('aria-label', `${title} ${label.toLowerCase()}`);
@@ -299,6 +312,9 @@ export function renderProperties(
             : currentPaint.type === 'solid'
               ? paintPreview(linearGradient(currentPaint.color, currentPaint.opacity))
               : paintPreview(currentPaint);
+        if (target === 'fill' && mode === 'gradient' && currentPaint.type !== 'solid') {
+          control.ondblclick = () => openGradientEditor(gradientEditorOptions());
+        }
         paintModes.append(control);
       }
       paints.append(paintModes);
@@ -342,8 +358,7 @@ export function renderProperties(
     };
     renderPaintSection('fill', 'Fill');
     renderPaintSection('border', 'Border');
-    const paints = section('Multiple paints');
-    paints.append(
+    section('Multiple paints').append(
       button(
         'Edit paints',
         () =>
@@ -357,6 +372,16 @@ export function renderProperties(
         notify,
       ),
     );
+    if (firstFill(appearance, n.fill).type !== 'solid') {
+      const gradient = section('Gradient');
+      const gradientOptions = gradientEditorOptions();
+      renderGradientEditor({
+        ...gradientOptions,
+        host: gradient,
+        trackOnly: true,
+        onStopDoubleClick: () => openGradientEditor(gradientOptions),
+      });
+    }
   }
   if (!multi && n.type === 'text') {
     const content = section('Content');

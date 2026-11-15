@@ -1205,16 +1205,32 @@ select:focus-visible {
 }
 .gradient-color-panel {
   margin-bottom: 8px;
-  padding: 8px;
-  background: var(--surface-secondary);
-  border: 1px solid var(--border);
-  border-radius: 6px;
 }
 .gradient-color-panel .feature-field {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+}
+.gradient-color-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.gradient-color-row .feature-field {
+  flex: 1;
+}
+.gradient-stop-remove {
+  display: grid;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  place-items: center;
+}
+.gradient-stop-remove svg {
+  width: 16px;
+  height: 16px;
 }
 .gradient-stop-controls .feature-field {
   min-width: 0;

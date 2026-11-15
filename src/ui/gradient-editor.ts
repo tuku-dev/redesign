@@ -10,6 +10,8 @@ interface GradientEditorOptions {
   remove: () => void;
   onClose?: () => void;
   host?: HTMLElement;
+  trackOnly?: boolean;
+  onStopDoubleClick?: () => void;
   notify: Notify;
 }
 
@@ -108,15 +110,6 @@ export function renderGradientEditor(options: GradientEditorOptions): void {
       control.append(input, document.createTextNode(label));
       types.append(control);
     }
-    const mesh = document.createElement('label');
-    const meshInput = document.createElement('input');
-    meshInput.type = 'radio';
-    meshInput.disabled = true;
-    meshInput.setAttribute('aria-label', 'Mesh gradient (not yet supported)');
-    meshInput.title = 'Mesh gradients are not yet supported';
-    mesh.append(meshInput, document.createTextNode('Mesh (not yet supported)'));
-    types.append(mesh);
-
     const stops = document.createElement('div');
     stops.className = 'gradient-stop-track';
     stops.setAttribute('role', 'group');
@@ -154,32 +147,34 @@ export function renderGradientEditor(options: GradientEditorOptions): void {
         selectedStop = index;
         render();
       };
+      if (options.onStopDoubleClick) handle.ondblclick = options.onStopDoubleClick;
       handle.onpointerdown = (event) => {
         if (event.button !== 0) return;
         selectedStop = index;
-        color.value = stop.color;
-        opacity.value = String(stop.opacity);
-        location.value = String(stop.position);
+        if (!options.trackOnly) {
+          color.value = stop.color;
+          opacity.value = String(stop.opacity);
+          location.value = String(stop.position);
+        }
         stops
           .querySelectorAll<HTMLButtonElement>('.gradient-stop-handle')
           .forEach((item, itemIndex) =>
             item.setAttribute('aria-pressed', String(itemIndex === index)),
           );
         handle.setPointerCapture(event.pointerId);
+        // Keep the active handle mounted until release. Persisting each movement
+        // rebuilds the properties panel and loses pointer capture.
+        const draft = structuredClone(gradient);
+        const draggedStop = draft.stops[index]!;
         let moved = false;
         const move = (moveEvent: PointerEvent) => {
           moved = true;
           const position = positionAt(moveEvent.clientX);
-          set((value) => {
-            const target = value.stops[selectedStop]!;
-            target.position = position;
-            value.stops.sort((a, b) => a.position - b.position);
-            return value.stops.indexOf(target);
-          }, false);
+          draggedStop.position = position;
+          draft.stops.sort((a, b) => a.position - b.position);
           handle.style.left = `${position * 100}%`;
-          const current = getAppearance().fills?.[fillIndex];
-          if (current && current.type !== 'solid') paintTrack(stops, current);
-          location.value = String(position);
+          paintTrack(stops, draft);
+          if (!options.trackOnly) location.value = String(position);
         };
         const finish = (upEvent: PointerEvent) => {
           handle.removeEventListener('pointermove', move);
@@ -189,7 +184,12 @@ export function renderGradientEditor(options: GradientEditorOptions): void {
             handle.releasePointerCapture(upEvent.pointerId);
           if (moved) {
             ignoreClick = true;
-            render();
+            if (upEvent.type === 'pointercancel') render();
+            else
+              set((value) => {
+                value.stops = draft.stops;
+                return draft.stops.indexOf(draggedStop);
+              });
           }
         };
         handle.addEventListener('pointermove', move);
@@ -198,13 +198,19 @@ export function renderGradientEditor(options: GradientEditorOptions): void {
       };
       stops.append(handle);
     }
+    if (options.trackOnly) {
+      host.replaceChildren(stops);
+      return;
+    }
 
     const colorPanel = document.createElement('div');
     colorPanel.className = 'gradient-color-panel';
     colorPanel.setAttribute('role', 'group');
     colorPanel.setAttribute('aria-label', 'Selected stop color panel');
+    const colorRow = document.createElement('div');
+    colorRow.className = 'gradient-color-row';
     const color = inputField(
-      colorPanel,
+      colorRow,
       'Color',
       selected.color,
       'color',
@@ -214,6 +220,26 @@ export function renderGradientEditor(options: GradientEditorOptions): void {
         }),
       notify,
     );
+    const removeStop = button(
+      'Remove selected gradient stop',
+      () =>
+        set((value) => {
+          value.stops.splice(selectedStop, 1);
+          return Math.min(selectedStop, value.stops.length - 1);
+        }),
+      notify,
+    );
+    removeStop.className = 'gradient-stop-remove';
+    removeStop.textContent = '';
+    removeStop.setAttribute('aria-label', 'Remove selected gradient stop');
+    removeStop.title =
+      gradient.stops.length > 2
+        ? 'Remove selected gradient stop'
+        : 'A gradient requires at least two stops';
+    removeStop.disabled = gradient.stops.length <= 2;
+    removeStop.append(createIcon('delete'));
+    colorRow.append(removeStop);
+    colorPanel.append(colorRow);
     const controls = document.createElement('div');
     controls.className = 'gradient-stop-controls';
     inputField(
@@ -264,18 +290,6 @@ export function renderGradientEditor(options: GradientEditorOptions): void {
         notify,
       ),
     );
-    if (gradient.stops.length > 2)
-      actions.append(
-        button(
-          'Remove selected gradient stop',
-          () =>
-            set((value) => {
-              value.stops.splice(selectedStop, 1);
-              return Math.min(selectedStop, value.stops.length - 1);
-            }),
-          notify,
-        ),
-      );
     host.replaceChildren(
       ...(dialog ? [header] : []),
       types,
