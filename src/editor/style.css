@@ -598,9 +598,6 @@ textarea {
   color: var(--text-primary);
   background: var(--surface);
 }
-#grid {
-  display: none;
-}
 
 /* Fixed vector geometry keeps tools consistent across platforms and fonts. */
 .icon {

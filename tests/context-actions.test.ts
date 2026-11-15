@@ -334,3 +334,21 @@ test('right-clicking selected artwork retains multiselection and containing grou
   s.selection.context(child.id, true);
   assert.deepEqual([...s.store.selected], [child.id]);
 });
+
+test('canvas context menu toggles grid and rulers with current visibility labels', () => {
+  const s = setup();
+  for (const selected of [new Set<string>(), s.store.selected]) {
+    s.store.selected = selected;
+    for (const id of ['toggle-grid', 'toggle-rulers']) {
+      const entry = () =>
+        entries(buildContextMenu(s, { x: -100, y: -100 })).find((e) => e.id === id)!;
+      assert.match(entry().label, /^Show /);
+      entry().run!();
+      assert.match(entry().label, /^Hide /);
+      if (id === 'toggle-grid') assert.equal(s.store.gridVisible, true);
+      else assert.equal(s.store.doc.workspace?.rulers, true);
+      entry().run!();
+      assert.match(entry().label, /^Show /);
+    }
+  }
+});

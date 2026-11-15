@@ -24,6 +24,7 @@ export class EditorStore {
   space = false;
   snappingEnabled = true;
   gridSnappingEnabled = false;
+  gridVisible = false;
   snapGridSize = 8;
   canvasColorMode: 'apply' | 'sample' | null = null;
   canvasPaintColor = '#000000';

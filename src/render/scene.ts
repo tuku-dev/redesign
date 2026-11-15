@@ -11,6 +11,12 @@ export function renderScene(
   gestures: GestureController,
 ): void {
   const { pan, zoom } = store;
+  elements.canvas
+    .querySelector('#canvas-grid')
+    ?.setAttribute('fill', store.gridVisible ? 'url(#grid)' : 'transparent');
+  elements.canvas
+    .querySelector('#grid')
+    ?.setAttribute('patternTransform', `translate(${pan.x} ${pan.y}) scale(${zoom})`);
   elements.viewport.setAttribute('transform', `translate(${pan.x} ${pan.y}) scale(${zoom})`);
   elements.scene.replaceChildren(
     ...renderDocument(store.doc, {

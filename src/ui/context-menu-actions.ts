@@ -1,4 +1,5 @@
-﻿import type { EditingCommands } from '../commands/editing.ts';
+import { GuideCommands } from '../commands/guides.ts';
+import type { EditingCommands } from '../commands/editing.ts';
 import type { StructureCommands } from '../commands/structure.ts';
 import type { LayerStateCommands } from '../commands/layer-state.ts';
 import type { LayerOrderCommands } from '../commands/layer-order.ts';
@@ -286,6 +287,20 @@ export function buildContextMenu(s: MenuServices, point: Point): MenuSection[] {
     },
   ]);
   sections.push([
+    {
+      id: 'toggle-grid',
+      label: s.store.gridVisible ? 'Hide grid' : 'Show grid',
+      run: () => {
+        s.store.gridVisible = !s.store.gridVisible;
+        s.store.refresh();
+      },
+    },
+    {
+      id: 'toggle-rulers',
+      label: s.store.doc.workspace?.rulers ? 'Hide rulers' : 'Show rulers',
+      shortcut: 'Shift+R',
+      run: () => new GuideCommands(s.store).rulers(),
+    },
     { id: 'fit-all', label: 'Zoom to fit', shortcut: 'Shift+1', run: () => s.fit(false) },
     ...(has
       ? [
